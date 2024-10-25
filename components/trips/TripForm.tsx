@@ -23,15 +23,27 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { tripFormSchema, type TripFormValues } from '@/lib/validations/trip';
 
-export function TripForm() {
+interface TripFormProps {
+  initialData?: {
+    id: string;
+    title: string;
+    destination: string;
+    startDate: Date;
+    endDate: Date;
+  };
+}
+
+export function TripForm({ initialData }: TripFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
     defaultValues: {
-      title: '',
-      destination: '',
+      title: initialData?.title ?? '',
+      destination: initialData?.destination ?? '',
+      startDate: initialData?.startDate ?? undefined,
+      endDate: initialData?.endDate ?? undefined,
     },
   });
 
@@ -46,8 +58,12 @@ export function TripForm() {
         endDate: values.endDate.toISOString(),
       };
 
-      const response = await fetch('/api/trips', {
-        method: 'POST',
+      const url = initialData ? `/api/trips/${initialData.id}` : '/api/trips';
+
+      const method = initialData ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -62,8 +78,8 @@ export function TripForm() {
       router.push('/trips');
       router.refresh();
     } catch (error) {
-      console.error('Error creating trip:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create trip');
+      console.error('Error saving trip:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save trip');
     } finally {
       setLoading(false);
     }
@@ -169,7 +185,13 @@ export function TripForm() {
           />
         </div>
         <Button type="submit" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Trip'}
+          {loading
+            ? initialData
+              ? 'Saving...'
+              : 'Creating...'
+            : initialData
+              ? 'Save Changes'
+              : 'Create Trip'}
         </Button>
       </form>
     </Form>

@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
@@ -17,50 +17,66 @@ enum ActivityType {
 }
 
 model User {
-  id            String    @id
-  email         String    @unique
-  firstName     String?
-  lastName      String?
-  profileImage  String?
-  preferences   Json?     // Store default travel preferences
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  trips         Trip[]
+  id           String   @id
+  email        String   @unique
+  firstName    String?
+  lastName     String?
+  profileImage String?
+  preferences  Json? // Store default travel preferences
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  trips        Trip[]
+
   @@map("user")
 }
 
 model Trip {
-  id          String   @id @default(cuid())
+  id          String      @id @default(cuid())
   userId      String
-  user        User     @relation(fields: [userId], references: [id])
+  user        User        @relation(fields: [userId], references: [id])
   title       String
   destination String
   startDate   DateTime
   endDate     DateTime
-  preferences Json     // Store dietary preferences and interests
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  preferences Json // Store dietary preferences and interests
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
   activities  Activity[]
+  isPublic    Boolean     @default(false)
+  sharedWith  TripShare[]
 
   @@index([userId])
   @@map("trip")
 }
 
+model TripShare {
+  id        String   @id @default(cuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  userId    String // The user the trip is shared with
+  role      String   @default("VIEWER") // VIEWER, EDITOR
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([tripId, userId])
+  @@index([tripId])
+  @@index([userId])
+}
+
 model Activity {
-  id          String   @id @default(cuid())
-  tripId      String
-  trip        Trip     @relation(fields: [tripId], references: [id])
-  type        String
-  name        String
-  
-  address     String   @default("")  // Default for existing records
-  latitude    Float?
-  longitude   Float?
-  startTime   DateTime
-  endTime     DateTime
-  notes       String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  tripId    String
+  trip      Trip     @relation(fields: [tripId], references: [id])
+  type      String
+  name      String
+  address   String   @default("") // Default for existing records
+  latitude  Float?
+  longitude Float?
+  startTime DateTime
+  endTime   DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([tripId])
   @@index([latitude, longitude])

@@ -43,7 +43,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId }) => {
     resolver: zodResolver(activityFormSchema),
     defaultValues: {
       name: '',
-      type: 'OTHER',
+      type: 'DINING',
       address: '',
       startTime: '09:00',
       endTime: '10:00',

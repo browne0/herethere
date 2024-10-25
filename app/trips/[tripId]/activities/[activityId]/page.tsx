@@ -10,11 +10,12 @@ export default async function ActivityDetailsPage({
   params: { tripId: string; activityId: string };
 }) {
   const { userId } = await auth();
+  const { tripId, activityId } = await params;
   if (!userId) redirect('/sign-in');
 
   const activity = await prisma.activity.findUnique({
     where: {
-      id: params.activityId,
+      id: activityId,
       trip: {
         userId: userId,
       },
@@ -23,5 +24,5 @@ export default async function ActivityDetailsPage({
 
   if (!activity) redirect('/trips');
 
-  return <ActivityDetails activity={activity} tripId={params.tripId} />;
+  return <ActivityDetails activity={activity} tripId={tripId} />;
 }

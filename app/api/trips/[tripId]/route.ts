@@ -74,3 +74,46 @@ export async function DELETE(req: Request, { params }: RouteParams) {
     });
   }
 }
+
+export async function PATCH(req: Request, { params }: { params: { tripId: string } }) {
+  try {
+    const { userId } = await auth();
+    const { tripId } = await params;
+    if (!userId) {
+      return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    const body = await req.json();
+    const { title, destination, startDate, endDate } = body;
+
+    // Verify the trip belongs to the user
+    const trip = await prisma.trip.findUnique({
+      where: {
+        id: tripId,
+        userId,
+      },
+    });
+
+    if (!trip) {
+      return new NextResponse('Not found', { status: 404 });
+    }
+
+    // Update the trip
+    const updatedTrip = await prisma.trip.update({
+      where: {
+        id: tripId,
+      },
+      data: {
+        title,
+        destination,
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+      },
+    });
+
+    return NextResponse.json(updatedTrip);
+  } catch (error) {
+    console.error('Error updating trip:', error);
+    return new NextResponse('Internal error', { status: 500 });
+  }
+}

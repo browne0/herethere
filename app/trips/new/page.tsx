@@ -1,5 +1,5 @@
 import { Container } from '@/components/layouts/container';
-import { TripForm } from '@/components/trips/trip-form';
+import { TripForm } from '@/components/trips/TripForm';
 
 export default function NewTripPage() {
   return (
