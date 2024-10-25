@@ -1,22 +1,25 @@
+// app/api/trips/[tripId]/activities/route.ts
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
-import { activityFormSchema } from '@/lib/validations/activity';
 
 export async function POST(req: Request, { params }: { params: { tripId: string } }) {
   try {
     const { userId } = await auth();
     const { tripId } = await params;
-
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const trip = await prisma.trip.findUnique({
+    const body = await req.json();
+    const { name, type, startTime, endTime, notes, address, latitude, longitude } = body;
+
+    // Validate the trip belongs to the user
+    const trip = await prisma.trip.findFirst({
       where: {
         id: tripId,
-        userId,
+        userId: userId,
       },
     });
 
@@ -24,27 +27,24 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       return new NextResponse('Trip not found', { status: 404 });
     }
 
-    const body = await req.json();
-    const validatedData = activityFormSchema.parse(body);
-
+    // Create activity with the new schema structure
     const activity = await prisma.activity.create({
       data: {
         tripId,
-        name: validatedData.name,
-        type: validatedData.type,
-        location: validatedData.location,
-        startTime: new Date(validatedData.startTime),
-        endTime: new Date(validatedData.endTime),
-        notes: validatedData.notes,
+        name,
+        type,
+        address,
+        latitude: latitude || null,
+        longitude: longitude || null,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        notes,
       },
     });
 
     return NextResponse.json(activity);
   } catch (error) {
-    console.error('[ACTIVITY_POST]', error);
-    if (error instanceof Error) {
-      return new NextResponse(error.message, { status: 400 });
-    }
-    return new NextResponse('Internal Error', { status: 500 });
+    console.error('Error creating activity:', error);
+    return new NextResponse('Internal error', { status: 500 });
   }
 }

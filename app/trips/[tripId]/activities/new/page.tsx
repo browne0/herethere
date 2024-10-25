@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
-import { ActivityForm } from '@/components/activities/activity-form';
+import { ActivityForm } from '@/components/activities/ActivityForm';
 import { Container } from '@/components/layouts/container';
 import { prisma } from '@/lib/db';
 

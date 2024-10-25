@@ -1,10 +1,19 @@
 generator client {
   provider = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+enum ActivityType {
+  DINING
+  SIGHTSEEING
+  ACCOMMODATION
+  TRANSPORTATION
+  OTHER
 }
 
 model User {
@@ -40,10 +49,13 @@ model Trip {
 model Activity {
   id          String   @id @default(cuid())
   tripId      String
-  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip        Trip     @relation(fields: [tripId], references: [id])
   type        String
   name        String
-  location    Json
+  
+  address     String   @default("")  // Default for existing records
+  latitude    Float?
+  longitude   Float?
   startTime   DateTime
   endTime     DateTime
   notes       String?
@@ -51,5 +63,6 @@ model Activity {
   updatedAt   DateTime @updatedAt
 
   @@index([tripId])
+  @@index([latitude, longitude])
   @@map("activity")
 }

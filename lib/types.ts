@@ -12,20 +12,6 @@ export interface CreateTripInput {
   };
 }
 
-export interface CreateActivityInput {
-  tripId: string;
-  type: 'FOOD' | 'SIGHTSEEING' | 'SPORT' | 'NIGHTLIFE';
-  name: string;
-  location: {
-    lat: number;
-    lng: number;
-    address: string;
-  };
-  startTime: Date;
-  endTime: Date;
-  notes?: string;
-}
-
 export type TripWithActivities = Trip & {
   activities: Activity[];
 };
@@ -41,3 +27,9 @@ export interface UserPreferences {
     push?: boolean;
   };
 }
+
+export type Location = {
+  address: string;
+  latitude?: number;
+  longitude?: number;
+};
