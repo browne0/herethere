@@ -3,9 +3,10 @@ import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
 
-export async function GET(req: Request, { params }: { params: { tripId: string } }) {
+export async function GET(_req: Request, { params }: { params: { tripId: string } }) {
   try {
     const { userId } = await auth();
+    const { tripId } = await params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -13,8 +14,11 @@ export async function GET(req: Request, { params }: { params: { tripId: string }
 
     const trip = await prisma.trip.findUnique({
       where: {
-        id: params.tripId,
+        id: tripId,
         userId,
+      },
+      include: {
+        activities: true,
       },
     });
 

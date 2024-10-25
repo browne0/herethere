@@ -40,7 +40,7 @@ export function TripShareDialog({ trip, activityCount }: TripShareDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const shareUrl = `${window.location.origin}/trips/${trip.id}`;
+  const shareUrl = `${window.location.origin}/trips/${trip.id}/public`;
   const shareText = `Check out my trip to ${trip.title} on WanderWeave!`;
   const encodedShareText = encodeURIComponent(shareText);
   const encodedUrl = encodeURIComponent(shareUrl);
