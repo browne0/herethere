@@ -53,7 +53,7 @@ model TripShare {
   id        String   @id @default(cuid())
   tripId    String
   trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  userId    String // The user the trip is shared with
+  userId    String
   role      String   @default("VIEWER") // VIEWER, EDITOR
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 import { Container } from '@/components/layouts/container';
 import { DeleteTripButton } from '@/components/trips/delete-trip-button';
 import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
+import { TripShareDialog } from '@/components/trips/TripShareDialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -48,6 +49,7 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
     },
     include: {
       activities: true,
+      sharedWith: true,
     },
   });
 
@@ -87,6 +89,7 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
           </Button>
           <DeleteTripButton tripId={trip.id} />
           <TripActionsDropdown trip={trip} />
+          <TripShareDialog trip={trip} activityCount={trip.activities.length} />
         </div>
       </div>
 
