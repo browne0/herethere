@@ -1,4 +1,11 @@
-import { ClerkProvider } from '@clerk/nextjs';
+import {
+  ClerkProvider,
+  SignedIn,
+  SignedOut,
+  SignInButton,
+  UserButton,
+  SignUpButton,
+} from '@clerk/nextjs';
 import type { Metadata } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
@@ -28,7 +35,16 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en">
         <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-          {children}
+          <header>
+            <SignedOut>
+              <SignInButton />
+              <SignUpButton />
+            </SignedOut>
+            <SignedIn>
+              <UserButton />
+            </SignedIn>
+          </header>
+          <main className="min-h-screen p-8">{children}</main>
         </body>
       </html>
     </ClerkProvider>
