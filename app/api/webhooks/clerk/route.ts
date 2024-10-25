@@ -6,7 +6,6 @@ import { prisma } from '@/lib/db';
 import { UserPreferences } from '@/lib/types';
 
 async function POST(req: Request) {
-  console.log('Webhook received'); // Add this
   const CLERK_WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!CLERK_WEBHOOK_SECRET) {
@@ -20,8 +19,6 @@ async function POST(req: Request) {
   const svix_timestamp = headerPayload.get('svix-timestamp');
   const svix_signature = headerPayload.get('svix-signature');
 
-  console.log('Headers:', { svix_id, svix_timestamp, svix_signature }); // Add this
-
   // If there are no headers, error out
   if (!svix_id || !svix_timestamp || !svix_signature) {
     console.error('Missing svix headers'); // Add this
@@ -33,8 +30,6 @@ async function POST(req: Request) {
   // Get the body
   const payload = await req.json();
   const body = JSON.stringify(payload);
-
-  console.log('Webhook body:', body); // Add this
 
   // Create a new Svix instance with your webhook secret
   const wh = new Webhook(CLERK_WEBHOOK_SECRET);
@@ -57,8 +52,6 @@ async function POST(req: Request) {
 
   const { id } = evt.data;
   const eventType = evt.type;
-
-  console.log('Event type:', evt.type); // Add this
 
   console.log(`Webhook with and ID of ${id} and type of ${eventType}`);
   console.log('Webhook body:', body);
@@ -87,7 +80,7 @@ async function POST(req: Request) {
           firstName: first_name || null,
           lastName: last_name || null,
           profileImage: image_url,
-          preferences: defaultPreferences,
+          preferences: {},
         },
         update: {
           email: email_addresses[0].email_address,

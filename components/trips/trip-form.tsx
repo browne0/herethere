@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
@@ -23,6 +25,8 @@ import { tripFormSchema, type TripFormValues } from '@/lib/validations/trip';
 
 export function TripForm() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
+
   const form = useForm<TripFormValues>({
     resolver: zodResolver(tripFormSchema),
     defaultValues: {
@@ -33,22 +37,35 @@ export function TripForm() {
 
   async function onSubmit(values: TripFormValues) {
     try {
+      setLoading(true);
+
+      // Convert dates to ISO strings before sending
+      const payload = {
+        ...values,
+        startDate: values.startDate.toISOString(),
+        endDate: values.endDate.toISOString(),
+      };
+
       const response = await fetch('/api/trips', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(values),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create trip');
+        const errorText = await response.text();
+        throw new Error(errorText);
       }
 
       router.push('/trips');
       router.refresh();
     } catch (error) {
       console.error('Error creating trip:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create trip');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -151,7 +168,9 @@ export function TripForm() {
             )}
           />
         </div>
-        <Button type="submit">Create Trip</Button>
+        <Button type="submit" disabled={loading}>
+          {loading ? 'Creating...' : 'Create Trip'}
+        </Button>
       </form>
     </Form>
   );

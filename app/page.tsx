@@ -1,7 +1,11 @@
 import { auth } from '@clerk/nextjs/server';
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-export default async function Home() {
+import { Container } from '@/components/layouts/container';
+import { Button } from '@/components/ui/button';
+
+export default async function HomePage() {
   const { userId } = await auth();
 
   // If the user is signed in, redirect them to the dashboard
@@ -10,10 +14,22 @@ export default async function Home() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <h1 className="text-4xl font-bold text-primary-600">WanderWeave</h1>
-      <p className="mt-4 text-lg text-gray-600">Plan your perfect trip</p>
-      <button className="btn-primary mt-4">Get Started</button>
-    </div>
+    <Container size="lg">
+      <div className="flex flex-col items-center text-center py-20">
+        <h1 className="text-6xl font-bold mb-6">Plan Your Perfect Trip</h1>
+        <p className="text-xl text-muted-foreground mb-8 max-w-2xl">
+          WanderWeave helps you create personalized travel itineraries with dietary preferences in
+          mind.
+        </p>
+        <div className="flex gap-4">
+          <Button asChild size="lg">
+            <Link href="/sign-up">Get Started</Link>
+          </Button>
+          <Button asChild size="lg" variant="outline">
+            <Link href="/sign-in">Sign In</Link>
+          </Button>
+        </div>
+      </div>
+    </Container>
   );
 }
