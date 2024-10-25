@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  profileImage  String?
+  preferences   Json?     // Store default travel preferences
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  trips         Trip[]
+  @@map("user")
+}
+
+model Trip {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id])
+  title       String
+  destination String
+  startDate   DateTime
+  endDate     DateTime
+  preferences Json     // Store dietary preferences and interests
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  activities  Activity[]
+
+  @@index([userId])
+  @@map("trip")
+}
+
+model Activity {
+  id          String   @id @default(cuid())
+  tripId      String
+  trip        Trip     @relation(fields: [tripId], references: [id])
+  type        String   // FOOD, SIGHTSEEING, SPORT, NIGHTLIFE
+  name        String
+  location    Json     // Store lat/lng and address
+  startTime   DateTime
+  endTime     DateTime
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([tripId])
+  @@map("activity")
+}
