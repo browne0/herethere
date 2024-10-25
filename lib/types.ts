@@ -29,3 +29,15 @@ export interface CreateActivityInput {
 export type TripWithActivities = Trip & {
   activities: Activity[];
 };
+
+export interface UserPreferences {
+  dietary?: string[]; // e.g., ['vegetarian', 'gluten-free']
+  interests?: string[]; // e.g., ['sightseeing', 'food']
+  budget?: 'LOW' | 'MEDIUM' | 'HIGH';
+  travelStyle?: string[]; // e.g., ['adventure', 'relaxation']
+  accessibility?: string[]; // e.g., ['wheelchair', 'step-free']
+  notifications?: {
+    email?: boolean;
+    push?: boolean;
+  };
+}
