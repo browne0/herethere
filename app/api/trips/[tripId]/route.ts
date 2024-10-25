@@ -25,9 +25,16 @@ export async function GET(req: Request, { params }: { params: { tripId: string }
   }
 }
 
-export async function DELETE(req: Request, { params }: { params: { tripId: string } }) {
+interface RouteParams {
+  params: Promise<{
+    tripId: string;
+  }>;
+}
+
+export async function DELETE(req: Request, { params }: RouteParams) {
   try {
     const { userId } = await auth();
+    const { tripId } = await params;
 
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
@@ -36,7 +43,7 @@ export async function DELETE(req: Request, { params }: { params: { tripId: strin
     // Verify the trip belongs to the user
     const trip = await prisma.trip.findUnique({
       where: {
-        id: params.tripId,
+        id: tripId,
         userId,
       },
     });
@@ -45,16 +52,25 @@ export async function DELETE(req: Request, { params }: { params: { tripId: strin
       return new NextResponse('Trip not found', { status: 404 });
     }
 
-    // Delete the trip and all related activities (cascade delete is set up in schema)
+    // Delete all activities first (if not using cascade)
+    await prisma.activity.deleteMany({
+      where: {
+        tripId,
+      },
+    });
+
+    // Then delete the trip
     await prisma.trip.delete({
       where: {
-        id: params.tripId,
+        id: tripId,
       },
     });
 
     return new NextResponse(null, { status: 204 });
   } catch (error) {
     console.error('[TRIP_DELETE]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    return new NextResponse(error instanceof Error ? error.message : 'Internal Error', {
+      status: 500,
+    });
   }
 }

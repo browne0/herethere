@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 
 export default async function TripDetailsPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
+  const { tripId } = await params;
 
   if (!userId) {
     redirect('/sign-in');
@@ -19,7 +20,7 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
 
   const trip = await prisma.trip.findUnique({
     where: {
-      id: params.tripId,
+      id: tripId,
       userId,
     },
     include: {

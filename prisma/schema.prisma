@@ -40,10 +40,10 @@ model Trip {
 model Activity {
   id          String   @id @default(cuid())
   tripId      String
-  trip        Trip     @relation(fields: [tripId], references: [id])
-  type        String   // FOOD, SIGHTSEEING, SPORT, NIGHTLIFE
+  trip        Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  type        String
   name        String
-  location    Json     // Store lat/lng and address
+  location    Json
   startTime   DateTime
   endTime     DateTime
   notes       String?
