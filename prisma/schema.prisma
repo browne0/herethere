@@ -61,6 +61,7 @@ model TripShare {
   @@unique([tripId, userId])
   @@index([tripId])
   @@index([userId])
+  @@map("trip_share")
 }
 
 model Activity {
