@@ -1,21 +1,3 @@
-import { Trip, Activity } from '@prisma/client';
-
-export interface CreateTripInput {
-  title: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
-  preferences: {
-    dietary: string[];
-    interests: string[];
-    budget: 'LOW' | 'MEDIUM' | 'HIGH';
-  };
-}
-
-export type TripWithActivities = Trip & {
-  activities: Activity[];
-};
-
 export interface UserPreferences {
   dietary?: string[]; // e.g., ['vegetarian', 'gluten-free']
   interests?: string[]; // e.g., ['sightseeing', 'food']
@@ -28,8 +10,25 @@ export interface UserPreferences {
   };
 }
 
-export type Location = {
+export interface Location {
   address: string;
-  latitude?: number;
-  longitude?: number;
-};
+  latitude: number;
+  longitude: number;
+  placeId?: string;
+  name?: string;
+}
+
+export interface MapViewport {
+  center: {
+    lat: number;
+    lng: number;
+  };
+  zoom: number;
+}
+
+export type ActivitySearchType =
+  | 'DINING'
+  | 'SIGHTSEEING'
+  | 'ACCOMMODATION'
+  | 'TRANSPORTATION'
+  | 'OTHER';

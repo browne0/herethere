@@ -70,9 +70,10 @@ model Activity {
   trip      Trip     @relation(fields: [tripId], references: [id])
   type      String
   name      String
-  address   String   @default("") // Default for existing records
-  latitude  Float?
-  longitude Float?
+  address   String
+  latitude  Float
+  longitude Float
+  placeId   String?
   startTime DateTime
   endTime   DateTime
   notes     String?
@@ -80,6 +81,5 @@ model Activity {
   updatedAt DateTime @updatedAt
 
   @@index([tripId])
-  @@index([latitude, longitude])
   @@map("activity")
 }

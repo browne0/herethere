@@ -1,6 +1,7 @@
+// components/activities/ActivityForm.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Activity } from '@prisma/client';
@@ -9,8 +10,11 @@ import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 
+import { LocationSearch } from '@/components/maps/LocationSearch';
+import { MapDisplay } from '@/components/maps/MapDisplay';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
+import { Card } from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -29,10 +33,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Location } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { activityFormSchema, type ActivityFormValues } from '@/lib/validations/activity';
 
-type ActivityType = 'OTHER' | 'DINING' | 'SIGHTSEEING' | 'ACCOMMODATION' | 'TRANSPORTATION';
 interface ActivityFormProps {
   tripId: string;
   initialData?: Activity;
@@ -42,14 +46,28 @@ interface ActivityFormProps {
 export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData, onCancel }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
+    initialData
+      ? {
+          address: initialData.address,
+          latitude: initialData.latitude,
+          longitude: initialData.longitude,
+          placeId: initialData.placeId || undefined,
+          name: initialData.name,
+        }
+      : null
+  );
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
     defaultValues: initialData
       ? {
           name: initialData.name,
-          type: initialData.type as ActivityType,
+          type: initialData.type as ActivityFormValues['type'],
           address: initialData.address,
+          latitude: initialData.latitude,
+          longitude: initialData.longitude,
+          placeId: initialData.placeId || undefined,
           startDate: initialData.startTime,
           endDate: initialData.endTime,
           startTime: format(initialData.startTime, 'HH:mm'),
@@ -60,17 +78,37 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
           name: '',
           type: 'DINING',
           address: '',
+          latitude: 0,
+          longitude: 0,
           startTime: '09:00',
           endTime: '10:00',
           notes: '',
         },
   });
 
+  const handleLocationSelect = useCallback(
+    (location: Location) => {
+      setSelectedLocation(location);
+
+      // Use the location name or address as the activity name
+      const activityName = location.name || location.address.split(',')[0];
+
+      form.reset({
+        ...form.getValues(),
+        name: activityName,
+        address: location.address,
+        latitude: location.latitude,
+        longitude: location.longitude,
+        placeId: location.placeId,
+      });
+    },
+    [form]
+  );
+
   const onSubmit = async (data: ActivityFormValues) => {
     try {
       setLoading(true);
 
-      // Combine date and time
       const startDateTime = new Date(data.startDate);
       const [startHours, startMinutes] = data.startTime.split(':');
       startDateTime.setHours(parseInt(startHours), parseInt(startMinutes));
@@ -83,6 +121,9 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
         name: data.name,
         type: data.type,
         address: data.address,
+        latitude: data.latitude,
+        longitude: data.longitude,
+        placeId: data.placeId,
         startTime: startDateTime.toISOString(),
         endTime: endDateTime.toISOString(),
         notes: data.notes,
@@ -119,23 +160,32 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
     }
   };
 
+  const latitude = form.watch('latitude');
+  const longitude = form.watch('longitude');
+  const hasLocation = latitude !== 0 && longitude !== 0;
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="name"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Activity Name</FormLabel>
-              <FormControl>
-                <Input placeholder="Museum Visit" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
+        <FormItem>
+          <FormLabel>Location Search</FormLabel>
+          {selectedLocation && (
+            <div className="text-sm text-muted-foreground mb-2">
+              Selected: {selectedLocation.name || selectedLocation.address.split(',')[0]}
+            </div>
           )}
-        />
+          <LocationSearch
+            onLocationSelect={handleLocationSelect}
+            defaultValue={initialData?.address}
+            searchType={form.watch('type')}
+          />
+        </FormItem>
 
+        {selectedLocation && (
+          <Card className="p-4">
+            <MapDisplay location={selectedLocation} zoom={16} />
+          </Card>
+        )}
         <FormField
           control={form.control}
           name="type"
@@ -149,27 +199,13 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="OTHER">Other</SelectItem>
                   <SelectItem value="DINING">Dining</SelectItem>
                   <SelectItem value="SIGHTSEEING">Sightseeing</SelectItem>
                   <SelectItem value="ACCOMMODATION">Accommodation</SelectItem>
                   <SelectItem value="TRANSPORTATION">Transportation</SelectItem>
+                  <SelectItem value="OTHER">Other</SelectItem>
                 </SelectContent>
               </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Location</FormLabel>
-              <FormControl>
-                <Input placeholder="123 Main St, City" {...field} />
-              </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -297,7 +333,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
               Cancel
             </Button>
           )}
-          <Button type="submit" disabled={loading}>
+          <Button type="submit" disabled={loading || !hasLocation}>
             {loading
               ? initialData
                 ? 'Updating...'

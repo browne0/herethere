@@ -15,7 +15,7 @@ interface EditActivityPageProps {
 
 export default async function EditActivityPage({ params }: EditActivityPageProps) {
   const { userId } = await auth();
-  const { tripId, activityId } = params;
+  const { tripId, activityId } = await params;
 
   if (!userId) {
     redirect('/sign-in');
