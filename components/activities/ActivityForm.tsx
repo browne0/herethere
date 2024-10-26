@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Activity } from '@prisma/client';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -31,24 +32,38 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { activityFormSchema, type ActivityFormValues } from '@/lib/validations/activity';
 
+type ActivityType = 'OTHER' | 'DINING' | 'SIGHTSEEING' | 'ACCOMMODATION' | 'TRANSPORTATION';
 interface ActivityFormProps {
   tripId: string;
+  initialData?: Activity;
+  onCancel?: () => void;
 }
 
-export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId }) => {
+export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData, onCancel }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
-    defaultValues: {
-      name: '',
-      type: 'DINING',
-      address: '',
-      startTime: '09:00',
-      endTime: '10:00',
-      notes: '',
-    },
+    defaultValues: initialData
+      ? {
+          name: initialData.name,
+          type: initialData.type as ActivityType,
+          address: initialData.address,
+          startDate: initialData.startTime,
+          endDate: initialData.endTime,
+          startTime: format(initialData.startTime, 'HH:mm'),
+          endTime: format(initialData.endTime, 'HH:mm'),
+          notes: initialData.notes || '',
+        }
+      : {
+          name: '',
+          type: 'DINING',
+          address: '',
+          startTime: '09:00',
+          endTime: '10:00',
+          notes: '',
+        },
   });
 
   const onSubmit = async (data: ActivityFormValues) => {
@@ -64,19 +79,25 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId }) => {
       const [endHours, endMinutes] = data.endTime.split(':');
       endDateTime.setHours(parseInt(endHours), parseInt(endMinutes));
 
-      const response = await fetch(`/api/trips/${tripId}/activities`, {
-        method: 'POST',
+      const payload = {
+        name: data.name,
+        type: data.type,
+        address: data.address,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+        notes: data.notes,
+      };
+
+      const url = initialData
+        ? `/api/trips/${tripId}/activities/${initialData.id}`
+        : `/api/trips/${tripId}/activities`;
+
+      const response = await fetch(url, {
+        method: initialData ? 'PATCH' : 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: data.name,
-          type: data.type,
-          address: data.address,
-          startTime: startDateTime.toISOString(),
-          endTime: endDateTime.toISOString(),
-          notes: data.notes,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -84,11 +105,15 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId }) => {
         throw new Error(error);
       }
 
-      router.push(`/trips/${tripId}`);
+      if (initialData && onCancel) {
+        onCancel();
+      } else {
+        router.push(`/trips/${tripId}`);
+      }
       router.refresh();
     } catch (error) {
-      console.error('Error creating activity:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create activity');
+      console.error('Error saving activity:', error);
+      alert(error instanceof Error ? error.message : 'Failed to save activity');
     } finally {
       setLoading(false);
     }
@@ -266,10 +291,25 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId }) => {
           )}
         />
 
-        <Button type="submit" disabled={loading}>
-          {loading ? 'Creating...' : 'Create Activity'}
-        </Button>
+        <div className="flex justify-end space-x-2">
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+          <Button type="submit" disabled={loading}>
+            {loading
+              ? initialData
+                ? 'Updating...'
+                : 'Creating...'
+              : initialData
+                ? 'Update Activity'
+                : 'Create Activity'}
+          </Button>
+        </div>
       </form>
     </Form>
   );
 };
+
+export default ActivityForm;
