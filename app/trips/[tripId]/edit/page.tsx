@@ -14,13 +14,14 @@ interface EditTripPageProps {
 
 export default async function EditTripPage({ params }: EditTripPageProps) {
   const { userId } = await auth();
+  const { tripId } = await params;
   if (!userId) {
     redirect('/sign-in');
   }
 
   const trip = await prisma.trip.findUnique({
     where: {
-      id: params.tripId,
+      id: tripId,
       userId,
     },
   });
