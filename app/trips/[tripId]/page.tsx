@@ -8,6 +8,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
 import { Container } from '@/components/layouts/container';
+import { PlacePhotos } from '@/components/places/PlacePhotos';
 import { DeleteTripButton } from '@/components/trips/delete-trip-button';
 import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
 import { TripShareDialog } from '@/components/trips/TripShareDialog';
@@ -103,6 +104,13 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
       <div className="space-y-8">
         {/* Trip Overview Card */}
         <Card className="bg-muted/50">
+          {trip.placeId && (
+            <PlacePhotos
+              placeId={trip.placeId}
+              className="w-full h-48 md:h-64 rounded-t-lg"
+              maxPhotos={1}
+            />
+          )}
           <CardHeader>
             <div className="flex justify-between items-start">
               <div>
