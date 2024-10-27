@@ -5,7 +5,7 @@ import { prisma } from '@/lib/db';
 import { activityFormSchema } from '@/lib/validations/activity';
 
 export async function DELETE(
-  req: Request,
+  _req: Request,
   { params }: { params: { tripId: string; activityId: string } }
 ) {
   try {
@@ -104,6 +104,9 @@ export async function PATCH(
         name: json.name,
         type: json.type,
         address: json.address,
+        latitude: json.latitude || null, // Add these
+        longitude: json.longitude || null, // Add these
+        placeId: json.placeId || null, // Add this
         startTime: new Date(json.startTime),
         endTime: new Date(json.endTime),
         notes: json.notes,

@@ -3,9 +3,10 @@ import React from 'react';
 
 import { type Activity } from '@prisma/client';
 import { format } from 'date-fns';
-import { ArrowLeft, Clock, MapPin, Edit, Trash2 } from 'lucide-react';
+import { ArrowLeft, Clock, MapPin, Edit, Trash2, Navigation2, Globe } from 'lucide-react';
 import Link from 'next/link';
 
+import { PlacePhotos } from '@/components/places/PlacePhotos';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -34,7 +36,6 @@ const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) =
       });
 
       if (response.ok) {
-        // Redirect to trip details page after successful deletion
         window.location.href = `/trips/${tripId}`;
       }
     } catch (error) {
@@ -42,9 +43,24 @@ const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) =
     }
   };
 
+  const getActivityTypeColor = (type: string) => {
+    const types: Record<string, { color: string; bg: string }> = {
+      DINING: { color: 'text-orange-700', bg: 'bg-orange-50' },
+      SIGHTSEEING: { color: 'text-blue-700', bg: 'bg-blue-50' },
+      ACCOMMODATION: { color: 'text-purple-700', bg: 'bg-purple-50' },
+      TRANSPORTATION: { color: 'text-green-700', bg: 'bg-green-50' },
+      OTHER: { color: 'text-gray-700', bg: 'bg-gray-50' },
+    };
+    return types[type] || types.OTHER;
+  };
+
+  const typeStyle = getActivityTypeColor(activity.type);
+
+  console.log(activity);
+
   return (
-    <div className="max-w-2xl mx-auto p-4">
-      <div className="mb-6">
+    <div className="max-w-4xl mx-auto p-4">
+      <div className="mb-6 flex justify-between items-center">
         <Link
           href={`/trips/${tripId}`}
           className="inline-flex items-center text-gray-600 hover:text-gray-900"
@@ -52,62 +68,117 @@ const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) =
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Trip
         </Link>
+        <div className="space-x-2">
+          <Link href={`/trips/${tripId}/activities/${activity.id}/edit`}>
+            <Button variant="outline" size="sm">
+              <Edit className="w-4 h-4 mr-2" />
+              Edit
+            </Button>
+          </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setDeleteDialogOpen(true)}
+            className="text-destructive hover:text-destructive"
+          >
+            <Trash2 className="w-4 h-4 mr-2" />
+            Delete
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex justify-between items-center">
-            <span>{activity.name}</span>
-            <div className="space-x-2">
-              <Link href={`/trips/${tripId}/activities/${activity.id}/edit`}>
-                <Button variant="outline" size="sm">
-                  <Edit className="w-4 h-4 mr-2" />
-                  Edit
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="md:col-span-2 space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="space-y-2">
+                <Badge variant="secondary" className={`${typeStyle.color} ${typeStyle.bg}`}>
+                  {activity.type}
+                </Badge>
+                <CardTitle>{activity.name}</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center text-muted-foreground">
+                <Clock className="w-4 h-4 mr-2 shrink-0" />
+                <span>
+                  {format(new Date(activity.startTime), 'MMM d, yyyy h:mm a')} -{' '}
+                  {format(new Date(activity.endTime), 'h:mm a')}
+                </span>
+              </div>
+
+              {activity.address && (
+                <div className="flex items-start text-muted-foreground">
+                  <MapPin className="w-4 h-4 mr-2 shrink-0 mt-1" />
+                  <span>{activity.address}</span>
+                </div>
+              )}
+
+              {activity.notes && (
+                <div className="pt-4 border-t">
+                  <h3 className="font-semibold mb-2">Notes</h3>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{activity.notes}</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {activity.placeId && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Photos</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <PlacePhotos placeId={activity.placeId} maxPhotos={3} className="h-64" />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Location</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="aspect-square rounded-lg overflow-hidden bg-muted relative">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  frameBorder="0"
+                  style={{ border: 0 }}
+                  src={`https://www.google.com/maps/embed/v1/place?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&q=${activity.latitude},${activity.longitude}`}
+                  allowFullScreen
+                />
+              </div>
+              <div className="mt-4 space-y-2">
+                <Button variant="outline" className="w-full" asChild>
+                  <a
+                    href={`https://www.google.com/maps/dir/?api=1&destination=${activity.latitude},${activity.longitude}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Navigation2 className="w-4 h-4 mr-2" />
+                    Get Directions
+                  </a>
                 </Button>
-              </Link>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setDeleteDialogOpen(true)}
-                className="text-red-600 hover:text-red-700"
-              >
-                <Trash2 className="w-4 h-4 mr-2" />
-                Delete
-              </Button>
-            </div>
-          </CardTitle>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
-          <div className="flex items-center text-gray-600">
-            <Clock className="w-4 h-4 mr-2" />
-            <span>
-              {format(new Date(activity.startTime), 'MMM d, yyyy h:mm a')} -
-              {format(new Date(activity.endTime), 'h:mm a')}
-            </span>
-          </div>
-
-          {activity.address && (
-            <div className="flex items-center text-gray-600">
-              <MapPin className="w-4 h-4 mr-2" />
-              <span>{activity.address}</span>
-            </div>
-          )}
-          {activity.notes && (
-            <div className="mt-4">
-              <h3 className="font-semibold mb-2">Notes</h3>
-              <p className="text-gray-600 whitespace-pre-wrap">{activity.notes}</p>
-            </div>
-          )}
-
-          <div className="mt-4">
-            <h3 className="font-semibold mb-2">Activity Type</h3>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-gray-100">
-              {activity.type}
-            </span>
-          </div>
-        </CardContent>
-      </Card>
+                {activity.placeId && (
+                  <Button variant="outline" className="w-full" asChild>
+                    <a
+                      href={`https://www.google.com/maps/place/?q=place_id:${activity.placeId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Globe className="w-4 h-4 mr-2" />
+                      View on Google Maps
+                    </a>
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
@@ -119,7 +190,10 @@ const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) =
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive hover:bg-destructive/90"
+            >
               Delete
             </AlertDialogAction>
           </AlertDialogFooter>

@@ -15,15 +15,23 @@ interface PlacePhotosProps {
   placeId: string;
   className?: string;
   maxPhotos?: number;
+  aspectRatio?: 'square' | 'video';
 }
 
-export const PlacePhotos = ({ placeId, className = '', maxPhotos = 1 }: PlacePhotosProps) => {
+export const PlacePhotos = ({
+  placeId,
+  className = '',
+  maxPhotos = 1,
+  aspectRatio = 'square',
+}: PlacePhotosProps) => {
   const [photos, setPhotos] = useState<PlacePhoto[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchPlacePhotos = async () => {
+      if (!placeId) return;
+
       try {
         setLoading(true);
         const response = await fetch(`/api/places/${placeId}/photos?maxPhotos=${maxPhotos}`);
@@ -37,39 +45,35 @@ export const PlacePhotos = ({ placeId, className = '', maxPhotos = 1 }: PlacePho
       }
     };
 
-    if (placeId) {
-      fetchPlacePhotos();
-    }
+    fetchPlacePhotos();
   }, [placeId, maxPhotos]);
 
   if (loading) {
-    return <Skeleton className={`w-full h-48 rounded-lg ${className}`} />;
+    return (
+      <div className={`relative bg-muted ${className}`}>
+        <div className="absolute inset-0 animate-pulse bg-muted-foreground/10" />
+      </div>
+    );
   }
 
   if (error || photos.length === 0) {
     return (
-      <div
-        className={`w-full h-48 bg-gray-100 flex items-center justify-center rounded-lg ${className}`}
-      >
-        <p className="text-gray-500">No photos available</p>
+      <div className={`bg-muted flex items-center justify-center ${className}`}>
+        <div className="text-sm text-muted-foreground">No photo available</div>
       </div>
     );
   }
 
   return (
-    <div className={`grid gap-2 ${photos.length > 1 ? 'grid-cols-2' : 'grid-cols-1'} ${className}`}>
-      {photos.map((photo, index) => (
-        <div key={index} className="relative aspect-video overflow-hidden rounded-lg">
-          <Image
-            src={`/api/places/photo/${photo.photoReference}`}
-            alt="Place photo"
-            className="object-cover"
-            fill
-            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-            priority={index === 0}
-          />
-        </div>
-      ))}
+    <div className={`relative overflow-hidden ${className}`}>
+      <Image
+        src={`/api/places/photo/${photos[0].photoReference}`}
+        alt="Place photo"
+        className="object-cover transition-transform group-hover:scale-105"
+        fill
+        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+        priority
+      />
     </div>
   );
 };

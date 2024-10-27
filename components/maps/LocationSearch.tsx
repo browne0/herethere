@@ -89,7 +89,7 @@ export function LocationSearch({
           { lat: cityBounds.sw.lat, lng: cityBounds.sw.lng },
           { lat: cityBounds.ne.lat, lng: cityBounds.ne.lng }
         );
-        searchOptions.locationBias = bounds;
+        searchOptions.locationRestriction = bounds;
       }
 
       const response = await autocompleteService.current.getPlacePredictions(searchOptions);
