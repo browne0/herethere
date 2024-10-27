@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useLoadScript } from '@react-google-maps/api';
 import type { Libraries } from '@react-google-maps/api/dist/utils/make-load-script-url';
-import { Search } from 'lucide-react';
+import { Search, Loader2 } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,8 @@ export function LocationSearch({
 }: LocationSearchProps) {
   const [searchInput, setSearchInput] = useState(defaultValue || '');
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
@@ -39,9 +41,14 @@ export function LocationSearch({
 
   useEffect(() => {
     if (isLoaded && !autocompleteService.current) {
-      autocompleteService.current = new google.maps.places.AutocompleteService();
-      const dummyDiv = document.createElement('div');
-      placesService.current = new google.maps.places.PlacesService(dummyDiv);
+      try {
+        autocompleteService.current = new google.maps.places.AutocompleteService();
+        const dummyDiv = document.createElement('div');
+        placesService.current = new google.maps.places.PlacesService(dummyDiv);
+      } catch (err) {
+        setError('Failed to initialize location search');
+        console.error('Places service initialization error:', err);
+      }
     }
   }, [isLoaded]);
 
@@ -55,7 +62,7 @@ export function LocationSearch({
       case 'regions':
         return ['(regions)'];
       case 'cities':
-        return ['(regions)']; // Replace '(cities)' with '(regions)'
+        return ['(regions)'];
       default:
         return undefined;
     }
@@ -63,49 +70,53 @@ export function LocationSearch({
 
   const handleSearch = async (value: string) => {
     setSearchInput(value);
+    setError(''); // Clear any previous errors
+
     if (!value.trim() || !autocompleteService.current) {
       setSuggestions([]);
       return;
     }
 
     try {
+      setLoading(true);
       const searchOptions: google.maps.places.AutocompletionRequest = {
         input: value,
         types: getTypeRestrictions(searchType),
       };
 
-      // Add bounds if available
       if (cityBounds) {
         const bounds = new google.maps.LatLngBounds(
           { lat: cityBounds.sw.lat, lng: cityBounds.sw.lng },
           { lat: cityBounds.ne.lat, lng: cityBounds.ne.lng }
         );
-
-        // Use locationRestriction if you want to limit results strictly to the bounds
-        // searchOptions.locationRestriction = bounds;
-
-        // Or use locationBias for a softer bias toward the area
         searchOptions.locationBias = bounds;
       }
 
       const response = await autocompleteService.current.getPlacePredictions(searchOptions);
-
-      // Filter suggestions based on activity type if provided
       const filteredPredictions = response?.predictions || [];
-      if (searchType) {
-        // We'll do detailed type checking when selecting the place
-        setSuggestions(filteredPredictions);
-      } else {
-        setSuggestions(filteredPredictions);
+      setSuggestions(filteredPredictions);
+
+      // Show a message if no results found
+      if (filteredPredictions.length === 0) {
+        setError('No locations found. Try a different search.');
       }
     } catch (error) {
       console.error('Failed to fetch suggestions:', error);
+      setError('Unable to search locations. Please try again.');
       setSuggestions([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleSelect = async (suggestion: google.maps.places.AutocompletePrediction) => {
-    if (!placesService.current) return;
+    if (!placesService.current) {
+      setError('Location service unavailable');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
 
     placesService.current.getDetails(
       {
@@ -113,6 +124,8 @@ export function LocationSearch({
         fields: ['name', 'formatted_address', 'geometry', 'place_id'],
       },
       (result, status) => {
+        setLoading(false);
+
         if (status === google.maps.places.PlacesServiceStatus.OK && result?.geometry?.location) {
           const location: Location = {
             address: result.formatted_address || suggestion.description,
@@ -125,15 +138,25 @@ export function LocationSearch({
           setSearchInput(location.address);
           setSuggestions([]);
           onLocationSelect(location);
+        } else {
+          setError('Failed to get location details. Please try again.');
+          console.error('Places service error:', status);
         }
       }
     );
   };
 
-  if (loadError) return <div>Error loading Google Maps</div>;
+  // Handle Google Maps loading error
+  if (loadError) {
+    return (
+      <div className="p-4 text-sm text-red-500 bg-red-50 rounded-md">
+        Unable to load location search. Please refresh the page or try again later.
+      </div>
+    );
+  }
 
   return (
-    <div className="relative">
+    <div className="relative space-y-2">
       <div className="relative">
         <Search
           className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -144,9 +167,18 @@ export function LocationSearch({
           value={searchInput}
           onChange={e => handleSearch(e.target.value)}
           placeholder="Search for a location"
-          className="pl-10"
+          className={`pl-10 ${error ? 'border-red-300' : ''}`}
+          disabled={!isLoaded}
         />
+        {loading && (
+          <Loader2
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 animate-spin text-gray-400"
+            size={20}
+          />
+        )}
       </div>
+
+      {error && <div className="text-sm text-red-500">{error}</div>}
 
       {suggestions.length > 0 && (
         <Card className="absolute z-50 w-full mt-1 overflow-hidden">

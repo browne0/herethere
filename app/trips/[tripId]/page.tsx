@@ -17,14 +17,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { prisma } from '@/lib/db';
 
-function getDaysUntilTrip(startDate: Date) {
-  const today = new Date();
-  const start = new Date(startDate);
-  const diffTime = start.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return diffDays;
-}
-
 type BadgeVariant = ComponentProps<typeof Badge>['variant'];
 
 function getTripTimingText(
