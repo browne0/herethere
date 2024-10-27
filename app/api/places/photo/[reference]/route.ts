@@ -4,10 +4,11 @@ import { NextResponse } from 'next/server';
 const client = new Client({});
 
 export async function GET(request: Request, { params }: { params: { reference: string } }) {
+  const { reference } = await params;
   try {
     const photoResponse = await client.placePhoto({
       params: {
-        photoreference: params.reference,
+        photoreference: reference,
         maxwidth: 800, // Adjust based on your needs
         key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
       },

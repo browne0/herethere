@@ -1,6 +1,6 @@
-# WanderWeave
+# WanderAI
 
-WanderWeave is an AI-powered travel itinerary planner focusing on dietary restrictions and personalized experiences.
+WanderAI is an AI-powered travel itinerary planner focusing on dietary restrictions and personalized experiences.
 
 ## Tech Stack
 
@@ -24,8 +24,8 @@ Before you begin, ensure you have installed:
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/wanderweave.git
-cd wanderweave
+git clone https://github.com/yourusername/WanderAI.git
+cd WanderAI
 ```
 
 2. Install dependencies:
@@ -38,7 +38,7 @@ npm install
 
 ```env
 # Database
-DATABASE_URL="postgresql://postgres:your_password@localhost:5432/wanderweave"
+DATABASE_URL="postgresql://postgres:your_password@localhost:5432/WanderAI"
 
 # Clerk Authentication
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
@@ -102,7 +102,7 @@ npm run prisma:studio
 ## Project Structure
 
 ```
-wanderweave/
+WanderAI/
 ├── app/                    # Next.js app directory
 │   ├── api/               # API routes
 │   ├── trips/             # Trip-related pages
@@ -132,7 +132,7 @@ This project uses Clerk for authentication. To set up:
 1. Create a PostgreSQL database:
 
 ```sql
-CREATE DATABASE wanderweave;
+CREATE DATABASE WanderAI;
 ```
 
 2. Update your DATABASE_URL in `.env`

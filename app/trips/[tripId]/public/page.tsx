@@ -13,9 +13,12 @@ export default async function PublicTripPage({
 }: { 
   params: { tripId: string } 
 }) {
+
+  const {tripId} = await params;
+
   const trip = await prisma.trip.findUnique({
     where: {
-      id: params.tripId,
+      id: tripId,
       isPublic: true, // Only fetch public trips
     },
     include: {
@@ -121,7 +124,7 @@ export default async function PublicTripPage({
       </div>
 
       <div className="mt-8 text-center text-sm text-muted-foreground">
-        Created with WanderWeave
+        Created with WanderAI
       </div>
     </Container>
   );
