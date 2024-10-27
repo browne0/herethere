@@ -2,7 +2,6 @@ import { auth } from '@clerk/nextjs/server';
 import { Trip } from '@prisma/client';
 import { format } from 'date-fns';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 
 import { Container } from '@/components/layouts/container';
 import { Button } from '@/components/ui/button';
@@ -11,9 +10,7 @@ import { prisma } from '@/lib/db';
 export default async function TripsPage() {
   const { userId } = await auth();
 
-  if (!userId) {
-    redirect('/sign-in');
-  }
+  if (!userId) return null;
 
   const trips = await prisma.trip.findMany({
     where: {

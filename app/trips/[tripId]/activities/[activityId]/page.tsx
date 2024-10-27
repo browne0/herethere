@@ -11,7 +11,7 @@ export default async function ActivityDetailsPage({
 }) {
   const { userId } = await auth();
   const { tripId, activityId } = await params;
-  if (!userId) redirect('/sign-in');
+  if (!userId) return null;
 
   const activity = await prisma.activity.findUnique({
     where: {

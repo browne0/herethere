@@ -8,7 +8,7 @@ import { Search } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Location, ActivitySearchType } from '@/lib/types';
+import { Location, ActivitySearchType, CityBounds } from '@/lib/types';
 
 const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
 
@@ -16,12 +16,16 @@ interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
   defaultValue?: string;
   searchType?: ActivitySearchType;
+  cityBounds?: CityBounds;
+  cityPlaceId?: string;
 }
 
 export function LocationSearch({
   onLocationSelect,
   defaultValue,
   searchType,
+  cityBounds,
+  cityPlaceId,
 }: LocationSearchProps) {
   const [searchInput, setSearchInput] = useState(defaultValue || '');
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
@@ -41,6 +45,22 @@ export function LocationSearch({
     }
   }, [isLoaded]);
 
+  const getTypeRestrictions = (searchType: string | undefined): string[] | undefined => {
+    if (!searchType) return undefined;
+    switch (searchType) {
+      case 'address':
+        return ['address'];
+      case 'establishment':
+        return ['establishment'];
+      case 'regions':
+        return ['(regions)'];
+      case 'cities':
+        return ['(regions)']; // Replace '(cities)' with '(regions)'
+      default:
+        return undefined;
+    }
+  };
+
   const handleSearch = async (value: string) => {
     setSearchInput(value);
     if (!value.trim() || !autocompleteService.current) {
@@ -49,8 +69,35 @@ export function LocationSearch({
     }
 
     try {
-      const response = await autocompleteService.current.getPlacePredictions({ input: value });
-      setSuggestions(response?.predictions || []);
+      const searchOptions: google.maps.places.AutocompletionRequest = {
+        input: value,
+        types: getTypeRestrictions(searchType),
+      };
+
+      // Add bounds if available
+      if (cityBounds) {
+        const bounds = new google.maps.LatLngBounds(
+          { lat: cityBounds.sw.lat, lng: cityBounds.sw.lng },
+          { lat: cityBounds.ne.lat, lng: cityBounds.ne.lng }
+        );
+
+        // Use locationRestriction if you want to limit results strictly to the bounds
+        // searchOptions.locationRestriction = bounds;
+
+        // Or use locationBias for a softer bias toward the area
+        searchOptions.locationBias = bounds;
+      }
+
+      const response = await autocompleteService.current.getPlacePredictions(searchOptions);
+
+      // Filter suggestions based on activity type if provided
+      const filteredPredictions = response?.predictions || [];
+      if (searchType) {
+        // We'll do detailed type checking when selecting the place
+        setSuggestions(filteredPredictions);
+      } else {
+        setSuggestions(filteredPredictions);
+      }
     } catch (error) {
       console.error('Failed to fetch suggestions:', error);
       setSuggestions([]);

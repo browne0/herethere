@@ -8,7 +8,7 @@ export default async function TripPrintPage({ params }: { params: { tripId: stri
   const { userId } = await auth();
   const { tripId } = await params;
   if (!userId) {
-    redirect('/sign-in');
+    return null;
   }
 
   const trip = await prisma.trip.findUnique({

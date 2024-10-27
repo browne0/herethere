@@ -88,6 +88,7 @@ export async function PATCH(req: Request, { params }: { params: { tripId: string
     }
 
     const body = await req.json();
+
     const { title, destination, startDate, endDate } = body;
 
     // Verify the trip belongs to the user
@@ -112,6 +113,7 @@ export async function PATCH(req: Request, { params }: { params: { tripId: string
         destination,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
+        cityBounds: {},
       },
     });
 

@@ -15,7 +15,8 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && prisma generate"
+    "db:reset": "prisma db push --force-reset && prisma generate",
+    "db:sync-users": "tsx scripts/sync-dev-users.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.0.2",

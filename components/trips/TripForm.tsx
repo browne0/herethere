@@ -20,8 +20,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { City } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { tripFormSchema, type TripFormValues } from '@/lib/validations/trip';
+import { TripFormData, tripFormSchema } from '@/lib/validations/trip';
+
+import { CitySearch } from '../maps/CitySearch';
 
 interface TripFormProps {
   initialData?: {
@@ -36,8 +39,9 @@ interface TripFormProps {
 export function TripForm({ initialData }: TripFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
-  const form = useForm<TripFormValues>({
+  const form = useForm<TripFormData>({
     resolver: zodResolver(tripFormSchema),
     defaultValues: {
       title: initialData?.title ?? '',
@@ -47,15 +51,21 @@ export function TripForm({ initialData }: TripFormProps) {
     },
   });
 
-  async function onSubmit(values: TripFormValues) {
+  async function onSubmit(values: TripFormData) {
     try {
       setLoading(true);
 
-      // Convert dates to ISO strings before sending
-      const payload = {
+      if (!selectedCity) {
+        console.log('No city selected');
+        throw new Error('Please select a destination city');
+      }
+
+      const payload: TripFormData = {
         ...values,
-        startDate: values.startDate.toISOString(),
-        endDate: values.endDate.toISOString(),
+        cityBounds: selectedCity.bounds,
+        placeId: selectedCity.placeId,
+        latitude: selectedCity.latitude,
+        longitude: selectedCity.longitude,
       };
 
       const url = initialData ? `/api/trips/${initialData.id}` : '/api/trips';
@@ -85,6 +95,11 @@ export function TripForm({ initialData }: TripFormProps) {
     }
   }
 
+  const handleCitySelect = (city: City) => {
+    setSelectedCity(city);
+    form.setValue('destination', city.name);
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
@@ -107,9 +122,7 @@ export function TripForm({ initialData }: TripFormProps) {
           render={({ field }) => (
             <FormItem>
               <FormLabel>Destination</FormLabel>
-              <FormControl>
-                <Input placeholder="Paris, France" {...field} />
-              </FormControl>
+              <CitySearch onCitySelect={handleCitySelect} defaultValue={field.value} />
               <FormMessage />
             </FormItem>
           )}

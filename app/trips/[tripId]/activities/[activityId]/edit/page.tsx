@@ -18,7 +18,7 @@ export default async function EditActivityPage({ params }: EditActivityPageProps
   const { tripId, activityId } = await params;
 
   if (!userId) {
-    redirect('/sign-in');
+    return null;
   }
 
   // Fetch activity and verify it belongs to a trip owned by the user
@@ -43,26 +43,10 @@ export default async function EditActivityPage({ params }: EditActivityPageProps
     redirect(`/trips/${tripId}`);
   }
 
-  // Transform the activity data to match the form's expected shape
-  const formData = {
-    id: activity.id,
-    name: activity.name,
-    tripId: activity.tripId,
-    type: activity.type as 'OTHER' | 'DINING' | 'SIGHTSEEING' | 'ACCOMMODATION' | 'TRANSPORTATION',
-    address: activity.address,
-    latitude: activity.latitude,
-    longitude: activity.longitude,
-    startTime: activity.startTime,
-    endTime: activity.endTime,
-    notes: activity.notes,
-    createdAt: activity.createdAt,
-    updatedAt: activity.updatedAt,
-  };
-
   return (
     <Container size="md">
       <h1 className="text-4xl font-bold mb-8">Edit Activity</h1>
-      <ActivityForm initialData={formData} tripId={tripId} />
+      <ActivityForm tripId={tripId} initialData={activity} />
     </Container>
   );
 }

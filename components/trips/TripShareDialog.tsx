@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Trip } from '@prisma/client';
 import { format } from 'date-fns';
@@ -38,9 +38,14 @@ export function TripShareDialog({ trip, activityCount }: TripShareDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(trip.isPublic);
   const [isLoading, setIsLoading] = useState(false);
+  const [shareUrl, setShareUrl] = useState('');
+
   const { toast } = useToast();
 
-  const shareUrl = `${window.location.origin}/trips/${trip.id}/public`;
+  useEffect(() => {
+    setShareUrl(`${window.location.origin}/trips/${trip.id}/public`);
+  }, [trip.id]);
+
   const shareText = `Check out my trip to ${trip.title} on WanderWeave!`;
   const encodedShareText = encodeURIComponent(shareText);
   const encodedUrl = encodeURIComponent(shareUrl);

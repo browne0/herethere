@@ -16,7 +16,7 @@ export default async function EditTripPage({ params }: EditTripPageProps) {
   const { userId } = await auth();
   const { tripId } = await params;
   if (!userId) {
-    redirect('/sign-in');
+    return null;
   }
 
   const trip = await prisma.trip.findUnique({

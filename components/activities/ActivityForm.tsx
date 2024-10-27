@@ -1,10 +1,11 @@
 // components/activities/ActivityForm.tsx
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Activity } from '@prisma/client';
+import { Activity, Trip } from '@prisma/client';
+import { JsonObject } from '@prisma/client/runtime/library';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -33,7 +34,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Location } from '@/lib/types';
+import { City, CityBounds, isCityBounds, Location } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { activityFormSchema, type ActivityFormValues } from '@/lib/validations/activity';
 
@@ -164,6 +165,35 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
   const longitude = form.watch('longitude');
   const hasLocation = latitude !== 0 && longitude !== 0;
 
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+
+  // Fetch trip details including city bounds when component mounts
+  useEffect(() => {
+    const fetchTripDetails = async () => {
+      try {
+        const response = await fetch(`/api/trips/${tripId}`);
+        if (response.ok) {
+          const trip: Trip = await response.json();
+          if (trip.cityBounds && isCityBounds(trip.cityBounds)) {
+            const bounds = trip.cityBounds as CityBounds;
+            setSelectedCity({
+              name: trip.destination,
+              address: trip.destination,
+              latitude: (bounds.ne.lat + bounds.sw.lat) / 2,
+              longitude: (bounds.ne.lng + bounds.sw.lng) / 2,
+              placeId: trip.placeId,
+              bounds,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching trip details:', error);
+      }
+    };
+
+    fetchTripDetails();
+  }, [tripId]);
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -178,6 +208,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
             onLocationSelect={handleLocationSelect}
             defaultValue={initialData?.address}
             searchType={form.watch('type')}
+            cityBounds={selectedCity?.bounds}
           />
         </FormItem>
 

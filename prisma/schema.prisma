@@ -36,6 +36,10 @@ model Trip {
   user        User        @relation(fields: [userId], references: [id])
   title       String
   destination String
+  cityBounds  Json?
+  placeId     String?
+  latitude    Float?
+  longitude   Float?
   startDate   DateTime
   endDate     DateTime
   preferences Json // Store dietary preferences and interests

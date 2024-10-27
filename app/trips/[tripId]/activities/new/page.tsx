@@ -16,7 +16,7 @@ export default async function NewActivityPage({ params }: NewActivityPageProps) 
   const { tripId } = await params;
 
   if (!userId) {
-    redirect('/sign-in');
+    return null;
   }
 
   // Verify the trip exists and belongs to the user
