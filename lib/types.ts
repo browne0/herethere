@@ -78,3 +78,36 @@ export interface City {
   placeId: string;
   bounds?: CityBounds;
 }
+
+export interface NavItem {
+  title: string;
+  href: string;
+}
+
+export interface Feature {
+  title: string;
+  description: string;
+  icon: React.ComponentType;
+}
+
+export interface Destination {
+  city: string;
+  description: string;
+  imageUrl: string;
+}
+
+export interface FAQ {
+  question: string;
+  answer: string;
+}
+
+export interface Step {
+  title: string;
+  description: string;
+  icon: React.ComponentType;
+}
+
+export interface Stat {
+  value: number;
+  label: string;
+}
