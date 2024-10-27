@@ -42,12 +42,14 @@ model Trip {
   longitude   Float?
   startDate   DateTime
   endDate     DateTime
-  preferences Json // Store dietary preferences and interests
+  preferences Json
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
   activities  Activity[]
   isPublic    Boolean     @default(false)
   sharedWith  TripShare[]
+  mainPhoto   String?
+  photoCount  Int         @default(0)
 
   @@index([userId])
   @@map("trip")
