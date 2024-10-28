@@ -1,4 +1,3 @@
-// app/trips/[tripId]/public/page.tsx
 import { notFound } from 'next/navigation';
 import { format, differenceInDays } from 'date-fns';
 import { CalendarDays, MapPin, Clock } from 'lucide-react';

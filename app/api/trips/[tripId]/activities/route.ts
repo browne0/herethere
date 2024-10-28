@@ -1,4 +1,3 @@
-// app/api/trips/[tripId]/activities/route.ts
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 

@@ -70,6 +70,7 @@ export const PlacePhotos = ({
   }
 
   if (error || photos.length === 0) {
+    console.log(error);
     return (
       <div
         className={`bg-muted flex items-center justify-center ${className} ${

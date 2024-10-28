@@ -1,4 +1,3 @@
-// app/components/trips/TripPdfContent.tsx
 import { Activity, Trip } from '@prisma/client';
 import { format } from 'date-fns';
 

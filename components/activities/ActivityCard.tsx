@@ -13,7 +13,6 @@ interface ActivityCardProps {
 }
 
 export function ActivityCard({ activity, onSignUpClick }: ActivityCardProps) {
-  console.log(activity.placeId);
   return (
     <div className="relative pl-6 border-l-2 border-gray-200">
       <div className="absolute left-[-5px] top-3 w-2 h-2 rounded-full bg-primary" />

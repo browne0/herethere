@@ -1,4 +1,3 @@
-// app/api/trips/[tripId]/share/route.ts
 import { createClerkClient } from '@clerk/backend';
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';

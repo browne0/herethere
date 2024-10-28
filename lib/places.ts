@@ -1,3 +1,5 @@
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
 interface PlacesSearchParams {
   query: string;
   locationBias?: string;
@@ -9,7 +11,7 @@ interface PhotoParams {
 }
 
 export async function searchPlaces({ query, locationBias }: PlacesSearchParams) {
-  const response = await fetch('/api/places', {
+  const response = await fetch(`${BASE_URL}/api/places`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

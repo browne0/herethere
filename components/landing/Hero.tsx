@@ -6,8 +6,17 @@ import { useRouter } from 'next/navigation';
 
 import { City } from '@/lib/types';
 
-import TravelDecoration from './TravelDecoration';
 import { CitySearch } from '../maps/CitySearch';
+import { LocationSearch } from '../maps/LocationSearch';
+
+interface SelectedCity {
+  name: string;
+  place_id: string;
+  geometry: {
+    bounds?: google.maps.LatLngBounds;
+    location: google.maps.LatLng;
+  };
+}
 
 const popularDestinations = [
   {
@@ -74,7 +83,16 @@ export function Hero() {
   return (
     <div className="relative min-h-[calc(100vh-4rem)] flex flex-col justify-center py-20">
       {/* Background decorative elements */}
-      <TravelDecoration />
+      <div className="absolute inset-0 overflow-hidden z-0">
+        <div className="absolute transform rotate-45 -left-1/4 -top-1/4 w-full h-full bg-indigo-100/50 rounded-full" />
+        <div className="absolute transform -rotate-45 -right-1/4 -bottom-1/4 w-full h-full bg-purple-100/50 rounded-full" />
+      </div>
+
+      {/* Floating cards */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-10">
+        <div className="absolute top-1/4 -left-4 w-64 h-40 bg-white rounded-lg shadow-xl transform -rotate-12 opacity-60" />
+        <div className="absolute bottom-1/4 -right-4 w-64 h-40 bg-white rounded-lg shadow-xl transform rotate-12 opacity-60" />
+      </div>
 
       {/* Main content */}
       <div className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

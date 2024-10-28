@@ -3,7 +3,6 @@ import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
 
-// app/api/trips/[tripId]/share/public/route.ts
 export async function PATCH(req: Request, { params }: { params: { tripId: string } }) {
     try {
       const { userId } = await auth();
