@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 
 import { MapPin } from 'lucide-react';
 
@@ -13,8 +13,26 @@ const popularDestinations = [
 ];
 
 export function Hero() {
+  const locationSearchRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (locationSearchRef.current) {
+      locationSearchRef.current.focus();
+    }
+  });
+
+  // useEffect(() => {
+  //   // Listen for hash changes
+  //   window.addEventListener('hashchange', focusLocationSearch);
+
+  //   return () => {
+  //     // Cleanup event listener on unmount
+  //     window.removeEventListener('hashchange', focusLocationSearch);
+  //   };
+  // }, []);
+
   return (
-    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col justify-center py-20">
+    <div className="relative min-h-[calc(100vh-4rem)] flex flex-col justify-center py-20" id="hero">
       {/* Background decorative elements - lowest z-index */}
       <div className="absolute inset-0 overflow-hidden z-0">
         <div className="absolute transform rotate-45 -left-1/4 -top-1/4 w-full h-full bg-indigo-100/50 rounded-full" />
@@ -31,7 +49,7 @@ export function Hero() {
       <div className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="mb-6">
           <h1 className="inline-block text-4xl md:text-6xl font-bold leading-tight md:leading-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 animate-fade-in px-4">
-            Your Journey Begins Here
+            Your Next Journey Starts Here
           </h1>
         </div>
 
@@ -41,7 +59,12 @@ export function Hero() {
 
         {/* Search section */}
         <div className="relative z-30 max-w-2xl mx-auto animate-fade-in-delayed">
-          <LocationSearch onLocationSelect={() => {}} searchType="OTHER" variant="hero" />
+          <LocationSearch
+            onLocationSelect={() => {}}
+            searchType="OTHER"
+            variant="hero"
+            ref={locationSearchRef}
+          />
 
           <div className="relative z-0 mt-6">
             <div className="flex flex-wrap justify-center gap-2 animate-fade-in">

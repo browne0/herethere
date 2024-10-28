@@ -27,8 +27,8 @@ export function Nav() {
 
   // Landing page navigation links
   const landingPageLinks = [
-    { href: '#features', label: 'Features' },
     { href: '#how-it-works', label: 'How It Works' },
+    { href: '#features', label: 'Features' },
     { href: '#faq', label: 'FAQ' },
   ];
 
@@ -58,7 +58,6 @@ export function Nav() {
                 </Button>
               </Link>
               <UserButton
-                afterSignOutUrl="/"
                 appearance={{
                   elements: {
                     avatarBox: 'w-8 h-8 hover:scale-110 transition-transform duration-300',
@@ -83,12 +82,14 @@ export function Nav() {
                   ))}
                 </>
               )}
+            </SignedOut>
+            {['/sign-in', '/sign-up'].includes(pathname) === false && (
               <Link href="/sign-up">
                 <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5">
                   Get Started
                 </Button>
               </Link>
-            </SignedOut>
+            )}
           </nav>
 
           {/* Mobile Menu Button - Only show on landing page when signed out */}

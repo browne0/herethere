@@ -1,5 +1,5 @@
 export const siteConfig = {
-  name: 'WanderWeave',
+  name: 'WanderAI',
   description: 'AI-powered travel itinerary planner',
   mainNav: [
     { title: 'How it Works', href: '#how-it-works' },

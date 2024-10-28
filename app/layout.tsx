@@ -9,11 +9,11 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
+    <ClerkProvider afterSignOutUrl="/">
       <html lang="en">
         <body className={`${inter.className} bg-gray-50 min-h-screen`}>
           <Nav />
-          <main>{children}</main>
+          <main className="pt-16">{children}</main>
         </body>
       </html>
     </ClerkProvider>

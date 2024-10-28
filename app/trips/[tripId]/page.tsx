@@ -293,7 +293,7 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
       {/* Right Panel - Map */}
       <div className="hidden lg:block w-[45%] border-l">
         <div className="h-full">
-          <TripMapView tripId={params.tripId} />
+          <TripMapView tripId={tripId} />
         </div>
       </div>
     </div>
