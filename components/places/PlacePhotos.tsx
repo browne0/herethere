@@ -1,9 +1,8 @@
 'use client';
 import { useState, useEffect } from 'react';
 
+import { ImageIcon } from 'lucide-react';
 import Image from 'next/image';
-
-import { Skeleton } from '@/components/ui/skeleton';
 
 interface PlacePhoto {
   photoReference: string;
@@ -30,15 +29,25 @@ export const PlacePhotos = ({
 
   useEffect(() => {
     const fetchPlacePhotos = async () => {
-      if (!placeId) return;
+      if (!placeId) {
+        setError('No place ID provided');
+        setLoading(false);
+        return;
+      }
 
       try {
         setLoading(true);
         const response = await fetch(`/api/places/${placeId}/photos?maxPhotos=${maxPhotos}`);
-        if (!response.ok) throw new Error('Failed to fetch photos');
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch photos');
+        }
+
         const data = await response.json();
-        setPhotos(data.photos);
+        console.log('Photos data:', data); // Debug log
+        setPhotos(data.photos || []);
       } catch (err) {
+        console.error('Error fetching photos:', err);
         setError(err instanceof Error ? err.message : 'Failed to load photos');
       } finally {
         setLoading(false);
@@ -50,7 +59,11 @@ export const PlacePhotos = ({
 
   if (loading) {
     return (
-      <div className={`relative bg-muted ${className}`}>
+      <div
+        className={`relative bg-muted ${className} ${
+          aspectRatio === 'square' ? 'aspect-square' : 'aspect-video'
+        }`}
+      >
         <div className="absolute inset-0 animate-pulse bg-muted-foreground/10" />
       </div>
     );
@@ -58,14 +71,25 @@ export const PlacePhotos = ({
 
   if (error || photos.length === 0) {
     return (
-      <div className={`bg-muted flex items-center justify-center ${className}`}>
-        <div className="text-sm text-muted-foreground">No photo available</div>
+      <div
+        className={`bg-muted flex items-center justify-center ${className} ${
+          aspectRatio === 'square' ? 'aspect-square' : 'aspect-video'
+        }`}
+      >
+        <div className="flex flex-col items-center gap-2">
+          <ImageIcon className="h-8 w-8 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">No photo available</span>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className={`relative overflow-hidden ${className}`}>
+    <div
+      className={`relative overflow-hidden ${className} ${
+        aspectRatio === 'square' ? 'aspect-square' : 'aspect-video'
+      }`}
+    >
       <Image
         src={`/api/places/photo/${photos[0].photoReference}`}
         alt="Place photo"

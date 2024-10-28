@@ -46,7 +46,7 @@
     "jspdf": "^2.5.2",
     "lucide-react": "^0.453.0",
     "next": "15.0.1",
-    "openai": "^4.68.4",
+    "openai": "^4.47.1",
     "react": "^18",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18",

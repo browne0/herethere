@@ -106,11 +106,13 @@ export type DietaryOption = 'vegetarian' | 'vegan' | 'halal' | 'kosher' | 'glute
 export type BudgetLevel = 'budget' | 'moderate' | 'luxury';
 
 export interface DemoTripPreferences {
-  dates: DateRange;
+  dates: DateRange | undefined;
   dietary: DietaryOption[];
   tripVibe: number;
   budget: BudgetLevel;
   pace: number;
+  activities: string[];
+  customInterests?: string;
 }
 
 export interface DemoActivity {
@@ -123,7 +125,7 @@ export interface DemoActivity {
   notes?: string;
   latitude: number;
   longitude: number;
-  placeId?: string;
+  placeId: string;
 }
 
 export interface DemoTrip {

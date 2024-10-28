@@ -42,8 +42,6 @@ export async function POST(req: Request) {
         preferences: {}, // Default empty preferences
       };
 
-      console.log('Creating trip with data:', tripData);
-
       const trip = await prisma.trip.create({
         data: tripData,
       });

@@ -1,7 +1,10 @@
+import { ComponentProps } from 'react';
+
 import { clsx, type ClassValue } from 'clsx';
 import { nanoid } from 'nanoid';
 import { twMerge } from 'tailwind-merge';
 
+import { Badge } from '@/components/ui/badge';
 import { City, DemoTrip, DemoTripPreferences, StoredDemoData } from '@/lib/types';
 
 export function cn(...inputs: ClassValue[]) {
@@ -61,6 +64,7 @@ export class DemoTripStorage {
     const updatedTrip = {
       ...currentTrip,
       ...updates,
+      activities: updates.activities || currentTrip.activities,
     };
 
     this.storeDemoTrip(updatedTrip);
@@ -88,4 +92,41 @@ export class DemoTripStorage {
       }
     }
   }
+}
+
+type BadgeVariant = ComponentProps<typeof Badge>['variant'];
+
+export function getTripTimingText(
+  startDate: Date | undefined,
+  endDate: Date | undefined
+): { text: string; variant: BadgeVariant } {
+  if (!startDate || !endDate) {
+    return { text: 'Preview', variant: 'secondary' };
+  }
+  const now = new Date();
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+  const diffHours = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60));
+  const diffDays = Math.ceil(diffHours / 24);
+
+  if (now > end) {
+    return { text: 'Past trip', variant: 'outline' };
+  }
+
+  if (now >= start && now <= end) {
+    return { text: 'In progress', variant: 'secondary' };
+  }
+
+  if (diffHours <= 24) {
+    if (diffHours <= 1) {
+      return { text: 'Starting soon', variant: 'secondary' };
+    }
+    return { text: `In ${diffHours} hours`, variant: 'secondary' };
+  }
+
+  if (diffDays === 1) {
+    return { text: 'Tomorrow', variant: 'secondary' };
+  }
+
+  return { text: `${diffDays} days away`, variant: 'secondary' };
 }

@@ -1,26 +1,17 @@
 import React, { useState } from 'react';
 
 import { Clock, ArrowRight, ArrowLeft } from 'lucide-react';
-import { DateRange } from 'react-day-picker';
 
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Slider } from '@/components/ui/slider';
+import { DemoTripPreferences } from '@/lib/types';
+
+import { ActivityPreferencesStep } from './ActivityPreferencesStep';
 
 interface TripPreferencesFormProps {
   city: string;
-  onSubmit: (preferences: TripPreferences) => void;
-}
-
-type DietaryOption = 'vegetarian' | 'vegan' | 'halal' | 'kosher' | 'gluten-free' | 'none';
-type BudgetLevel = 'budget' | 'moderate' | 'luxury';
-
-interface TripPreferences {
-  dates: DateRange | undefined;
-  dietary: DietaryOption[];
-  tripVibe: number;
-  budget: BudgetLevel;
-  pace: number;
+  onSubmit: (preferences: DemoTripPreferences) => void;
 }
 
 const dietaryOptions = [
@@ -45,17 +36,19 @@ const budgetOptions = [
 
 export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps) {
   const [step, setStep] = useState(1);
-  const [preferences, setPreferences] = useState<TripPreferences>({
+  const [preferences, setPreferences] = useState<DemoTripPreferences>({
     dates: undefined,
     dietary: [],
     tripVibe: 50,
     budget: 'moderate',
     pace: 3,
+    activities: [],
+    customInterests: '',
   });
 
-  const updatePreferences = <K extends keyof TripPreferences>(
+  const updatePreferences = <K extends keyof DemoTripPreferences>(
     key: K,
-    value: TripPreferences[K]
+    value: DemoTripPreferences[K]
   ) => {
     setPreferences(prev => ({
       ...prev,
@@ -69,9 +62,12 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
         return preferences.dates?.from && preferences.dates?.to;
       case 2:
         return true; // Can proceed even if no dietary restrictions are selected
+
       case 3:
-        return preferences.budget && preferences.tripVibe >= 0;
+        return preferences.activities.length > 0;
       case 4:
+        return preferences.budget && preferences.tripVibe >= 0;
+      case 5:
         return preferences.pace >= 1 && preferences.pace <= 5;
       default:
         return false;
@@ -109,7 +105,7 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
             />
           </div>
           <div className="flex justify-between mt-2">
-            {['Dates', 'Diet', 'Style', 'Pace'].map((label, idx) => (
+            {['Dates', 'Diet', 'Activities', 'Style', 'Pace'].map((label, idx) => (
               <div
                 key={label}
                 className={`flex flex-col items-center ${
@@ -182,6 +178,13 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
           )}
 
           {step === 3 && (
+            <ActivityPreferencesStep
+              preferences={preferences}
+              updatePreferences={updatePreferences}
+            />
+          )}
+
+          {step === 4 && (
             <div className="space-y-8">
               <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center">
                 What&apos;s your travel style?
@@ -233,7 +236,7 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
             </div>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <div className="space-y-8">
               <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center">
                 How do you like to pace your days?

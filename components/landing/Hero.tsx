@@ -7,16 +7,6 @@ import { useRouter } from 'next/navigation';
 import { City } from '@/lib/types';
 
 import { CitySearch } from '../maps/CitySearch';
-import { LocationSearch } from '../maps/LocationSearch';
-
-interface SelectedCity {
-  name: string;
-  place_id: string;
-  geometry: {
-    bounds?: google.maps.LatLngBounds;
-    location: google.maps.LatLng;
-  };
-}
 
 const popularDestinations = [
   {

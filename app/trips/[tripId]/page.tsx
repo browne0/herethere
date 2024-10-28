@@ -1,8 +1,6 @@
-import { ComponentProps } from 'react';
-
 import { auth } from '@clerk/nextjs/server';
 import { format, differenceInDays } from 'date-fns';
-import { CalendarDays, Plus, PencilIcon, Map, ArrowLeft } from 'lucide-react';
+import { CalendarDays, Plus, PencilIcon } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
@@ -16,42 +14,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { prisma } from '@/lib/db';
-
-type BadgeVariant = ComponentProps<typeof Badge>['variant'];
-
-function getTripTimingText(
-  startDate: Date,
-  endDate: Date
-): { text: string; variant: BadgeVariant } {
-  const now = new Date();
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const diffHours = Math.ceil((start.getTime() - now.getTime()) / (1000 * 60 * 60));
-  const diffDays = Math.ceil(diffHours / 24);
-
-  if (now > end) {
-    return { text: 'Past trip', variant: 'outline' };
-  }
-
-  if (now >= start && now <= end) {
-    return { text: 'In progress', variant: 'secondary' };
-  }
-
-  if (diffHours <= 24) {
-    if (diffHours <= 1) {
-      return { text: 'Starting soon', variant: 'secondary' };
-    }
-    return { text: `In ${diffHours} hours`, variant: 'secondary' };
-  }
-
-  if (diffDays === 1) {
-    return { text: 'Tomorrow', variant: 'secondary' };
-  }
-
-  return { text: `${diffDays} days away`, variant: 'secondary' };
-}
+import { getTripTimingText } from '@/lib/utils';
 
 export default async function TripDetailsPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
