@@ -1,4 +1,3 @@
-// app/api/trips/[tripId]/map/route.ts
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
@@ -6,7 +5,7 @@ import { prisma } from '@/lib/db';
 
 export async function GET(request: Request, { params }: { params: { tripId: string } }) {
   try {
-    const tripId = params.tripId;
+    const { tripId } = await params;
 
     // Get authenticated user
     const { userId } = await auth();

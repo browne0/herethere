@@ -1,14 +1,4 @@
-export interface UserPreferences {
-  dietary?: string[]; // e.g., ['vegetarian', 'gluten-free']
-  interests?: string[]; // e.g., ['sightseeing', 'food']
-  budget?: 'LOW' | 'MEDIUM' | 'HIGH';
-  travelStyle?: string[]; // e.g., ['adventure', 'relaxation']
-  accessibility?: string[]; // e.g., ['wheelchair', 'step-free']
-  notifications?: {
-    email?: boolean;
-    push?: boolean;
-  };
-}
+import { DateRange } from 'react-day-picker';
 
 export interface Location {
   address: string;
@@ -110,4 +100,41 @@ export interface Step {
 export interface Stat {
   value: number;
   label: string;
+}
+
+export type DietaryOption = 'vegetarian' | 'vegan' | 'halal' | 'kosher' | 'gluten-free' | 'none';
+export type BudgetLevel = 'budget' | 'moderate' | 'luxury';
+
+export interface DemoTripPreferences {
+  dates: DateRange;
+  dietary: DietaryOption[];
+  tripVibe: number;
+  budget: BudgetLevel;
+  pace: number;
+}
+
+export interface DemoActivity {
+  id: string;
+  name: string;
+  type: string;
+  address: string;
+  startTime: string;
+  endTime: string;
+  notes?: string;
+  latitude: number;
+  longitude: number;
+  placeId?: string;
+}
+
+export interface DemoTrip {
+  id: string;
+  cityData: City;
+  preferences: DemoTripPreferences;
+  activities?: DemoActivity[];
+  createdAt: string;
+}
+
+export interface StoredDemoData {
+  trip: DemoTrip;
+  expiresAt: string; // ISO string
 }

@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 
 import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
+import { useUser } from '@clerk/nextjs';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -31,6 +32,8 @@ export function Nav() {
     { href: '#features', label: 'Features' },
     { href: '#faq', label: 'FAQ' },
   ];
+
+  const { isLoaded, isSignedIn, user } = useUser();
 
   return (
     <header
@@ -82,14 +85,14 @@ export function Nav() {
                   ))}
                 </>
               )}
+              {['/sign-in', '/sign-up'].includes(pathname) === false && (
+                <Link href="/sign-up">
+                  <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5">
+                    Get Started
+                  </Button>
+                </Link>
+              )}
             </SignedOut>
-            {['/sign-in', '/sign-up'].includes(pathname) === false && (
-              <Link href="/sign-up">
-                <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5">
-                  Get Started
-                </Button>
-              </Link>
-            )}
           </nav>
 
           {/* Mobile Menu Button - Only show on landing page when signed out */}

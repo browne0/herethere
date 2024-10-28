@@ -4,8 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import { useLoadScript } from '@react-google-maps/api';
 import type { Libraries } from '@react-google-maps/api/dist/utils/make-load-script-url';
-import { Search } from 'lucide-react';
+import { Search, X } from 'lucide-react';
 
+import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { City } from '@/lib/types';
@@ -98,13 +99,19 @@ export function CitySearch({ onCitySelect, defaultValue }: CitySearchProps) {
     );
   };
 
+  const handleClear = () => {
+    setSearchInput('');
+    setSuggestions([]);
+    setShowSuggestions(false);
+  };
+
   if (loadError) {
     return <div className="text-red-500">Error loading Google Maps</div>;
   }
 
   return (
     <div className="relative">
-      <div className="relative">
+      <div className="relative flex items-center">
         <Search
           className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
           size={20}
@@ -114,8 +121,18 @@ export function CitySearch({ onCitySelect, defaultValue }: CitySearchProps) {
           value={searchInput}
           onChange={e => handleSearch(e.target.value)}
           placeholder="Search for a city"
-          className="pl-10"
+          className="pl-10 pr-10"
         />
+        {searchInput && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="absolute right-1 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0"
+            onClick={handleClear}
+          >
+            <X className="h-4 w-4 text-gray-400" />
+          </Button>
+        )}
       </div>
 
       {showSuggestions && suggestions.length > 0 && (

@@ -3,7 +3,6 @@ import { headers } from 'next/headers';
 import { Webhook } from 'svix';
 
 import { prisma } from '@/lib/db';
-import { UserPreferences } from '@/lib/types';
 
 async function POST(req: Request) {
   const CLERK_WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -55,18 +54,6 @@ async function POST(req: Request) {
 
   if (eventType === 'user.created' || eventType === 'user.updated') {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-
-    const defaultPreferences: UserPreferences = {
-      dietary: [],
-      interests: [],
-      budget: 'MEDIUM',
-      travelStyle: [],
-      accessibility: [],
-      notifications: {
-        email: true,
-        push: true,
-      },
-    };
 
     try {
       const user = await prisma.user.upsert({
