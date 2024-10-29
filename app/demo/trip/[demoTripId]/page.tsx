@@ -1,18 +1,7 @@
 'use client';
 import { use, useCallback, useEffect, useState } from 'react';
 
-import {
-  CalendarDays,
-  MapPin,
-  ArrowLeft,
-  ArrowRight,
-  Lock,
-  Clock,
-  Route,
-  Sparkles,
-  AlertCircle,
-  Lightbulb,
-} from 'lucide-react';
+import { CalendarDays, MapPin, ArrowRight, Lock, Clock, Route, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -60,12 +49,6 @@ export default function DemoTripPage({
   const [error, setError] = useState<string | null>(null);
   const [showConversionDialog, setShowConversionDialog] = useState(false);
 
-  const handleSignUpClick = useCallback(() => {
-    setShowConversionDialog(true);
-  }, []);
-
-  const tripTiming = getTripTimingText(trip?.preferences.dates.from, trip?.preferences.dates.to);
-
   const params = use(paramsPromise);
 
   const loadTrip = useCallback(async () => {
@@ -112,6 +95,11 @@ export default function DemoTripPage({
   }
 
   if (!trip) return null;
+  if (!trip!.preferences.dates?.from || !trip!.preferences.dates?.to) {
+    return null;
+  }
+
+  const tripTiming = getTripTimingText(trip?.preferences.dates.from, trip?.preferences.dates.to);
 
   const ConversionDialog = () => (
     <Dialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>

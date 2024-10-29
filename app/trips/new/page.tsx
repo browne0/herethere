@@ -1,13 +1,12 @@
 'use client';
-import React, { useState } from 'react';
+import React from 'react';
 
-import { ArrowRight, Sparkles, Map } from 'lucide-react';
+import { Sparkles, Map } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 
-export const PathSelection = ({ onPathSelect }) => {
+export const PathSelection = () => {
   const router = useRouter();
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
@@ -40,7 +39,7 @@ export const PathSelection = ({ onPathSelect }) => {
             <div className="p-4 bg-primary/10 rounded-full">
               <Map className="w-8 h-8 text-primary" />
             </div>
-            <h3 className="text-xl font-semibold">I'll build my own adventure</h3>
+            <h3 className="text-xl font-semibold">I&apos;ll build my own adventure</h3>
             <p className="text-muted-foreground">
               Take full control of your itinerary. Browse activities, create your schedule, and plan
               at your own pace.

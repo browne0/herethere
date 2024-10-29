@@ -1,6 +1,6 @@
 'use client';
 import { format } from 'date-fns';
-import { CalendarDays, MapPin, Star, ArrowLeft } from 'lucide-react';
+import { CalendarDays, Star, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { CityPhoto } from '@/components/photos/CityPhoto';
@@ -25,6 +25,10 @@ export function TripHeader({ trip }: TripHeaderProps) {
     if (pace > 2) return 'Moderate';
     return 'Leisurely';
   };
+
+  if (!trip.preferences.dates) {
+    return;
+  }
 
   return (
     <div className="relative">

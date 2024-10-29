@@ -71,20 +71,21 @@ model TripShare {
 }
 
 model Activity {
-  id        String   @id @default(cuid())
-  tripId    String
-  trip      Trip     @relation(fields: [tripId], references: [id])
-  type      String
-  name      String
-  address   String
-  latitude  Float
-  longitude Float
-  placeId   String?
-  startTime DateTime
-  endTime   DateTime
-  notes     String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(cuid())
+  tripId     String
+  trip       Trip     @relation(fields: [tripId], references: [id])
+  type       String
+  name       String
+  address    String
+  latitude   Float
+  longitude  Float
+  placeId    String?
+  startTime  DateTime
+  endTime    DateTime
+  notes      String?
+  priceLevel Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tripId])
   @@map("activity")

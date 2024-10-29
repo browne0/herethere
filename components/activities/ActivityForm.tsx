@@ -5,7 +5,6 @@ import { useState, useCallback, useEffect } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Activity, Trip } from '@prisma/client';
-import { JsonObject } from '@prisma/client/runtime/library';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -181,7 +180,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
               address: trip.destination,
               latitude: (bounds.ne.lat + bounds.sw.lat) / 2,
               longitude: (bounds.ne.lng + bounds.sw.lng) / 2,
-              placeId: trip.placeId,
+              placeId: trip.placeId!,
               bounds,
             });
           }

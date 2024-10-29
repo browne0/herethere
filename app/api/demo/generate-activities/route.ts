@@ -103,12 +103,12 @@ function createTimeForDate(baseDate: Date, timeString: string, _timezone: string
 export async function POST(request: Request) {
   try {
     const trip: DemoTrip = await request.json();
+    const { cityData, preferences } = trip;
 
-    if (!trip || !trip.cityData || !trip.preferences || !trip.preferences.dates.from) {
-      return new NextResponse('Invalid trip data', { status: 400 });
+    if (!preferences.dates?.from || !preferences.dates?.to) {
+      return new NextResponse('Missing trip dates', { status: 400 });
     }
 
-    const { cityData, preferences } = trip;
     const startDate = new Date(preferences.dates.from!);
     const endDate = new Date(preferences.dates.to!);
     const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
