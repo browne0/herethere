@@ -1,23 +1,20 @@
+'use client';
 import React, { useState } from 'react';
 
-import { Clock, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clock } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
+import { ActivityPreferencesStep } from '@/components/landing/ActivityPreferencesStep';
+import { CitySearch } from '@/components/maps/CitySearch';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
 import { Slider } from '@/components/ui/slider';
 import { budgetOptions, dietaryOptions } from '@/lib/trips';
-import { DemoTripPreferences } from '@/lib/types';
+import type { City, TripPreferences } from '@/lib/types';
 
-import { ActivityPreferencesStep } from './ActivityPreferencesStep';
-
-interface TripPreferencesFormProps {
-  city: string;
-  onSubmit: (preferences: DemoTripPreferences) => void;
-}
-
-export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps) {
+const NewTripFlow = () => {
   const [step, setStep] = useState(1);
-  const [preferences, setPreferences] = useState<DemoTripPreferences>({
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [preferences, setPreferences] = useState<TripPreferences>({
     dates: undefined,
     dietary: [],
     tripVibe: 50,
@@ -25,11 +22,12 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
     pace: 3,
     activities: [],
     customInterests: '',
+    city: null,
   });
 
-  const updatePreferences = <K extends keyof DemoTripPreferences>(
+  const updatePreferences = <K extends keyof TripPreferences>(
     key: K,
-    value: DemoTripPreferences[K]
+    value: TripPreferences[K]
   ) => {
     setPreferences(prev => ({
       ...prev,
@@ -40,20 +38,23 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
   const canProceedToNext = () => {
     switch (step) {
       case 1:
-        return preferences.dates?.from && preferences.dates?.to;
+        return selectedCity !== null;
       case 2:
-        return true; // Can proceed even if no dietary restrictions are selected
-
+        return preferences.dates?.from && preferences.dates?.to;
       case 3:
-        return preferences.activities.length > 0;
+        return true; // Can proceed even if no dietary restrictions are selected
       case 4:
-        return preferences.budget && preferences.tripVibe >= 0;
+        return preferences.activities.length > 0;
       case 5:
+        return preferences.budget && preferences.tripVibe >= 0;
+      case 6:
         return preferences.pace >= 1 && preferences.pace <= 5;
       default:
         return false;
     }
   };
+
+  const onSubmit = (preferences: TripPreferences) => {};
 
   const handleSubmit = () => {
     onSubmit(preferences);
@@ -72,9 +73,9 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
   return (
     <div className="min-h-[calc(100vh-4rem)] flex flex-col pt-12">
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 flex-1">
-        {/* Heading with gradient text */}
+        {/* Consistent heading style */}
         <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-          Plan Your {city} Adventure
+          Where would you like to explore?
         </h1>
 
         {/* Progress bar */}
@@ -82,11 +83,11 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
           <div className="h-1 bg-gray-200 rounded-full">
             <div
               className="h-1 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full transition-all duration-500"
-              style={{ width: `${(step / 4) * 100}%` }}
+              style={{ width: `${(step / 6) * 100}%` }}
             />
           </div>
           <div className="flex justify-between mt-2">
-            {['Dates', 'Diet', 'Activities', 'Style', 'Pace'].map((label, idx) => (
+            {['City', 'Dates', 'Diet', 'Activities', 'Style', 'Pace'].map((label, idx) => (
               <div
                 key={label}
                 className={`flex flex-col items-center ${
@@ -104,23 +105,15 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
           </div>
         </div>
 
-        {/* Content container with gradient border */}
-        <div className="relative p-4 sm:p-8 rounded-2xl bg-white shadow-xl border border-transparent animate-fade-in overflow-hidden">
+        {/* Content container */}
+        <div className="relative p-4 sm:p-8 rounded-2xl bg-white shadow-xl border border-transparent animate-fade-in">
           {step === 1 && (
             <div className="space-y-6">
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center">
-                When would you like to visit?
-              </h2>
-              <div className="flex justify-center">
-                <Calendar
-                  mode="range"
-                  selected={preferences.dates}
-                  onSelect={range => updatePreferences('dates', range)}
-                  className="rounded-lg border shadow-lg bg-white w-full sm:w-auto"
-                  disabled={date => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                  fromDate={new Date()}
-                />
-              </div>
+              <CitySearch
+                onCitySelect={(city: City) => {
+                  setSelectedCity(city);
+                }}
+              />
             </div>
           )}
 
@@ -249,7 +242,6 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
               </div>
             </div>
           )}
-
           {/* Navigation buttons */}
           <div className="flex justify-between mt-8">
             <Button
@@ -265,7 +257,7 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
             </Button>
 
             <Button
-              onClick={step === 4 ? handleSubmit : handleNext}
+              onClick={step === 6 ? handleSubmit : handleNext}
               className={`bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 ${
                 !canProceedToNext() ? 'opacity-50 cursor-not-allowed' : ''
               }`}
@@ -286,4 +278,6 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
       </div>
     </div>
   );
-}
+};
+
+export default NewTripFlow;

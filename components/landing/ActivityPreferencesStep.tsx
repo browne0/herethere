@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 import { Textarea } from '@/components/ui/textarea';
-import { DemoTripPreferences } from '@/lib/types';
+import { DemoTripPreferences, TripPreferences } from '@/lib/types';
 
 const activityOptions = [
   {
@@ -65,18 +65,15 @@ const activityOptions = [
   },
 ] as const;
 
-interface ActivityPreferencesStepProps {
-  preferences: DemoTripPreferences;
-  updatePreferences: <K extends keyof DemoTripPreferences>(
-    key: K,
-    value: DemoTripPreferences[K]
-  ) => void;
+interface ActivityPreferencesStepProps<T extends DemoTripPreferences | TripPreferences> {
+  preferences: T;
+  updatePreferences: <K extends keyof T>(key: K, value: T[K]) => void;
 }
 
-export function ActivityPreferencesStep({
+export function ActivityPreferencesStep<T extends DemoTripPreferences | TripPreferences>({
   preferences,
   updatePreferences,
-}: ActivityPreferencesStepProps) {
+}: ActivityPreferencesStepProps<T>) {
   const toggleActivity = (activityId: string) => {
     const newActivities = preferences.activities?.includes(activityId)
       ? preferences.activities.filter(id => id !== activityId)

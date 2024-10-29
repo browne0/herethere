@@ -31,6 +31,7 @@ export function Nav() {
     { href: '#how-it-works', label: 'How It Works' },
     { href: '#features', label: 'Features' },
     { href: '#faq', label: 'FAQ' },
+    { href: '/sign-in', label: 'Login' },
   ];
 
   const { isLoaded, isSignedIn, user } = useUser();

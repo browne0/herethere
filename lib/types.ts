@@ -105,7 +105,8 @@ export interface Stat {
 export type DietaryOption = 'vegetarian' | 'vegan' | 'halal' | 'kosher' | 'gluten-free' | 'none';
 export type BudgetLevel = 'budget' | 'moderate' | 'luxury';
 
-export interface DemoTripPreferences {
+export interface TripPreferences {
+  city: City | null;
   dates: DateRange | undefined;
   dietary: DietaryOption[];
   tripVibe: number;
@@ -115,6 +116,7 @@ export interface DemoTripPreferences {
   customInterests?: string;
 }
 
+export type DemoTripPreferences = Omit<TripPreferences, 'city'>;
 export interface DemoActivity {
   id: string;
   name: string;
