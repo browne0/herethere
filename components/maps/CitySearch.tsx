@@ -16,9 +16,11 @@ const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
 interface CitySearchProps {
   onCitySelect: (city: City) => void;
   defaultValue?: string;
+  value?: City | null;
+  onChange?: (value: string) => void;
 }
 
-export function CitySearch({ onCitySelect, defaultValue }: CitySearchProps) {
+export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProps) {
   const [searchInput, setSearchInput] = useState(defaultValue || '');
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -38,6 +40,12 @@ export function CitySearch({ onCitySelect, defaultValue }: CitySearchProps) {
       placesServiceRef.current = new google.maps.places.PlacesService(dummyDiv);
     }
   }, [isLoaded]);
+
+  useEffect(() => {
+    if (value) {
+      setSearchInput(value.name);
+    }
+  }, [value]);
 
   const handleSearch = async (value: string) => {
     setSearchInput(value);

@@ -17,3 +17,30 @@ export const budgetOptions = [
   { id: 'moderate' as const, label: 'Moderate', icon: '💰💰', description: 'Balanced spending' },
   { id: 'luxury' as const, label: 'Luxury', icon: '💰💰💰', description: 'Premium experiences' },
 ];
+
+export const popularDestinations = [
+  {
+    name: 'Tokyo',
+    country: 'Japan',
+    placeId: 'ChIJ51cu8IcbXWARiRtXIothAS4', // Tokyo's place ID
+    location: { lat: 35.6762, lng: 139.6503 },
+  },
+  {
+    name: 'Paris',
+    country: 'France',
+    placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ', // Paris' place ID
+    location: { lat: 48.8566, lng: 2.3522 },
+  },
+  {
+    name: 'New York',
+    country: 'USA',
+    placeId: 'ChIJOwg_06VPwokRYv534QaPC8g', // NYC's place ID
+    location: { lat: 40.7128, lng: -74.006 },
+  },
+  {
+    name: 'Barcelona',
+    country: 'Spain',
+    placeId: 'ChIJ5TCOcRaYpBIRCmZHTz37sEQ', // Barcelona's place ID
+    location: { lat: 41.3874, lng: 2.1686 },
+  },
+];

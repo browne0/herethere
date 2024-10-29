@@ -86,7 +86,7 @@ export function TripPreferencesForm({ city, onSubmit }: TripPreferencesFormProps
             />
           </div>
           <div className="flex justify-between mt-2">
-            {['Dates', 'Diet', 'Activities', 'Style', 'Pace'].map((label, idx) => (
+            {['Dates', 'Diet', 'Activities', 'Vibe', 'Pace'].map((label, idx) => (
               <div
                 key={label}
                 className={`flex flex-col items-center ${

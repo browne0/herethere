@@ -4,6 +4,7 @@ import React from 'react';
 import { MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+import { popularDestinations } from '@/lib/trips';
 import { City } from '@/lib/types';
 
 import { CitySearch } from '../maps/CitySearch';
@@ -17,33 +18,6 @@ interface SelectedCity {
     location: google.maps.LatLng;
   };
 }
-
-const popularDestinations = [
-  {
-    name: 'Tokyo',
-    country: 'Japan',
-    placeId: 'ChIJ51cu8IcbXWARiRtXIothAS4', // Tokyo's place ID
-    location: { lat: 35.6762, lng: 139.6503 },
-  },
-  {
-    name: 'Paris',
-    country: 'France',
-    placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ', // Paris' place ID
-    location: { lat: 48.8566, lng: 2.3522 },
-  },
-  {
-    name: 'New York',
-    country: 'USA',
-    placeId: 'ChIJOwg_06VPwokRYv534QaPC8g', // NYC's place ID
-    location: { lat: 40.7128, lng: -74.006 },
-  },
-  {
-    name: 'Barcelona',
-    country: 'Spain',
-    placeId: 'ChIJ5TCOcRaYpBIRCmZHTz37sEQ', // Barcelona's place ID
-    location: { lat: 41.3874, lng: 2.1686 },
-  },
-];
 
 export function Hero() {
   const router = useRouter();
@@ -73,8 +47,6 @@ export function Hero() {
       placeId: popularCity.placeId,
       latitude: popularCity.location.lat,
       longitude: popularCity.location.lng,
-      // For popular cities, we're not setting bounds since we don't have that data
-      // In a production app, you might want to fetch these from the Places API
     };
 
     handleCitySelect(city);

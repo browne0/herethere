@@ -114,9 +114,10 @@ export interface TripPreferences {
   pace: number;
   activities: string[];
   customInterests?: string;
+  walkingComfort: 'minimal' | 'moderate' | 'lots' | undefined;
 }
 
-export type DemoTripPreferences = Omit<TripPreferences, 'city'>;
+export type DemoTripPreferences = Omit<TripPreferences, 'city' | 'walkingComfort'>;
 export interface DemoActivity {
   id: string;
   name: string;
@@ -142,4 +143,9 @@ export interface DemoTrip {
 export interface StoredDemoData {
   trip: DemoTrip;
   expiresAt: string; // ISO string
+}
+
+export interface DateRangeType {
+  from: Date | undefined;
+  to: Date | undefined;
 }
