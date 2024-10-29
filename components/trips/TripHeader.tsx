@@ -80,7 +80,7 @@ export function TripHeader({ trip }: TripHeaderProps) {
               </div>
 
               {/* Dietary Preferences if any */}
-              {trip.preferences.dietary.length > 0 && (
+              {trip.preferences.dietary.length > 0 ? (
                 <div className="flex items-center gap-2">
                   <CalendarDays className="w-5 h-5 text-primary" />
                   <div>
@@ -88,6 +88,14 @@ export function TripHeader({ trip }: TripHeaderProps) {
                     <p className="text-sm text-muted-foreground">
                       {trip.preferences.dietary.join(', ')}
                     </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <CalendarDays className="w-5 h-5 text-primary" />
+                  <div>
+                    <p className="font-medium">Dietary Preferences</p>
+                    <p className="text-sm text-muted-foreground">No preferences</p>
                   </div>
                 </div>
               )}

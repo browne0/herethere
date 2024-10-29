@@ -12,7 +12,26 @@ interface ActivityCardProps {
   onSignUpClick: () => void;
 }
 
+const PriceLevel = ({ level }: { level?: 1 | 2 | 3 | 4 }) => {
+  if (!level) return null;
+
+  const renderPriceSymbols = () => {
+    const symbols = ['$', '$', '$', '$'];
+    return (
+      <span className="flex mb-1">
+        {symbols.map((symbol, index) => (
+          <span key={index} className={index < level ? 'text-primary' : 'text-muted-foreground/30'}>
+            {symbol}
+          </span>
+        ))}
+      </span>
+    );
+  };
+  return <div className="flex items-center gap-1 text-sm">{renderPriceSymbols()}</div>;
+};
+
 export function ActivityCard({ activity, onSignUpClick }: ActivityCardProps) {
+  console.log(activity);
   return (
     <div className="relative pl-6 border-l-2 border-gray-200">
       <div className="absolute left-[-5px] top-3 w-2 h-2 rounded-full bg-primary" />
@@ -45,7 +64,8 @@ export function ActivityCard({ activity, onSignUpClick }: ActivityCardProps) {
         </div>
 
         <div className="p-4">
-          <h3 className="font-semibold text-lg mb-2">{activity.name}</h3>
+          <h3 className="font-semibold text-lg">{activity.name}</h3>
+          <PriceLevel level={activity.priceLevel} />
 
           {/* Time and Type */}
           <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">

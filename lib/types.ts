@@ -126,6 +126,7 @@ export interface DemoActivity {
   latitude: number;
   longitude: number;
   placeId: string;
+  priceLevel?: 1 | 2 | 3 | 4;
 }
 
 export interface DemoTrip {

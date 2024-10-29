@@ -154,6 +154,7 @@ export async function POST(request: Request) {
     3. The complete address as it would appear on Google Maps
     4. Start and end times (use local ${cityData.name} time, between 8:00 AM and 10:00 PM)
     5. A brief description or notes about the activity
+    6. Price level (1-4, where 1=$, 2=$$, 3=$$$, 4=$$$$)
   
     Important guidelines:
     - Use well-known, established places that can be found on Google Maps
@@ -172,7 +173,8 @@ export async function POST(request: Request) {
           "address": "full address",
           "startTime": "2024-02-27T09:00:00Z",
           "endTime": "2024-02-27T11:00:00Z",
-          "notes": "activity description"
+          "notes": "activity description",
+          "priceLevel": 2
         }
       ]
     }`;
@@ -208,7 +210,7 @@ export async function POST(request: Request) {
 
     // Map the response and find placeIds
     const activities: DemoActivity[] = await Promise.all(
-      parsedResponse.activities.map(async (activity: any, index: number) => {
+      parsedResponse.activities.map(async (activity: DemoActivity, index: number) => {
         try {
           const placeDetails = await findPlaceId(activity.name, activity.address, cityData.name, {
             latitude: cityData.latitude,
@@ -235,6 +237,7 @@ export async function POST(request: Request) {
             latitude: placeDetails.latitude,
             longitude: placeDetails.longitude,
             placeId: placeDetails.placeId,
+            priceLevel: activity.priceLevel,
           };
         } catch (error) {
           console.error('Error processing activity:', error);
@@ -249,6 +252,7 @@ export async function POST(request: Request) {
             latitude: cityData.latitude,
             longitude: cityData.longitude,
             placeId: undefined,
+            priceLevel: undefined,
           };
         }
       })
