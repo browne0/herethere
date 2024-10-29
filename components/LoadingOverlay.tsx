@@ -56,7 +56,13 @@ const LoadingOverlay = ({ isLoading }: LoadingOverlayProps) => {
             className="fixed inset-0 flex items-center justify-center z-50"
           >
             <div className="text-center px-4">
-              <Loader2 className="w-12 h-12 text-indigo-600" />
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                className="mb-8"
+              >
+                <Loader2 className="w-12 h-12 text-indigo-600" />
+              </motion.div>
 
               <AnimatePresence mode="wait">
                 <motion.div
