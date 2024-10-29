@@ -8,6 +8,7 @@ import { redirect } from 'next/navigation';
 
 import { ActivityCard } from '@/components/activities/ActivityCard';
 import { DeleteTripButton } from '@/components/trips/delete-trip-button';
+import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
 import { TripHeader } from '@/components/trips/TripHeader';
 import { TripMapView } from '@/components/trips/TripMapView';
 import { TripShareDialog } from '@/components/trips/TripShareDialog';
@@ -19,7 +20,7 @@ import { getTripTimingText } from '@/lib/utils';
 
 export default async function TripDetailsPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
-  const { tripId } = params;
+  const { tripId } = await params;
 
   if (!userId) {
     redirect('/sign-in');
@@ -69,26 +70,21 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
         {/* Main Content */}
         <div className="px-4 lg:px-8 py-6 space-y-6">
           {/* Quick Actions */}
-          <div className="flex flex-wrap gap-4 items-center">
-            <Button asChild>
-              <Link href={`/trips/${trip.id}/activities/new`}>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Activity
-              </Link>
-            </Button>
+          <div className="flex flex-wrap justify-between items-center">
+            <div className="flex flex-wrap gap-4 items-center">
+              <Button asChild>
+                <Link href={`/trips/${trip.id}/activities/new`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Activity
+                </Link>
+              </Button>
 
-            <TripShareDialog
-              trip={trip}
-              activityCount={trip.activities.length}
-              trigger={
-                <Button variant="outline">
-                  <Share2 className="h-4 w-4 mr-2" />
-                  Share Trip
-                </Button>
-              }
-            />
+              <TripShareDialog trip={trip} activityCount={trip.activities?.length || 0} />
 
-            <DeleteTripButton tripId={trip.id} />
+              <DeleteTripButton tripId={trip.id} />
+            </div>
+
+            <TripActionsDropdown trip={trip} />
           </div>
 
           {/* Trip Stats */}
@@ -200,39 +196,6 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
-
-          {/* Features Card */}
-          <Card className="bg-muted/50">
-            <CardHeader>
-              <CardTitle>Trip Features</CardTitle>
-              <CardDescription>Tools to help you plan and organize your trip</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center gap-3 p-4 bg-background rounded-lg">
-                  <Route className="w-8 h-8 text-indigo-600" />
-                  <div>
-                    <p className="font-medium">Route Planning</p>
-                    <p className="text-sm text-muted-foreground">Optimize your daily routes</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-background rounded-lg">
-                  <Clock className="w-8 h-8 text-purple-600" />
-                  <div>
-                    <p className="font-medium">Time Management</p>
-                    <p className="text-sm text-muted-foreground">Balance your schedule</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3 p-4 bg-background rounded-lg">
-                  <Share2 className="w-8 h-8 text-blue-600" />
-                  <div>
-                    <p className="font-medium">Trip Sharing</p>
-                    <p className="text-sm text-muted-foreground">Collaborate with others</p>
-                  </div>
-                </div>
-              </div>
             </CardContent>
           </Card>
         </div>

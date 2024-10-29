@@ -48,18 +48,6 @@ export function isCityBounds(value: unknown): value is CityBounds {
   );
 }
 
-export interface Trip {
-  id: string;
-  userId: string;
-  title: string;
-  destination: string;
-  startDate: Date;
-  endDate: Date;
-  cityBounds: CityBounds | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
 export interface City {
   name: string;
   address: string;
@@ -148,4 +136,26 @@ export interface StoredDemoData {
 export interface DateRangeType {
   from: Date | undefined;
   to: Date | undefined;
+}
+
+export interface TripHeaderProps {
+  trip: {
+    id: string;
+    destination: string;
+    title?: string;
+    placeId?: string | null;
+    startDate?: Date;
+    endDate?: Date;
+    preferences?: {
+      dates?: {
+        from: string | Date;
+        to: string | Date;
+      };
+      dietary?: string[];
+      tripVibe?: number;
+      pace?: number;
+    };
+  };
+  showBackButton?: boolean;
+  className?: string;
 }

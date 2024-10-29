@@ -69,13 +69,13 @@ export function Hero() {
       {/* Main content */}
       <div className="relative z-20 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <div className="mb-6">
-          <h1 className="inline-block text-4xl md:text-6xl font-bold leading-tight md:leading-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 animate-fade-in px-4">
-            Your Journey Begins Here
+          <h1 className="inline-block text-4xl md:text-5xl font-bold leading-tight md:leading-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 animate-fade-in px-4">
+            Your Personalized Trip, Planned in Minutes.
           </h1>
         </div>
 
         <p className="text-xl md:text-2xl text-gray-600 mb-12 max-w-3xl mx-auto animate-fade-in-delayed">
-          Create personalized travel experiences that cater to your dietary needs and preferences
+          Forget the research and planning—just pack and go.
         </p>
 
         <div className="relative z-30 max-w-2xl mx-auto animate-fade-in-delayed">

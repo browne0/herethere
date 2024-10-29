@@ -1,5 +1,5 @@
 'use client';
-import { use, useCallback, useEffect, useState } from 'react';
+import { ComponentProps, use, useCallback, useEffect, useState } from 'react';
 
 import { CalendarDays, MapPin, ArrowRight, Lock, Clock, Route, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -21,7 +21,7 @@ import type { DemoTrip } from '@/lib/types';
 import { DemoTripStorage, getTripTimingText } from '@/lib/utils';
 
 const generateActivities = async (trip: DemoTrip) => {
-  const response = await fetch('/api/demo/generate-activities', {
+  const response = await fetch('/api/demo/generate', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -59,7 +59,13 @@ export default function DemoTripPage({
       return;
     }
 
-    setTrip(demoTrip);
+    const trip: ComponentProps<typeof TripHeader>['trip'] = {
+      ...demoTrip,
+      destination: demoTrip.cityData.name,
+      placeId: demoTrip.cityData.placeId,
+    };
+
+    setTrip(trip);
     setLoading(false);
 
     // If trip doesn't have activities yet, generate them
@@ -147,6 +153,8 @@ export default function DemoTripPage({
       </DialogContent>
     </Dialog>
   );
+
+  console.log(trip);
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">

@@ -126,9 +126,9 @@ const NewTripFlow = () => {
 
   const stepHeaders = {
     1: 'Where would you like to explore?',
-    2: `When would you like to visit ${selectedCity!.name}?`,
+    2: `When would you like to visit?`,
     3: 'Any dietary preferences?',
-    4: `What activities interest you in ${selectedCity!.name}?`,
+    4: `What activities interest you in?`,
     5: "What's your travel style?",
     6: 'How do you like to pace your days?',
   } as const;

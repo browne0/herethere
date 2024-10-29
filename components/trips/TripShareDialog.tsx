@@ -4,16 +4,7 @@ import { useEffect, useState } from 'react';
 
 import { Trip } from '@prisma/client';
 import { format } from 'date-fns';
-import {
-  Share2,
-  Link2,
-  Mail,
-  MessageCircle,
-  Copy,
-  Loader2,
-  CalendarDays,
-  MapPin,
-} from 'lucide-react';
+import { Share2, Mail, MessageCircle, Copy, Loader2, CalendarDays, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -32,15 +23,29 @@ import { useToast } from '@/hooks/use-toast';
 interface TripShareDialogProps {
   trip: Trip;
   activityCount: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  trigger?: React.ReactNode;
 }
 
-export function TripShareDialog({ trip, activityCount }: TripShareDialogProps) {
-  const [isOpen, setIsOpen] = useState(false);
+export function TripShareDialog({
+  trip,
+  activityCount,
+  open,
+  onOpenChange,
+  trigger,
+}: TripShareDialogProps) {
+  // Use internal state only if open prop is not provided
+  const [internalOpen, setInternalOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(trip.isPublic);
   const [isLoading, setIsLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
 
   const { toast } = useToast();
+
+  const isControlled = open !== undefined;
+  const isOpen = isControlled ? open : internalOpen;
+  const setIsOpen = isControlled ? onOpenChange : setInternalOpen;
 
   useEffect(() => {
     setShareUrl(`${window.location.origin}/trips/${trip.id}/public`);
@@ -110,11 +115,15 @@ export function TripShareDialog({ trip, activityCount }: TripShareDialogProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="icon">
-          <Share2 className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      {!trigger && !isControlled && (
+        <DialogTrigger asChild>
+          <Button variant="outline">
+            <Share2 className="h-4 w-4" />
+            <span>Share Trip</span>
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Share Trip</DialogTitle>

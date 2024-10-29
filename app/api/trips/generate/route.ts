@@ -147,6 +147,9 @@ export async function POST(request: Request) {
         startDate: new Date(preferences.dates.from),
         endDate: new Date(preferences.dates.to),
         preferences: preferences as any,
+        placeId: preferences.city?.placeId,
+        latitude: preferences.city?.latitude,
+        longitude: preferences.city?.longitude,
       },
     });
 

@@ -8,6 +8,7 @@ import Link from 'next/link';
 
 import { Container } from '@/components/layouts/container';
 import { TripCard } from '@/components/trips/TripCard';
+import TripEmptyStates from '@/components/trips/TripEmptyStates';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -70,118 +71,99 @@ export default async function TripsPage() {
           </div>
         </div>
 
-        {trips.length > 0 ? (
-          <>
-            {/* Stats Section */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium">
-                    <Calendar className="h-4 w-4 text-primary" />
-                    Upcoming Trips
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{upcoming.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Next trip:{' '}
-                    {upcoming.length > 0
-                      ? format(new Date(upcoming[0].startDate), 'MMM d, yyyy')
-                      : 'None planned'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium">
-                    <Plane className="h-4 w-4 text-primary" />
-                    Active Trips
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{ongoing.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {ongoing.length > 0 ? 'Currently traveling' : 'No active trips'}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium">
-                    <Map className="h-4 w-4 text-primary" />
-                    Total Destinations
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {new Set(trips.map(trip => trip.destination)).size}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {trips.reduce((acc, trip) => acc + trip.activities.length, 0)} activities
-                    planned
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Trips Tabs */}
-            <Tabs defaultValue={defaultTab} className="space-y-4">
-              <TabsList>
-                <TabsTrigger value="ongoing" className="relative">
-                  Active
-                  {ongoing.length > 0 && (
-                    <span className="ml-2 -mr-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
-                      {ongoing.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="upcoming" className="relative">
-                  Upcoming
-                  {upcoming.length > 0 && (
-                    <span className="ml-2 -mr-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
-                      {upcoming.length}
-                    </span>
-                  )}
-                </TabsTrigger>
-                <TabsTrigger value="past">Past</TabsTrigger>
-              </TabsList>
-
-              {['ongoing', 'upcoming', 'past'].map(status => (
-                <TabsContent key={status} value={status}>
-                  <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
-                    {(status === 'ongoing' ? ongoing : status === 'upcoming' ? upcoming : past).map(
-                      trip => (
-                        <TripCard key={trip.id} trip={trip} />
-                      )
-                    )}
-                  </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          </>
-        ) : (
-          // Empty State
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-              <div className="rounded-full bg-primary/10 p-4 mb-4">
-                <Plane className="h-8 w-8 text-primary" />
-              </div>
-              <h3 className="text-lg font-medium mb-2">Start Your Journey</h3>
-              <p className="text-muted-foreground mb-6 max-w-sm">
-                Create your first trip to begin planning your next adventure. We&apos;ll help you
-                organize everything from activities to schedules.
+        {/* Always show the Tabs section, remove the trips.length check */}
+        {/* Stats Section */}
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Calendar className="h-4 w-4 text-primary" />
+                Upcoming Trips
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{upcoming.length}</div>
+              <p className="text-xs text-muted-foreground">
+                Next trip:{' '}
+                {upcoming.length > 0
+                  ? format(new Date(upcoming[0].startDate), 'MMM d, yyyy')
+                  : 'None planned'}
               </p>
-              <Button asChild>
-                <Link href="/trips/new">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create Your First Trip
-                </Link>
-              </Button>
             </CardContent>
           </Card>
-        )}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Plane className="h-4 w-4 text-primary" />
+                Active Trips
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{ongoing.length}</div>
+              <p className="text-xs text-muted-foreground">
+                {ongoing.length > 0 ? 'Currently traveling' : 'No active trips'}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base font-medium">
+                <Map className="h-4 w-4 text-primary" />
+                Total Destinations
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {new Set(trips.map(trip => trip.destination)).size}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {trips.reduce((acc, trip) => acc + trip.activities.length, 0)} activities planned
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Trips Tabs */}
+        <Tabs defaultValue={defaultTab} className="space-y-4">
+          <TabsList>
+            <TabsTrigger value="ongoing" className="relative">
+              Active
+              {ongoing.length > 0 && (
+                <span className="ml-2 -mr-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                  {ongoing.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="upcoming" className="relative">
+              Upcoming
+              {upcoming.length > 0 && (
+                <span className="ml-2 -mr-1 px-1.5 py-0.5 text-xs bg-primary text-primary-foreground rounded-full">
+                  {upcoming.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="past">Past</TabsTrigger>
+          </TabsList>
+
+          {(['ongoing', 'upcoming', 'past'] as const).map(status => (
+            <TabsContent key={status} value={status}>
+              {(status === 'ongoing' ? ongoing : status === 'upcoming' ? upcoming : past).length >
+              0 ? (
+                <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-2">
+                  {(status === 'ongoing' ? ongoing : status === 'upcoming' ? upcoming : past).map(
+                    trip => (
+                      <TripCard key={trip.id} trip={trip} />
+                    )
+                  )}
+                </div>
+              ) : (
+                <TripEmptyStates type={status} />
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </Container>
   );
