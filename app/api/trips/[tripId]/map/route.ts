@@ -1,11 +1,33 @@
 import { auth } from '@clerk/nextjs/server';
+import { Client, TravelMode } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
 
-export async function GET(request: Request, { params }: { params: { tripId: string } }) {
+const googleMapsClient = new Client({});
+
+interface RouteSegment {
+  distance: string;
+  duration: string;
+  startActivity: {
+    id: string;
+    name: string;
+    type: string;
+    startTime: string;
+    endTime: string;
+  };
+  endActivity: {
+    id: string;
+    name: string;
+    type: string;
+    startTime: string;
+    endTime: string;
+  };
+}
+
+export async function GET(_request: Request, { params }: { params: { tripId: string } }) {
   try {
-    const { tripId } = await params;
+    const { tripId } = params;
 
     // Get authenticated user
     const { userId } = await auth();
@@ -88,6 +110,54 @@ export async function GET(request: Request, { params }: { params: { tripId: stri
       bounds.west -= lngPadding;
     }
 
+    // Calculate route segments
+    const routeSegments: RouteSegment[] = [];
+
+    if (tripData.activities.length > 1) {
+      for (let i = 0; i < tripData.activities.length - 1; i++) {
+        const startActivity = tripData.activities[i];
+        const endActivity = tripData.activities[i + 1];
+
+        try {
+          // Get route details from Google Maps Directions API
+          const response = await googleMapsClient.directions({
+            params: {
+              origin: `${startActivity.latitude},${startActivity.longitude}`,
+              destination: `${endActivity.latitude},${endActivity.longitude}`,
+              mode: TravelMode.driving,
+              key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+            },
+          });
+
+          if (response.data.routes[0]?.legs[0]) {
+            const leg = response.data.routes[0].legs[0];
+            routeSegments.push({
+              distance: leg.distance?.text || 'Unknown distance',
+              duration: leg.duration?.text || 'Unknown duration',
+              startActivity: {
+                id: startActivity.id,
+                name: startActivity.name,
+                type: startActivity.type,
+                startTime: startActivity.startTime.toISOString(),
+                endTime: startActivity.endTime.toISOString(),
+              },
+              endActivity: {
+                id: endActivity.id,
+                name: endActivity.name,
+                type: endActivity.type,
+                startTime: endActivity.startTime.toISOString(),
+                endTime: endActivity.endTime.toISOString(),
+              },
+            });
+          }
+        } catch (error) {
+          console.error('Error calculating route segment:', error);
+          // Continue with next segment if one fails
+          continue;
+        }
+      }
+    }
+
     return NextResponse.json({
       trip: {
         id: tripData.id,
@@ -98,6 +168,7 @@ export async function GET(request: Request, { params }: { params: { tripId: stri
         bounds,
       },
       activities: tripData.activities,
+      routeSegments,
     });
   } catch (error) {
     console.error('Error fetching trip map data:', error);

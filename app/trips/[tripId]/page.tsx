@@ -8,6 +8,8 @@ import { redirect } from 'next/navigation';
 
 import { ActivityCard } from '@/components/activities/ActivityCard';
 import { DeleteTripButton } from '@/components/trips/delete-trip-button';
+import { RouteLoadingSkeleton } from '@/components/trips/RouteLoadingSkeleton';
+import { RouteSummary } from '@/components/trips/RouteSummary';
 import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
 import TripGenerationError from '@/components/trips/TripGenerationError';
 import { TripGenerationProgress } from '@/components/trips/TripGenerationProgress';
@@ -212,6 +214,13 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
                 </CardContent>
               </Card>
             </div>
+
+            {/* Route Summary */}
+            {trip.activities.length >= 2 && (
+              <Suspense fallback={<RouteLoadingSkeleton />}>
+                <RouteSummary activities={trip.activities} />
+              </Suspense>
+            )}
 
             {/* Activities Section */}
             <Card>

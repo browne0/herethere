@@ -44,3 +44,22 @@ export const popularDestinations = [
     location: { lat: 41.3874, lng: 2.1686 },
   },
 ];
+
+export interface RouteSegment {
+  distance: string;
+  duration: string;
+  startActivity: {
+    id: string;
+    name: string;
+    type: string;
+    startTime: string;
+    endTime: string;
+  };
+  endActivity: {
+    id: string;
+    name: string;
+    type: string;
+    startTime: string;
+    endTime: string;
+  };
+}

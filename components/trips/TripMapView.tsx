@@ -1,24 +1,19 @@
 'use client';
+import React, { useState, useEffect } from 'react';
 
-import React, { useState, useCallback } from 'react';
-
-import { GoogleMap, Marker, InfoWindow, useLoadScript, Polyline } from '@react-google-maps/api';
+import { Activity } from '@prisma/client';
+import {
+  GoogleMap,
+  Marker,
+  InfoWindow,
+  DirectionsRenderer,
+  useLoadScript,
+} from '@react-google-maps/api';
 import { format } from 'date-fns';
-import { Loader2, MapPin, Clock, CalendarDays, MapIcon } from 'lucide-react';
+import { Loader2, MapPin, Clock, Route as RouteIcon } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
-
-type Activity = {
-  id: string;
-  type: string;
-  name: string;
-  address: string;
-  latitude: number;
-  longitude: number;
-  startTime: string;
-  endTime: string;
-  notes: string | null;
-};
+import { Card } from '@/components/ui/card';
 
 interface MapData {
   trip: {
@@ -37,57 +32,43 @@ interface MapData {
   activities: Activity[];
 }
 
+interface RouteSegment {
+  distance: string;
+  duration: string;
+  startActivity: Activity;
+  endActivity: Activity;
+}
+
 interface TripMapViewProps {
   tripId: string;
 }
 
-const defaultCenter = { lat: 40.7128, lng: -74.006 }; // New York City
-const defaultZoom = 12;
-
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: false,
-  clickableIcons: false,
-  styles: [
-    {
-      featureType: 'poi',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }],
-    },
-  ],
-  streetViewControl: false,
-  mapTypeControl: false,
-  fullscreenControl: false,
-  zoomControl: true,
-  mapTypeId: 'roadmap',
-  backgroundColor: '#fff', // Add this to prevent gray background
-  gestureHandling: 'cooperative',
-};
-
 const libraries: ('places' | 'geometry' | 'drawing' | 'visualization')[] = ['places'];
 
-export function TripMapView({ tripId }: TripMapViewProps) {
+export const TripMapView: React.FC<TripMapViewProps> = ({ tripId }) => {
   const [mapData, setMapData] = useState<MapData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [_, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
-  const [_, setMap] = useState<google.maps.Map | null>(null);
+  const [directions, setDirections] = useState<google.maps.DirectionsResult[]>([]);
+  const [routeSegments, setRouteSegments] = useState<RouteSegment[]>([]);
+  const [selectedRouteIndex, setSelectedRouteIndex] = useState<number | null>(null);
 
-  const { isLoaded, loadError } = useLoadScript({
+  const { isLoaded } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
     libraries,
   });
 
   // Fetch map data
-  React.useEffect(() => {
+  useEffect(() => {
     const fetchMapData = async () => {
       try {
         setLoading(true);
         const response = await fetch(`/api/trips/${tripId}/map`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch map data');
-        }
+        if (!response.ok) throw new Error('Failed to fetch map data');
         const data = await response.json();
         setMapData(data);
+        await calculateRoutes(data.activities);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -98,112 +79,58 @@ export function TripMapView({ tripId }: TripMapViewProps) {
     fetchMapData();
   }, [tripId]);
 
-  // Filter activities with valid coordinates
-  const validActivities = React.useMemo(() => {
-    if (!mapData?.activities) return [];
-    return mapData.activities.filter(
-      (activity): activity is Activity & { latitude: number; longitude: number } =>
-        activity.latitude !== null && activity.longitude !== null
-    );
-  }, [mapData?.activities]);
+  const calculateRoutes = async (activities: Activity[]) => {
+    if (!activities || activities.length < 2) return;
 
-  // Handle map load and set bounds
-  const onMapLoad = useCallback(
-    (map: google.maps.Map) => {
-      console.log('Map loaded', { validActivities: validActivities.length }); // Debug log
-      setMap(map);
+    const directionsService = new google.maps.DirectionsService();
+    const newDirections: google.maps.DirectionsResult[] = [];
+    const newRouteSegments: RouteSegment[] = [];
 
-      // If no activities, keep default center and zoom
-      if (!validActivities.length) {
-        map.setCenter(defaultCenter);
-        map.setZoom(defaultZoom);
-        return;
+    for (let i = 0; i < activities.length - 1; i++) {
+      const start = activities[i];
+      const end = activities[i + 1];
+
+      try {
+        const result = await directionsService.route({
+          origin: { lat: start.latitude as number, lng: start.longitude as number },
+          destination: { lat: end.latitude as number, lng: end.longitude as number },
+          travelMode: google.maps.TravelMode.DRIVING,
+          optimizeWaypoints: true,
+        });
+
+        const route = result.routes[0];
+        const leg = route.legs[0];
+
+        if (leg?.distance && leg?.duration) {
+          newDirections.push(result);
+          newRouteSegments.push({
+            distance: leg.distance.text,
+            duration: leg.duration.text,
+            startActivity: start,
+            endActivity: end,
+          });
+        }
+      } catch (error) {
+        console.error('Direction service failed:', error);
       }
+    }
 
-      // Handle single activity
-      if (validActivities.length === 1) {
-        const center = {
-          lat: validActivities[0].latitude,
-          lng: validActivities[0].longitude,
-        };
-        console.log('Setting single activity center', center); // Debug log
-        map.setCenter(center);
-        map.setZoom(15);
-        return;
-      }
+    setDirections(newDirections);
+    setRouteSegments(newRouteSegments);
+  };
 
-      // Handle multiple activities
-      if (mapData?.trip.bounds) {
-        const { north, south, east, west } = mapData.trip.bounds;
-        const bounds = new google.maps.LatLngBounds(
-          { lat: south, lng: west },
-          { lat: north, lng: east }
-        );
-        console.log('Setting bounds', bounds.toJSON()); // Debug log
-        map.fitBounds(bounds, 50);
-      }
-    },
-    [mapData, validActivities]
-  );
-
-  const getMarkerIcon = useCallback((type: string) => {
-    // Only create marker icon if window is defined (client-side)
-    if (typeof window === 'undefined') return null;
-
-    return {
-      path: 'M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8z',
-      fillColor: getMarkerColor(type),
-      fillOpacity: 1,
-      strokeWeight: 2,
-      strokeColor: '#FFFFFF',
-      scale: 2,
-      labelOrigin: new google.maps.Point(12, 8),
-      anchor: new google.maps.Point(12, 21),
-    };
-  }, []);
-
-  const getMarkerColor = (type: string) => {
-    const colors: Record<string, string> = {
+  const getMarkerColor = (type: Activity['type']): string => {
+    const colors: Record<Activity['type'], string> = {
       DINING: '#ef4444',
       SIGHTSEEING: '#3b82f6',
       ACCOMMODATION: '#22c55e',
       TRANSPORTATION: '#eab308',
       OTHER: '#6b7280',
     };
-    return colors[type] || colors.OTHER;
+    return colors[type];
   };
 
-  const polylineOptions = React.useMemo(() => {
-    if (!isLoaded || typeof window === 'undefined') return null;
-
-    return {
-      strokeColor: '#6b7280',
-      strokeOpacity: 0.8,
-      strokeWeight: 2,
-      icons: [
-        {
-          icon: {
-            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
-            scale: 3,
-            strokeColor: '#4b5563',
-            fillColor: '#4b5563',
-            fillOpacity: 1,
-          },
-          offset: '50%',
-          repeat: '100px',
-        },
-      ],
-    };
-  }, [isLoaded]);
-
-  const getPathCoordinates = useCallback(() => {
-    return validActivities.map(activity => ({
-      lat: activity.latitude,
-      lng: activity.longitude,
-    }));
-  }, [validActivities]);
-
-  if (!isLoaded) {
+  if (!isLoaded || loading) {
     return (
       <div className="h-full flex items-center justify-center bg-muted/20">
         <div className="flex flex-col items-center gap-2">
@@ -214,58 +141,10 @@ export function TripMapView({ tripId }: TripMapViewProps) {
     );
   }
 
-  if (loadError) {
-    return (
-      <div className="h-full flex items-center justify-center bg-destructive/10">
-        <div className="text-center text-destructive">
-          <p className="font-medium">Failed to load Google Maps</p>
-          <p className="text-sm">Please check your API key and try again</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="h-full flex items-center justify-center bg-muted/20">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading activities...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="h-full flex items-center justify-center bg-destructive/10">
-        <div className="text-center text-destructive">
-          <p className="font-medium">Failed to load map data</p>
-          <p className="text-sm">{error}</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!mapData) {
+  if (!mapData?.activities.length) {
     return (
       <div className="h-full flex items-center justify-center bg-muted/20">
         <p className="text-muted-foreground">No activities to display</p>
-      </div>
-    );
-  }
-
-  if (!mapData?.activities.length) {
-    return (
-      <div className="h-full flex flex-col items-center justify-center bg-muted/10 px-4">
-        <div className="text-center max-w-md mx-auto">
-          <MapIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Activities Added Yet</h3>
-          <p className="text-sm text-muted-foreground mb-6">
-            Add your first activity to see it on the map. You can add restaurants, attractions,
-            hotels, and more.
-          </p>
-        </div>
       </div>
     );
   }
@@ -274,81 +153,70 @@ export function TripMapView({ tripId }: TripMapViewProps) {
     <div className="h-full relative">
       <GoogleMap
         mapContainerClassName="w-full h-full"
-        center={defaultCenter} // Add this
-        zoom={defaultZoom} // Add this
         options={{
           disableDefaultUI: false,
           clickableIcons: false,
-          styles: [
-            {
-              featureType: 'poi',
-              elementType: 'labels',
-              stylers: [{ visibility: 'off' }],
-            },
-          ],
           streetViewControl: false,
           mapTypeControl: false,
           fullscreenControl: false,
         }}
-        onLoad={onMapLoad}
       >
-        {polylineOptions && validActivities.length > 1 && (
-          <Polyline path={getPathCoordinates()} options={polylineOptions} />
-        )}
+        {directions.map((direction, index) => (
+          <DirectionsRenderer
+            key={index}
+            directions={direction}
+            options={{
+              suppressMarkers: true,
+              preserveViewport: true,
+              polylineOptions: {
+                strokeColor: selectedRouteIndex === index ? '#3b82f6' : '#6b7280',
+                strokeWeight: selectedRouteIndex === index ? 4 : 2,
+                strokeOpacity: selectedRouteIndex === index ? 1 : 0.6,
+              },
+            }}
+          />
+        ))}
 
-        {validActivities.map((activity, index) => {
-          const markerIcon = getMarkerIcon(activity.type);
-          if (!markerIcon) return null;
+        {mapData.activities.map((activity, index) => (
+          <Marker
+            key={activity.id}
+            position={{
+              lat: activity.latitude as number,
+              lng: activity.longitude as number,
+            }}
+            onClick={() => setSelectedActivity(activity)}
+            icon={{
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 10,
+              fillColor: getMarkerColor(activity.type),
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: '#FFFFFF',
+            }}
+            label={{
+              text: String(index + 1),
+              color: '#FFFFFF',
+              fontSize: '14px',
+              fontWeight: 'bold',
+            }}
+          />
+        ))}
 
-          return (
-            <Marker
-              key={activity.id}
-              position={{
-                lat: activity.latitude,
-                lng: activity.longitude,
-              }}
-              onClick={() => setSelectedActivity(activity)}
-              icon={markerIcon}
-              label={{
-                text: String(index + 1),
-                color: '#FFFFFF',
-                fontSize: '14px',
-                fontWeight: 'bold',
-              }}
-              zIndex={1000 - index}
-              animation={google.maps.Animation.DROP}
-            />
-          );
-        })}
-
-        {selectedActivity?.latitude && selectedActivity?.longitude && (
+        {selectedActivity && (
           <InfoWindow
             position={{
-              lat: selectedActivity.latitude,
-              lng: selectedActivity.longitude,
+              lat: selectedActivity.latitude as number,
+              lng: selectedActivity.longitude as number,
             }}
             onCloseClick={() => setSelectedActivity(null)}
           >
             <div className="p-2 max-w-xs">
               <h3 className="font-medium mb-2">{selectedActivity.name}</h3>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getMarkerColor(selectedActivity.type) }}
-                  />
-                  <Badge variant="secondary">{selectedActivity.type}</Badge>
-                  <Badge variant="outline">
-                    Stop #{mapData.activities.findIndex(a => a.id === selectedActivity.id) + 1}
-                  </Badge>
-                </div>
+                <Badge variant="secondary">{selectedActivity.type}</Badge>
                 <div className="flex items-center gap-2">
                   <MapPin className="h-4 w-4" />
                   <span>{selectedActivity.address}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CalendarDays className="h-4 w-4" />
-                  <span>{format(new Date(selectedActivity.startTime), 'MMMM d, yyyy')}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4" />
@@ -357,84 +225,42 @@ export function TripMapView({ tripId }: TripMapViewProps) {
                     {format(new Date(selectedActivity.endTime), 'h:mm a')}
                   </span>
                 </div>
-                {selectedActivity.notes && <p className="mt-2 italic">{selectedActivity.notes}</p>}
               </div>
             </div>
           </InfoWindow>
         )}
       </GoogleMap>
 
-      {/* Legend - Update to include path information */}
-      {/* Updated Dynamic Legend */}
-      <div className="absolute bottom-4 right-4 bg-white p-3 rounded-lg shadow-lg space-y-4">
-        <div>
-          <div className="text-sm font-medium mb-2">Activity Types</div>
-          <div className="space-y-1">
-            {Array.from(new Set(mapData?.activities.map(a => a.type) ?? [])).map(type => {
-              const label =
-                {
-                  DINING: 'Restaurants',
-                  SIGHTSEEING: 'Attractions',
-                  ACCOMMODATION: 'Hotels',
-                  TRANSPORTATION: 'Transport',
-                  OTHER: 'Other',
-                }[type] ?? type;
-
-              return (
-                <div key={type} className="flex items-center gap-2">
-                  <div
-                    style={{
-                      backgroundColor: getMarkerColor(type),
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: 'white',
-                      fontSize: '12px',
-                      fontWeight: 'bold',
-                      border: '2px solid white',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                    }}
-                  ></div>
-                  <span className="text-xs text-muted-foreground">{label}</span>
+      {/* Route Information Panel */}
+      <Card className="absolute bottom-4 right-4 w-64 bg-white shadow-lg max-h-[40vh] overflow-y-auto">
+        <div className="p-4 space-y-4">
+          <h3 className="text-sm font-medium flex items-center gap-2">
+            <RouteIcon className="h-4 w-4" />
+            Travel Routes
+          </h3>
+          <div className="space-y-3">
+            {routeSegments.map((segment, index) => (
+              <div
+                key={index}
+                className={`p-2 rounded cursor-pointer text-xs ${
+                  selectedRouteIndex === index ? 'bg-primary/10' : 'hover:bg-muted'
+                }`}
+                onClick={() => setSelectedRouteIndex(selectedRouteIndex === index ? null : index)}
+              >
+                <div className="font-medium mb-1">
+                  Stop {index + 1} → {index + 2}
                 </div>
-              );
-            })}
+                <div className="text-muted-foreground">
+                  <div>Distance: {segment.distance}</div>
+                  <div>Duration: {segment.duration}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-
-        {mapData?.activities.length > 1 && (
-          <div>
-            <div className="text-sm font-medium mb-2">Route Information</div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2">
-                <div
-                  style={{
-                    width: '20px',
-                    height: '2px',
-                    backgroundColor: '#6b7280',
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">Path</span>
-              </div>
-              <div className="flex items-center gap-2 ml-4">
-                <div
-                  style={{
-                    width: '0',
-                    height: '0',
-                    borderLeft: '6px solid #6b7280',
-                    borderTop: '4px solid transparent',
-                    borderBottom: '4px solid transparent',
-                  }}
-                />
-                <span className="text-xs text-muted-foreground">Direction</span>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
+      </Card>
     </div>
   );
-}
+};
+
+export default TripMapView;
