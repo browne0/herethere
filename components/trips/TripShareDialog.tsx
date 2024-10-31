@@ -28,13 +28,7 @@ interface TripShareDialogProps {
   trigger?: React.ReactNode;
 }
 
-export function TripShareDialog({
-  trip,
-  activityCount,
-  open,
-  onOpenChange,
-  trigger,
-}: TripShareDialogProps) {
+export function TripShareDialog({ trip, open, onOpenChange, trigger }: TripShareDialogProps) {
   // Use internal state only if open prop is not provided
   const [internalOpen, setInternalOpen] = useState(false);
   const [isPublic, setIsPublic] = useState(trip.isPublic);
@@ -54,10 +48,6 @@ export function TripShareDialog({
   const shareText = `Check out my trip to ${trip.title} on WanderAI!`;
   const encodedShareText = encodeURIComponent(shareText);
   const encodedUrl = encodeURIComponent(shareUrl);
-
-  const tripDuration = Math.ceil(
-    (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)
-  );
 
   const handlePublicToggle = async (newStatus: boolean) => {
     try {
@@ -79,7 +69,7 @@ export function TripShareDialog({
           ? 'Anyone with the link can now view this trip'
           : 'The trip is now private',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to update sharing status',
@@ -97,7 +87,7 @@ export function TripShareDialog({
         title: 'Link copied',
         description: 'Trip link copied to clipboard',
       });
-    } catch (error) {
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to copy link',

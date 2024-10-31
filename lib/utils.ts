@@ -86,7 +86,7 @@ export class DemoTripStorage {
           if (new Date(data.expiresAt) < now) {
             localStorage.removeItem(key);
           }
-        } catch (error) {
+        } catch (_error) {
           localStorage.removeItem(key);
         }
       }
