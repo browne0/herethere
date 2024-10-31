@@ -1,5 +1,5 @@
 'use client';
-import { ComponentProps, use, useCallback, useEffect, useState } from 'react';
+import { use, useCallback, useEffect, useState } from 'react';
 
 import { CalendarDays, MapPin, ArrowRight, Lock, Clock, Route, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -17,10 +17,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { DemoTrip } from '@/lib/types';
+import type { DemoTrip, DemoActivity } from '@/lib/types';
 import { DemoTripStorage, getTripTimingText } from '@/lib/utils';
 
-const generateActivities = async (trip: DemoTrip) => {
+interface GenerateActivitiesResponse {
+  activities: DemoActivity[];
+}
+
+const generateActivities = async (trip: DemoTrip): Promise<DemoActivity[]> => {
   const response = await fetch('/api/demo/generate', {
     method: 'POST',
     headers: {
@@ -33,39 +37,32 @@ const generateActivities = async (trip: DemoTrip) => {
     throw new Error('Failed to generate activities');
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as GenerateActivitiesResponse;
   return data.activities;
 };
 
-export default function DemoTripPage({
-  params: paramsPromise,
-}: {
+interface DemoTripPageProps {
   params: Promise<{ demoTripId: string }>;
-}) {
+}
+
+export default function DemoTripPage({ params }: DemoTripPageProps) {
   const router = useRouter();
   const [trip, setTrip] = useState<DemoTrip | null>(null);
+  const { demoTripId } = use(params);
   const [loading, setLoading] = useState(true);
   const [generatingActivities, setGeneratingActivities] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showConversionDialog, setShowConversionDialog] = useState(false);
 
-  const params = use(paramsPromise);
-
   const loadTrip = useCallback(async () => {
-    const demoTrip = DemoTripStorage.getDemoTrip(params.demoTripId);
+    const demoTrip = DemoTripStorage.getDemoTrip(demoTripId);
 
     if (!demoTrip) {
       router.push('/');
       return;
     }
 
-    const trip: ComponentProps<typeof TripHeader>['trip'] = {
-      ...demoTrip,
-      destination: demoTrip.cityData.name,
-      placeId: demoTrip.cityData.placeId,
-    };
-
-    setTrip(trip);
+    setTrip(demoTrip);
     setLoading(false);
 
     // If trip doesn't have activities yet, generate them
@@ -86,7 +83,7 @@ export default function DemoTripPage({
         setGeneratingActivities(false);
       }
     }
-  }, [params.demoTripId, router]);
+  }, [demoTripId, router]);
 
   useEffect(() => {
     loadTrip();
@@ -101,11 +98,11 @@ export default function DemoTripPage({
   }
 
   if (!trip) return null;
-  if (!trip!.preferences.dates?.from || !trip!.preferences.dates?.to) {
+  if (!trip.preferences.dates?.from || !trip.preferences.dates?.to) {
     return null;
   }
 
-  const tripTiming = getTripTimingText(trip?.preferences.dates.from, trip?.preferences.dates.to);
+  const tripTiming = getTripTimingText(trip.preferences.dates.from, trip.preferences.dates.to);
 
   const ConversionDialog = () => (
     <Dialog open={showConversionDialog} onOpenChange={setShowConversionDialog}>
@@ -154,122 +151,118 @@ export default function DemoTripPage({
     </Dialog>
   );
 
-  console.log(trip);
+  const tripHeaderProps = {
+    id: trip.id,
+    destination: trip.cityData.name,
+    placeId: trip.cityData.placeId,
+    startDate: trip.preferences.dates.from,
+    endDate: trip.preferences.dates.to,
+    preferences: {
+      ...trip.preferences,
+      city: trip.cityData,
+      walkingComfort: undefined,
+    },
+  };
 
   return (
     <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
       {/* Left Panel - Trip Details */}
       <div className="flex-1 min-w-0 overflow-y-auto pb-8">
-        {loading ? (
-          <div className="min-h-screen flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600" />
-          </div>
-        ) : !trip ? null : (
-          <>
-            {/* Header */}
-            <TripHeader trip={trip} onSignUpClick={() => setShowConversionDialog(true)} />
+        <TripHeader trip={tripHeaderProps} />
 
-            <div className="px-4 lg:px-8 space-y-6 mt-6">
-              {/* Activities Section */}
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle>Trip Itinerary</CardTitle>
-                  <Badge variant={tripTiming.variant}>{tripTiming.text}</Badge>
-                </CardHeader>
-                <CardContent>
-                  {generatingActivities ? (
-                    <div className="text-center py-12 bg-muted/20 rounded-lg">
-                      <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
-                        Generating your personalized itinerary
-                      </h3>
-                      <p className="text-muted-foreground mb-4">
-                        We&apos;re creating the perfect itinerary based on your preferences
-                      </p>
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
-                    </div>
-                  ) : error ? (
-                    <div className="text-center py-12 bg-red-50 rounded-lg">
-                      <h3 className="text-lg font-medium mb-2 text-red-600">
-                        Oops! Something went wrong
-                      </h3>
-                      <p className="text-red-500 mb-4">{error}</p>
-                      <Button
-                        variant="outline"
-                        onClick={() => {
-                          setError(null);
-                          loadTrip();
-                        }}
-                      >
-                        Try Again
-                      </Button>
-                    </div>
-                  ) : trip?.activities ? (
-                    <div className="space-y-4">
-                      {trip.activities.slice(0, 3).map(activity => (
-                        <ActivityCard
-                          key={activity.id}
-                          activity={activity}
-                          onSignUpClick={() => setShowConversionDialog(true)}
-                        />
-                      ))}
+        <div className="px-4 lg:px-8 space-y-6 mt-6">
+          {/* Activities Section */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Trip Itinerary</CardTitle>
+              <Badge variant={tripTiming.variant}>{tripTiming.text}</Badge>
+            </CardHeader>
+            <CardContent>
+              {generatingActivities ? (
+                <div className="text-center py-12 bg-muted/20 rounded-lg">
+                  <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    Generating your personalized itinerary
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    We&apos;re creating the perfect itinerary based on your preferences
+                  </p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-12 bg-red-50 rounded-lg">
+                  <h3 className="text-lg font-medium mb-2 text-red-600">
+                    Oops! Something went wrong
+                  </h3>
+                  <p className="text-red-500 mb-4">{error}</p>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setError(null);
+                      loadTrip();
+                    }}
+                  >
+                    Try Again
+                  </Button>
+                </div>
+              ) : trip.activities ? (
+                <div className="space-y-4">
+                  {trip.activities.slice(0, 3).map(activity => (
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      onSignUpClick={() => setShowConversionDialog(true)}
+                    />
+                  ))}
 
-                      {/* "See More" card */}
-                      <div
-                        className="relative pl-6 border-l-2 border-gray-200 cursor-pointer"
-                        onClick={() => setShowConversionDialog(true)}
-                      >
-                        <div className="absolute left-[-5px] top-3 w-2 h-2 rounded-full bg-primary" />
-                        <div className="border rounded-lg p-6 hover:border-primary/50 transition-colors">
-                          <div className="bg-muted/20 rounded-lg p-6">
-                            <div className="flex items-center justify-between mb-4">
-                              <div>
-                                <h3 className="font-semibold">Want to optimize this itinerary?</h3>
-                                <p className="text-sm text-muted-foreground">
-                                  Sign up to access our AI optimization features:
-                                </p>
-                              </div>
-                              <Lock className="w-5 h-5 text-muted-foreground" />
+                  {/* "See More" card */}
+                  <div
+                    className="relative pl-6 border-l-2 border-gray-200 cursor-pointer"
+                    onClick={() => setShowConversionDialog(true)}
+                  >
+                    <div className="absolute left-[-5px] top-3 w-2 h-2 rounded-full bg-primary" />
+                    <div className="border rounded-lg p-6 hover:border-primary/50 transition-colors">
+                      <div className="bg-muted/20 rounded-lg p-6">
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h3 className="font-semibold">Want to optimize this itinerary?</h3>
+                            <p className="text-sm text-muted-foreground">
+                              Sign up to access our AI optimization features:
+                            </p>
+                          </div>
+                          <Lock className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                          <div className="flex items-center gap-3 p-3 bg-background rounded-lg">
+                            <Route className="w-8 h-8 text-indigo-600" />
+                            <div>
+                              <p className="font-medium">Route Optimization</p>
+                              <p className="text-sm text-muted-foreground">Minimize travel time</p>
                             </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                              <div className="flex items-center gap-3 p-3 bg-background rounded-lg">
-                                <Route className="w-8 h-8 text-indigo-600" />
-                                <div>
-                                  <p className="font-medium">Route Optimization</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Minimize travel time
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 p-3 bg-background rounded-lg">
-                                <Clock className="w-8 h-8 text-purple-600" />
-                                <div>
-                                  <p className="font-medium">Time Adjustments</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Perfect your schedule
-                                  </p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 p-3 bg-background rounded-lg">
-                                <Sparkles className="w-8 h-8 text-blue-600" />
-                                <div>
-                                  <p className="font-medium">Alternative Spots</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    Discover hidden gems
-                                  </p>
-                                </div>
-                              </div>
+                          </div>
+                          <div className="flex items-center gap-3 p-3 bg-background rounded-lg">
+                            <Clock className="w-8 h-8 text-purple-600" />
+                            <div>
+                              <p className="font-medium">Time Adjustments</p>
+                              <p className="text-sm text-muted-foreground">Perfect your schedule</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 p-3 bg-background rounded-lg">
+                            <Sparkles className="w-8 h-8 text-blue-600" />
+                            <div>
+                              <p className="font-medium">Alternative Spots</p>
+                              <p className="text-sm text-muted-foreground">Discover hidden gems</p>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ) : null}
-                </CardContent>
-              </Card>
-            </div>
-          </>
-        )}
+                  </div>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Right Panel - Map Preview */}

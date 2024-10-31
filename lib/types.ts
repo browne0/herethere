@@ -1,3 +1,4 @@
+import { Activity } from '@prisma/client';
 import { DateRange } from 'react-day-picker';
 
 export interface Location {
@@ -183,3 +184,10 @@ export type ErrorCode =
   | 'TIMEOUT_ERROR'
   | 'INVALID_PREFERENCES'
   | 'UNKNOWN_ERROR';
+
+export interface ActivityCardProps {
+  activity: DemoActivity | Activity;
+  href?: string;
+  className?: string;
+  onSignUpClick?: () => void;
+}

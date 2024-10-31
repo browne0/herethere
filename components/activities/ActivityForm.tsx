@@ -1,10 +1,10 @@
 // components/activities/ActivityForm.tsx
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Activity, Trip } from '@prisma/client';
+import { Activity } from '@prisma/client';
 import { format } from 'date-fns';
 import { CalendarIcon } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { City, CityBounds, isCityBounds, Location } from '@/lib/types';
+import { Location } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { activityFormSchema, type ActivityFormValues } from '@/lib/validations/activity';
 
@@ -46,17 +46,26 @@ interface ActivityFormProps {
 export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData, onCancel }) => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState<Location | null>(
-    initialData
-      ? {
-          address: initialData.address,
-          latitude: initialData.latitude,
-          longitude: initialData.longitude,
-          placeId: initialData.placeId || undefined,
-          name: initialData.name,
-        }
-      : null
-  );
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(() => {
+    if (!initialData?.address || !initialData?.latitude || !initialData?.longitude) {
+      return null;
+    }
+
+    return {
+      address: initialData.address || '',
+      latitude: initialData.latitude || 0,
+      longitude: initialData.longitude || 0,
+      placeId: initialData.placeId || undefined,
+      name: initialData.name,
+    };
+  });
+
+  const [selectedCity, setSelectedCity] = useState<{
+    bounds?: {
+      ne: { lat: number; lng: number };
+      sw: { lat: number; lng: number };
+    };
+  } | null>(null);
 
   const form = useForm<ActivityFormValues>({
     resolver: zodResolver(activityFormSchema),
@@ -64,14 +73,14 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
       ? {
           name: initialData.name,
           type: initialData.type as ActivityFormValues['type'],
-          address: initialData.address,
-          latitude: initialData.latitude,
-          longitude: initialData.longitude,
+          address: initialData.address || '',
+          latitude: initialData.latitude || 0,
+          longitude: initialData.longitude || 0,
           placeId: initialData.placeId || undefined,
-          startDate: initialData.startTime,
-          endDate: initialData.endTime,
-          startTime: format(initialData.startTime, 'HH:mm'),
-          endTime: format(initialData.endTime, 'HH:mm'),
+          startDate: new Date(initialData.startTime),
+          endDate: new Date(initialData.endTime),
+          startTime: format(new Date(initialData.startTime), 'HH:mm'),
+          endTime: format(new Date(initialData.endTime), 'HH:mm'),
           notes: initialData.notes || '',
         }
       : {
@@ -83,27 +92,29 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
           startTime: '09:00',
           endTime: '10:00',
           notes: '',
+          startDate: new Date(),
+          endDate: new Date(),
         },
   });
 
   const handleLocationSelect = useCallback(
     (location: Location) => {
       setSelectedLocation(location);
-
-      // Use the location name or address as the activity name
-      const activityName = location.name || location.address.split(',')[0];
-
-      form.reset({
-        ...form.getValues(),
-        name: activityName,
-        address: location.address,
-        latitude: location.latitude,
-        longitude: location.longitude,
-        placeId: location.placeId,
+      form.setValue('name', location.name || location.address.split(',')[0], {
+        shouldValidate: true,
       });
+      form.setValue('address', location.address, { shouldValidate: true });
+      form.setValue('latitude', location.latitude, { shouldValidate: true });
+      form.setValue('longitude', location.longitude, { shouldValidate: true });
+      form.setValue('placeId', location.placeId);
     },
     [form]
   );
+
+  // Watch location fields for the hasLocation check
+  const latitude = form.watch('latitude');
+  const longitude = form.watch('longitude');
+  const hasLocation = latitude !== 0 && longitude !== 0;
 
   const onSubmit = async (data: ActivityFormValues) => {
     try {
@@ -116,6 +127,14 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
       const endDateTime = new Date(data.endDate);
       const [endHours, endMinutes] = data.endTime.split(':');
       endDateTime.setHours(parseInt(endHours), parseInt(endMinutes));
+
+      if (endDateTime <= startDateTime) {
+        form.setError('endTime', {
+          type: 'manual',
+          message: 'End time must be after start time',
+        });
+        return;
+      }
 
       const payload = {
         name: data.name,
@@ -142,8 +161,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
       });
 
       if (!response.ok) {
-        const error = await response.text();
-        throw new Error(error);
+        throw new Error(await response.text());
       }
 
       if (initialData && onCancel) {
@@ -160,39 +178,6 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
     }
   };
 
-  const latitude = form.watch('latitude');
-  const longitude = form.watch('longitude');
-  const hasLocation = latitude !== 0 && longitude !== 0;
-
-  const [selectedCity, setSelectedCity] = useState<City | null>(null);
-
-  // Fetch trip details including city bounds when component mounts
-  useEffect(() => {
-    const fetchTripDetails = async () => {
-      try {
-        const response = await fetch(`/api/trips/${tripId}`);
-        if (response.ok) {
-          const trip: Trip = await response.json();
-          if (trip.cityBounds && isCityBounds(trip.cityBounds)) {
-            const bounds = trip.cityBounds as CityBounds;
-            setSelectedCity({
-              name: trip.destination,
-              address: trip.destination,
-              latitude: (bounds.ne.lat + bounds.sw.lat) / 2,
-              longitude: (bounds.ne.lng + bounds.sw.lng) / 2,
-              placeId: trip.placeId!,
-              bounds,
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching trip details:', error);
-      }
-    };
-
-    fetchTripDetails();
-  }, [tripId]);
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
@@ -205,7 +190,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
           )}
           <LocationSearch
             onLocationSelect={handleLocationSelect}
-            defaultValue={initialData?.address}
+            defaultValue={initialData?.address || undefined}
             searchType={form.watch('type')}
             cityBounds={selectedCity?.bounds}
           />
