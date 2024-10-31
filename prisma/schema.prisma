@@ -31,25 +31,31 @@ model User {
 }
 
 model Trip {
-  id          String      @id @default(cuid())
-  userId      String
-  user        User        @relation(fields: [userId], references: [id])
-  title       String
-  destination String
-  cityBounds  Json?
-  placeId     String?
-  latitude    Float?
-  longitude   Float?
-  startDate   DateTime
-  endDate     DateTime
-  preferences Json
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  activities  Activity[]
-  isPublic    Boolean     @default(false)
-  sharedWith  TripShare[]
-  mainPhoto   String?
-  photoCount  Int         @default(0)
+  id             String      @id @default(cuid())
+  userId         String
+  user           User        @relation(fields: [userId], references: [id])
+  title          String
+  destination    String
+  cityBounds     Json?
+  placeId        String?
+  latitude       Float?
+  longitude      Float?
+  startDate      DateTime
+  endDate        DateTime
+  status         String      @default("draft") // draft, generating, basic_ready, complete, error
+  progress       Int         @default(0) // 0-100 progress indicator
+  errorCode      String? // For storing error type
+  errorMessage   String? // For storing error details
+  lastUpdateTime DateTime?
+  attemptsCount  Int         @default(0)
+  preferences    Json
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  activities     Activity[]
+  isPublic       Boolean     @default(false)
+  sharedWith     TripShare[]
+  mainPhoto      String?
+  photoCount     Int         @default(0)
 
   @@index([userId])
   @@map("trip")
@@ -76,14 +82,15 @@ model Activity {
   trip       Trip     @relation(fields: [tripId], references: [id])
   type       String
   name       String
-  address    String
-  latitude   Float
-  longitude  Float
+  address    String?
+  latitude   Float?
+  longitude  Float?
   placeId    String?
   startTime  DateTime
   endTime    DateTime
   notes      String?
   priceLevel Int?
+  status     String   @default("pending") // pending, complete, error
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

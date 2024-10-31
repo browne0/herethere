@@ -146,16 +146,40 @@ export interface TripHeaderProps {
     placeId?: string | null;
     startDate?: Date;
     endDate?: Date;
-    preferences?: {
-      dates?: {
-        from: string | Date;
-        to: string | Date;
-      };
-      dietary?: string[];
-      tripVibe?: number;
-      pace?: number;
-    };
+    preferences?: TripPreferences;
   };
   showBackButton?: boolean;
   className?: string;
 }
+
+export type TripStatus = 'draft' | 'generating' | 'basic_ready' | 'complete' | 'error';
+
+export interface TripError {
+  code:
+    | 'OPENAI_ERROR' // OpenAI API failures
+    | 'PLACES_ERROR' // Google Places API issues
+    | 'DATABASE_ERROR' // Database operations failed
+    | 'TIMEOUT_ERROR' // Generation took too long
+    | 'INVALID_PREFERENCES' // User preferences were invalid
+    | 'UNKNOWN_ERROR'; // Catch-all for unexpected errors
+  message: string;
+  details?: string;
+  recoverable: boolean; // Whether retry is possible
+  timestamp: string;
+}
+
+export interface TripGenerationState {
+  status: TripStatus;
+  progress: number;
+  error?: TripError;
+  lastUpdateTime: string; // Track when we last had an update
+  attemptsCount: number; // Track retry attempts
+}
+
+export type ErrorCode =
+  | 'OPENAI_ERROR'
+  | 'PLACES_ERROR'
+  | 'DATABASE_ERROR'
+  | 'TIMEOUT_ERROR'
+  | 'INVALID_PREFERENCES'
+  | 'UNKNOWN_ERROR';

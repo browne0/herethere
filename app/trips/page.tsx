@@ -42,7 +42,6 @@ export default async function TripsPage() {
 
   const { upcoming, ongoing, past } = groupTripsByStatus(trips);
   const defaultTab = ongoing.length > 0 ? 'ongoing' : upcoming.length > 0 ? 'upcoming' : 'past';
-  console.log(ongoing);
 
   return (
     <Container>

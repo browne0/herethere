@@ -20,29 +20,53 @@ type Activity = {
   notes: string | null;
 };
 
+interface MapData {
+  trip: {
+    id: string;
+    title: string;
+    destination: string;
+    startDate: string;
+    endDate: string;
+    bounds: {
+      north: number;
+      south: number;
+      east: number;
+      west: number;
+    } | null;
+  };
+  activities: Activity[];
+}
+
 interface TripMapViewProps {
   tripId: string;
 }
 
+const defaultCenter = { lat: 40.7128, lng: -74.006 }; // New York City
+const defaultZoom = 12;
+
+const mapOptions: google.maps.MapOptions = {
+  disableDefaultUI: false,
+  clickableIcons: false,
+  styles: [
+    {
+      featureType: 'poi',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+  ],
+  streetViewControl: false,
+  mapTypeControl: false,
+  fullscreenControl: false,
+  zoomControl: true,
+  mapTypeId: 'roadmap',
+  backgroundColor: '#fff', // Add this to prevent gray background
+  gestureHandling: 'cooperative',
+};
+
 const libraries: ('places' | 'geometry' | 'drawing' | 'visualization')[] = ['places'];
 
 export function TripMapView({ tripId }: TripMapViewProps) {
-  const [mapData, setMapData] = useState<{
-    trip: {
-      id: string;
-      title: string;
-      destination: string;
-      startDate: string;
-      endDate: string;
-      bounds: {
-        north: number;
-        south: number;
-        east: number;
-        west: number;
-      } | null;
-    };
-    activities: Activity[];
-  } | null>(null);
+  const [mapData, setMapData] = useState<MapData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
@@ -74,33 +98,58 @@ export function TripMapView({ tripId }: TripMapViewProps) {
     fetchMapData();
   }, [tripId]);
 
+  // Filter activities with valid coordinates
+  const validActivities = React.useMemo(() => {
+    if (!mapData?.activities) return [];
+    return mapData.activities.filter(
+      (activity): activity is Activity & { latitude: number; longitude: number } =>
+        activity.latitude !== null && activity.longitude !== null
+    );
+  }, [mapData?.activities]);
+
   // Handle map load and set bounds
   const onMapLoad = useCallback(
     (map: google.maps.Map) => {
+      console.log('Map loaded', { validActivities: validActivities.length }); // Debug log
       setMap(map);
-      if (!mapData?.activities.length) return;
 
-      if (mapData.activities.length === 1) {
-        // For single activity, set a reasonable zoom level
-        const activity = mapData.activities[0];
-        map.setCenter({
-          lat: activity.latitude,
-          lng: activity.longitude,
-        });
-        map.setZoom(15); // Adjust this value to get desired zoom level
-      } else if (mapData.trip.bounds) {
-        // For multiple activities, fit bounds with padding
+      // If no activities, keep default center and zoom
+      if (!validActivities.length) {
+        map.setCenter(defaultCenter);
+        map.setZoom(defaultZoom);
+        return;
+      }
+
+      // Handle single activity
+      if (validActivities.length === 1) {
+        const center = {
+          lat: validActivities[0].latitude,
+          lng: validActivities[0].longitude,
+        };
+        console.log('Setting single activity center', center); // Debug log
+        map.setCenter(center);
+        map.setZoom(15);
+        return;
+      }
+
+      // Handle multiple activities
+      if (mapData?.trip.bounds) {
         const { north, south, east, west } = mapData.trip.bounds;
-        map.fitBounds(
-          new google.maps.LatLngBounds({ lat: south, lng: west }, { lat: north, lng: east }),
-          50 // Adds 50 pixels of padding
+        const bounds = new google.maps.LatLngBounds(
+          { lat: south, lng: west },
+          { lat: north, lng: east }
         );
+        console.log('Setting bounds', bounds.toJSON()); // Debug log
+        map.fitBounds(bounds, 50);
       }
     },
-    [mapData]
+    [mapData, validActivities]
   );
 
   const getMarkerIcon = useCallback((type: string) => {
+    // Only create marker icon if window is defined (client-side)
+    if (typeof window === 'undefined') return null;
+
     return {
       path: 'M12 0C7.58 0 4 3.58 4 8c0 5.25 8 13 8 13s8-7.75 8-13c0-4.42-3.58-8-8-8z',
       fillColor: getMarkerColor(type),
@@ -108,37 +157,35 @@ export function TripMapView({ tripId }: TripMapViewProps) {
       strokeWeight: 2,
       strokeColor: '#FFFFFF',
       scale: 2,
-      labelOrigin: new window.google.maps.Point(12, 8),
-      anchor: new window.google.maps.Point(12, 21),
+      labelOrigin: new google.maps.Point(12, 8),
+      anchor: new google.maps.Point(12, 21),
     };
   }, []);
 
-  // Get marker color based on activity type
   const getMarkerColor = (type: string) => {
     const colors: Record<string, string> = {
-      DINING: '#ef4444', // Red
-      SIGHTSEEING: '#3b82f6', // Blue
-      ACCOMMODATION: '#22c55e', // Green
-      TRANSPORTATION: '#eab308', // Yellow
-      OTHER: '#6b7280', // Gray
+      DINING: '#ef4444',
+      SIGHTSEEING: '#3b82f6',
+      ACCOMMODATION: '#22c55e',
+      TRANSPORTATION: '#eab308',
+      OTHER: '#6b7280',
     };
     return colors[type] || colors.OTHER;
   };
 
-  // Create polyline options using useMemo to avoid recreating on every render
   const polylineOptions = React.useMemo(() => {
-    if (!isLoaded) return null;
+    if (!isLoaded || typeof window === 'undefined') return null;
 
     return {
-      strokeColor: '#6b7280', // gray-500
+      strokeColor: '#6b7280',
       strokeOpacity: 0.8,
       strokeWeight: 2,
       icons: [
         {
           icon: {
-            path: window.google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
+            path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW,
             scale: 3,
-            strokeColor: '#4b5563', // gray-600
+            strokeColor: '#4b5563',
             fillColor: '#4b5563',
             fillOpacity: 1,
           },
@@ -149,13 +196,12 @@ export function TripMapView({ tripId }: TripMapViewProps) {
     };
   }, [isLoaded]);
 
-  // Function to get path coordinates
-  const getPathCoordinates = (activities: Activity[]) => {
-    return activities.map(activity => ({
+  const getPathCoordinates = useCallback(() => {
+    return validActivities.map(activity => ({
       lat: activity.latitude,
       lng: activity.longitude,
     }));
-  };
+  }, [validActivities]);
 
   if (!isLoaded) {
     return (
@@ -228,6 +274,8 @@ export function TripMapView({ tripId }: TripMapViewProps) {
     <div className="h-full relative">
       <GoogleMap
         mapContainerClassName="w-full h-full"
+        center={defaultCenter} // Add this
+        zoom={defaultZoom} // Add this
         options={{
           disableDefaultUI: false,
           clickableIcons: false,
@@ -244,31 +292,36 @@ export function TripMapView({ tripId }: TripMapViewProps) {
         }}
         onLoad={onMapLoad}
       >
-        {/* Add path visualization */}
-        {polylineOptions && mapData.activities.length > 1 && (
-          <Polyline path={getPathCoordinates(mapData.activities)} options={polylineOptions} />
+        {polylineOptions && validActivities.length > 1 && (
+          <Polyline path={getPathCoordinates()} options={polylineOptions} />
         )}
 
-        {/* Markers with numbers */}
-        {mapData?.activities.map((activity, index) => (
-          <Marker
-            key={activity.id}
-            position={{ lat: activity.latitude, lng: activity.longitude }}
-            onClick={() => setSelectedActivity(activity)}
-            icon={getMarkerIcon(activity.type)}
-            label={{
-              text: String(index + 1),
-              color: '#FFFFFF',
-              fontSize: '14px',
-              fontWeight: 'bold',
-            }}
-            zIndex={1000 - index} // Earlier stops appear on top
-            animation={window.google.maps.Animation.DROP}
-          />
-        ))}
+        {validActivities.map((activity, index) => {
+          const markerIcon = getMarkerIcon(activity.type);
+          if (!markerIcon) return null;
 
-        {/* InfoWindow */}
-        {selectedActivity && (
+          return (
+            <Marker
+              key={activity.id}
+              position={{
+                lat: activity.latitude,
+                lng: activity.longitude,
+              }}
+              onClick={() => setSelectedActivity(activity)}
+              icon={markerIcon}
+              label={{
+                text: String(index + 1),
+                color: '#FFFFFF',
+                fontSize: '14px',
+                fontWeight: 'bold',
+              }}
+              zIndex={1000 - index}
+              animation={google.maps.Animation.DROP}
+            />
+          );
+        })}
+
+        {selectedActivity?.latitude && selectedActivity?.longitude && (
           <InfoWindow
             position={{
               lat: selectedActivity.latitude,

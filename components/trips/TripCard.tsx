@@ -73,8 +73,6 @@ export function TripCard({ trip }: TripCardProps) {
     }
   }
 
-  console.log(trip);
-
   return (
     <>
       <Card className="group hover:shadow-lg transition-all">

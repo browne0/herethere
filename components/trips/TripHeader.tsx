@@ -86,8 +86,8 @@ export function TripHeader({ trip, showBackButton = true, className = '' }: Trip
                   <div>
                     <p className="font-medium">Trip Dates</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(dates.from as string), 'MMM d')} -{' '}
-                      {format(new Date(dates.to as string), 'MMM d, yyyy')}
+                      {format(new Date(dates.from as Date), 'MMM d')} -{' '}
+                      {format(new Date(dates.to as Date), 'MMM d, yyyy')}
                     </p>
                   </div>
                 </div>

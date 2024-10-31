@@ -10,6 +10,7 @@ export async function DELETE(
 ) {
   try {
     const { userId } = await auth();
+    const { tripId, activityId } = await params;
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
@@ -17,11 +18,11 @@ export async function DELETE(
     // Verify the activity belongs to a trip owned by the user
     const trip = await prisma.trip.findFirst({
       where: {
-        id: params.tripId,
+        id: tripId,
         userId: userId,
         activities: {
           some: {
-            id: params.activityId,
+            id: activityId,
           },
         },
       },
@@ -34,7 +35,7 @@ export async function DELETE(
     // Delete the activity
     await prisma.activity.delete({
       where: {
-        id: params.activityId,
+        id: activityId,
       },
     });
 
@@ -51,6 +52,7 @@ export async function PATCH(
 ) {
   try {
     const { userId } = await auth();
+    const { tripId, activityId } = await params;
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
@@ -58,11 +60,11 @@ export async function PATCH(
     // Verify the activity belongs to a trip owned by the user
     const trip = await prisma.trip.findFirst({
       where: {
-        id: params.tripId,
+        id: tripId,
         userId: userId,
         activities: {
           some: {
-            id: params.activityId,
+            id: activityId,
           },
         },
       },
@@ -98,7 +100,7 @@ export async function PATCH(
     // Update the activity
     const updatedActivity = await prisma.activity.update({
       where: {
-        id: params.activityId,
+        id: activityId,
       },
       data: {
         name: json.name,

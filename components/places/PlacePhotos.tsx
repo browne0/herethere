@@ -44,7 +44,6 @@ export const PlacePhotos = ({
         }
 
         const data = await response.json();
-        console.log('Photos data:', data); // Debug log
         setPhotos(data.photos || []);
       } catch (err) {
         console.error('Error fetching photos:', err);
