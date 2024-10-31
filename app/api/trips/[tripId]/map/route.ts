@@ -73,10 +73,10 @@ export async function GET(request: Request, { params }: { params: { tripId: stri
 
     if (tripData.activities.length > 0) {
       bounds = {
-        north: Math.max(...tripData.activities.map(a => a.latitude)),
-        south: Math.min(...tripData.activities.map(a => a.latitude)),
-        east: Math.max(...tripData.activities.map(a => a.longitude)),
-        west: Math.min(...tripData.activities.map(a => a.longitude)),
+        north: Math.max(...tripData.activities.map(a => a.latitude as number)),
+        south: Math.min(...tripData.activities.map(a => a.latitude as number)),
+        east: Math.max(...tripData.activities.map(a => a.longitude as number)),
+        west: Math.min(...tripData.activities.map(a => a.longitude as number)),
       };
 
       // Add some padding to the bounds (about 10%)
