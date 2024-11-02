@@ -18,6 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Accommodation } from '@/lib/trips';
 
+import { DirectionsButton } from './DirectionsButton';
+
 interface TripMapViewProps {
   tripId: string;
   activities: Activity[];
@@ -206,7 +208,13 @@ export function TripMapView({
 
   return (
     <div className="h-full relative">
-      <GoogleMap mapContainerClassName="w-full h-full" options={mapOptions} onLoad={setMap}>
+      <GoogleMap
+        mapContainerClassName="w-full h-full"
+        options={mapOptions}
+        onLoad={setMap}
+        zoom={defaultZoom}
+        center={defaultCenter}
+      >
         {/* Accommodation Marker */}
         {accommodation && (
           <Marker
@@ -303,46 +311,21 @@ export function TripMapView({
               {selectedMarker.notes && (
                 <p className="mt-2 text-sm border-t pt-2">{selectedMarker.notes}</p>
               )}
+              <div className="mt-4 pt-2 border-t">
+                <DirectionsButton
+                  destination={{
+                    latitude: selectedMarker.latitude!,
+                    longitude: selectedMarker.longitude!,
+                  }}
+                  origin={accommodation}
+                  variant="ghost"
+                  size="sm"
+                />
+              </div>
             </div>
           </InfoWindow>
         )}
       </GoogleMap>
-
-      {/* Legend */}
-      <Card className="absolute bottom-4 right-4 w-auto">
-        <CardContent className="p-4 space-y-2">
-          <h3 className="text-sm font-medium mb-2">Activity Types</h3>
-          {Object.values(
-            activities.reduce(
-              (acc, activity) => {
-                acc[activity.type] = true;
-                return acc;
-              },
-              {} as Record<Activity['type'], boolean>
-            )
-          ).length > 0 && (
-            <div className="space-y-2">
-              {Object.entries(getMarkerColor).map(([type]) => (
-                <div key={type} className="flex items-center gap-2">
-                  <div
-                    className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: getMarkerColor(type as Activity['type']) }}
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {type.charAt(0) + type.slice(1).toLowerCase()}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
-          {accommodation && (
-            <div className="flex items-center gap-2 pt-2 border-t">
-              <Home className="h-4 w-4 text-emerald-500" />
-              <span className="text-sm text-muted-foreground">Accommodation</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }

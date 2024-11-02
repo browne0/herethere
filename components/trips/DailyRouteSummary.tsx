@@ -11,8 +11,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { useRouteCalculations } from '@/hooks/useRouteCalculations';
+import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
 import { Accommodation } from '@/lib/trips';
 import { cn } from '@/lib/utils';
+
+import { DirectionsButton } from './DirectionsButton';
 
 interface DailyRouteSummaryProps {
   dates: string[];
@@ -24,7 +28,11 @@ interface DailyRouteSummaryProps {
   hoveredActivityId: string | null;
   selectedActivityId: string | null;
   accommodation?: Accommodation;
-  isLoadingRoutes?: boolean;
+}
+
+interface RouteInfo {
+  distance: string;
+  duration: string;
 }
 
 export function DailyRouteSummary({
@@ -37,7 +45,6 @@ export function DailyRouteSummary({
   hoveredActivityId,
   selectedActivityId,
   accommodation,
-  isLoadingRoutes,
 }: DailyRouteSummaryProps) {
   // Group activities by date
   const groupedActivities = React.useMemo(() => {
@@ -92,7 +99,6 @@ export function DailyRouteSummary({
               onActivitySelect={onActivitySelect}
               hoveredActivityId={hoveredActivityId}
               selectedActivityId={selectedActivityId}
-              isLoadingRoutes={isLoadingRoutes}
             />
           </TabsContent>
         ))}
@@ -109,7 +115,6 @@ interface DayScheduleProps {
   onActivitySelect: (activityId: string | null) => void;
   hoveredActivityId: string | null;
   selectedActivityId: string | null;
-  isLoadingRoutes?: boolean;
 }
 
 function DaySchedule({
@@ -120,8 +125,9 @@ function DaySchedule({
   onActivitySelect,
   hoveredActivityId,
   selectedActivityId,
-  isLoadingRoutes,
 }: DayScheduleProps) {
+  const { routeSegments, isCalculating } = useRouteCalculations(activities, accommodation);
+
   if (activities.length === 0) {
     return (
       <CardContent>
@@ -154,23 +160,37 @@ function DaySchedule({
 
         {/* Activities Timeline */}
         <div className="relative">
-          <div className="absolute left-8 top-4 bottom-4 w-px bg-muted-foreground/20" />
+          {/* <div className="absolute left-8 top-4 bottom-4 w-px bg-muted-foreground/20" /> */}
 
-          {activities.map((activity, index) => (
-            <div key={activity.id} className="mb-8 last:mb-0">
-              <ActivityTimelineItem
-                activity={activity}
-                nextActivity={activities[index + 1]}
-                accommodation={accommodation}
-                isLast={index === activities.length - 1}
-                onHover={onActivityHover}
-                onSelect={onActivitySelect}
-                isHovered={hoveredActivityId === activity.id}
-                isSelected={selectedActivityId === activity.id}
-                isLoadingRoute={isLoadingRoutes}
-              />
-            </div>
-          ))}
+          {activities.map((activity, index) => {
+            const nextActivity = activities[index + 1];
+            const routeKey = nextActivity
+              ? `${activity.id}-${nextActivity.id}`
+              : index === activities.length - 1 && accommodation
+                ? `${activity.id}-accommodation`
+                : undefined;
+            const routeToNext = routeKey ? routeSegments[routeKey] : undefined;
+
+            return (
+              <div key={activity.id} className="mb-8 last:mb-0">
+                <ActivityTimelineItem
+                  activity={activity}
+                  nextActivity={nextActivity}
+                  previousActivity={activities[index - 1]}
+                  isFirstActivity={index === 0}
+                  isLastActivity={index === activities.length - 1}
+                  accommodation={accommodation}
+                  isLast={index === activities.length - 1}
+                  onHover={onActivityHover}
+                  onSelect={onActivitySelect}
+                  isHovered={hoveredActivityId === activity.id}
+                  isSelected={selectedActivityId === activity.id}
+                  isCalculatingRoutes={isCalculating}
+                  routeToNext={routeToNext}
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
     </CardContent>
@@ -180,33 +200,36 @@ function DaySchedule({
 interface ActivityTimelineItemProps {
   activity: Activity;
   nextActivity?: Activity;
+  previousActivity?: Activity;
   accommodation?: Accommodation;
   isLast: boolean;
   onHover: (activityId: string | null) => void;
   onSelect: (activityId: string | null) => void;
   isHovered: boolean;
   isSelected: boolean;
-  isLoadingRoute?: boolean;
+  isCalculatingRoutes: boolean;
+  isFirstActivity: boolean;
+  isLastActivity: boolean;
+  routeToNext?: RouteInfo;
 }
 
 function ActivityTimelineItem({
   activity,
   nextActivity,
+  previousActivity,
   accommodation,
   isLast,
   onHover,
   onSelect,
   isHovered,
   isSelected,
-  isLoadingRoute,
+  isCalculatingRoutes,
+  isFirstActivity,
+  isLastActivity,
+  routeToNext,
 }: ActivityTimelineItemProps) {
   return (
-    <div className="relative ml-16">
-      {/* Time Marker */}
-      <div className="absolute -left-12 w-8 h-8 rounded-full bg-background border-2 border-primary flex items-center justify-center text-xs">
-        {format(new Date(activity.startTime), 'HH:mm')}
-      </div>
-
+    <div className="relative">
       {/* Activity Card */}
       <Card
         className={cn(
@@ -218,19 +241,17 @@ function ActivityTimelineItem({
         onMouseLeave={() => onHover(null)}
         onClick={() => onSelect(activity.id)}
       >
-        <CardContent className="p-4">
+        <CardContent className="p-4 space-y-4">
+          {/* Activity Info */}
           <div className="flex items-start justify-between gap-4">
             <div>
               <h4 className="font-medium">{activity.name}</h4>
-              {activity.address && (
-                <p className="text-sm text-muted-foreground mt-1">{activity.address}</p>
-              )}
             </div>
             <Badge>{activity.type}</Badge>
           </div>
 
-          {/* Duration */}
-          <div className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+          {/* Activity Time */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Clock className="h-4 w-4" />
             <span>
               {format(new Date(activity.startTime), 'h:mm a')} -{' '}
@@ -238,21 +259,44 @@ function ActivityTimelineItem({
             </span>
           </div>
 
-          {/* Travel to Next Location */}
+          {/* Distance and Next Location */}
           {(nextActivity || (!isLast && accommodation)) && (
-            <div
-              className={cn(
-                'mt-3 pt-3 border-t flex items-center gap-2 text-sm text-muted-foreground',
-                isLoadingRoute && 'animate-pulse'
+            <div className="pt-4 border-t">
+              {routeToNext && activity.latitude && activity.longitude && !isCalculatingRoutes && (
+                <a
+                  href={getGoogleMapsDirectionsUrl(
+                    { latitude: activity.latitude, longitude: activity.longitude },
+                    nextActivity
+                      ? { latitude: nextActivity.latitude!, longitude: nextActivity.longitude! }
+                      : { latitude: accommodation!.latitude, longitude: accommodation!.longitude }
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
+                >
+                  <Navigation className="h-4 w-4 group-hover:text-primary" />
+                  <span className="font-medium group-hover:text-primary">
+                    {routeToNext.distance}
+                  </span>
+                  <ArrowRight className="h-4 w-4 group-hover:text-primary" />
+                  <span>
+                    {routeToNext.duration} to{' '}
+                    {nextActivity ? nextActivity.name : accommodation?.name}
+                  </span>
+                </a>
               )}
-            >
-              <Navigation className="h-4 w-4" />
-              <ArrowRight className="h-4 w-4" />
-              <span>
-                {isLoadingRoute
-                  ? 'Calculating route...'
-                  : `20 min to ${nextActivity ? nextActivity.name : accommodation?.name}`}
-              </span>
+              {isCalculatingRoutes && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
+                  <Navigation className="h-4 w-4" />
+                  <span>Calculating route...</span>
+                </div>
+              )}
+              {!routeToNext && !isCalculatingRoutes && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Navigation className="h-4 w-4" />
+                  <span>Unable to calculate route</span>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

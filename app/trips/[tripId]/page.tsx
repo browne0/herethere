@@ -7,7 +7,8 @@ import { Plus, MapPin, Route, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { DeleteTripButton } from '@/components/trips/delete-trip-button';
+import { DeleteTripButton } from '@/components/trips/DeleteTripButton';
+import { MapSection } from '@/components/trips/MapSection';
 import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
 import TripGenerationError from '@/components/trips/TripGenerationError';
 import { TripGenerationProgress } from '@/components/trips/TripGenerationProgress';
@@ -50,7 +51,7 @@ function MapLoadingFallback() {
 // Main page component
 export default async function TripDetailsPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
-  const { tripId } = params;
+  const { tripId } = await params;
 
   if (!userId) {
     redirect('/sign-in');
@@ -119,7 +120,7 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
     <AutoRefresh status={trip.status}>
       <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
         {/* Left Panel - Trip Details */}
-        <div className="flex-1 min-w-0 overflow-y-auto">
+        <div className="w-1/2 overflow-y-auto">
           {/* Header */}
           <TripHeader trip={tripProps} />
 
@@ -206,6 +207,15 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
               />
             </Suspense>
           </div>
+        </div>
+        <div className="w-1/2 border-l">
+          <Suspense fallback={<MapLoadingFallback />}>
+            <MapSection
+              tripId={tripId}
+              activities={trip.activities}
+              accommodation={trip.preferences?.accommodation}
+            />
+          </Suspense>
         </div>
       </div>
     </AutoRefresh>
