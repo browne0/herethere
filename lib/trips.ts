@@ -63,3 +63,14 @@ export interface RouteSegment {
     endTime: string;
   };
 }
+
+export interface Coordinates {
+  latitude: number;
+  longitude: number;
+}
+
+export interface Accommodation extends Coordinates {
+  name: string;
+  address?: string;
+  placeId?: string;
+}

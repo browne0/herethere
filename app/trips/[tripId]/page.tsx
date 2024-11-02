@@ -1,24 +1,22 @@
+// app/trips/[tripId]/page.tsx
 import { Suspense } from 'react';
 
 import { auth } from '@clerk/nextjs/server';
 import { format, differenceInDays } from 'date-fns';
-import { CalendarDays, Plus, MapPin, Route, Clock, Loader2 } from 'lucide-react';
+import { Plus, MapPin, Route, Clock } from 'lucide-react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { ActivityCard } from '@/components/activities/ActivityCard';
 import { DeleteTripButton } from '@/components/trips/delete-trip-button';
-import { RouteLoadingSkeleton } from '@/components/trips/RouteLoadingSkeleton';
-import { RouteSummary } from '@/components/trips/RouteSummary';
 import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
 import TripGenerationError from '@/components/trips/TripGenerationError';
 import { TripGenerationProgress } from '@/components/trips/TripGenerationProgress';
 import { TripHeader } from '@/components/trips/TripHeader';
-import { TripMapView } from '@/components/trips/TripMapView';
 import { TripShareDialog } from '@/components/trips/TripShareDialog';
+import { TripViewContainer } from '@/components/trips/TripViewContainer';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { prisma } from '@/lib/db';
 import { MAX_RETRY_ATTEMPTS } from '@/lib/trip-generation/utils';
 import { ErrorCode, TripHeaderProps, TripPreferences } from '@/lib/types';
@@ -34,7 +32,7 @@ function convertDbTripToProps(dbTrip: any): TripHeaderProps['trip'] {
     placeId: dbTrip.placeId,
     startDate: dbTrip.startDate,
     endDate: dbTrip.endDate,
-    preferences: dbTrip.preferences as TripPreferences, // Type assertion here is safe because we validate the structure
+    preferences: dbTrip.preferences as TripPreferences,
   };
 }
 
@@ -52,7 +50,7 @@ function MapLoadingFallback() {
 // Main page component
 export default async function TripDetailsPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
-  const { tripId } = await params;
+  const { tripId } = params;
 
   if (!userId) {
     redirect('/sign-in');
@@ -77,7 +75,6 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
   }
 
   const tripDuration = differenceInDays(new Date(trip.endDate), new Date(trip.startDate)) + 1;
-  const isSingleDayTrip = tripDuration === 1;
   const tripTiming = getTripTimingText(trip.startDate, trip.endDate);
   const tripProps = convertDbTripToProps(trip);
 
@@ -113,26 +110,10 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
             <TripHeader trip={tripProps} />
             <TripGenerationProgress progress={trip.progress} status={trip.status} />
           </div>
-          <div className="hidden lg:block w-[45%] border-l">
-            <TripMapView tripId={tripId} />
-          </div>
         </div>
       </AutoRefresh>
     );
   }
-
-  // Group activities by date
-  const groupedActivities = trip.activities.reduce(
-    (groups, activity) => {
-      const date = format(new Date(activity.startTime), 'yyyy-MM-dd');
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(activity);
-      return groups;
-    },
-    {} as Record<string, typeof trip.activities>
-  );
 
   return (
     <AutoRefresh status={trip.status}>
@@ -155,7 +136,6 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
                 </Button>
 
                 <TripShareDialog trip={trip} activityCount={trip.activities?.length || 0} />
-
                 <DeleteTripButton tripId={trip.id} />
               </div>
 
@@ -215,87 +195,17 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
               </Card>
             </div>
 
-            {/* Route Summary */}
-            {trip.activities.length >= 2 && (
-              <Suspense fallback={<RouteLoadingSkeleton />}>
-                <RouteSummary activities={trip.activities} />
-              </Suspense>
-            )}
-
-            {/* Activities Section */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  Trip Itinerary
-                  <Badge variant={tripTiming.variant}>{tripTiming.text}</Badge>
-                </CardTitle>
-                <CardDescription>Your planned activities for this trip</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Suspense
-                  fallback={
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                    </div>
-                  }
-                >
-                  {trip.activities.length === 0 ? (
-                    <div className="text-center py-12 bg-muted/20 rounded-lg">
-                      <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <h3 className="text-lg font-medium mb-2">
-                        Plan Your {isSingleDayTrip ? 'Day' : 'Trip'}
-                      </h3>
-                      <p className="text-muted-foreground mb-4">
-                        Start adding activities to build your itinerary
-                      </p>
-                      <Button asChild>
-                        <Link href={`/trips/${trip.id}/activities/new`}>Add First Activity</Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="space-y-8">
-                      {isSingleDayTrip ? (
-                        <div className="space-y-4">
-                          {trip.activities.map(activity => (
-                            <ActivityCard
-                              key={activity.id}
-                              activity={activity}
-                              href={`/trips/${trip.id}/activities/${activity.id}`}
-                            />
-                          ))}
-                        </div>
-                      ) : (
-                        Object.entries(groupedActivities).map(([date, activities]) => (
-                          <div key={date}>
-                            <h3 className="flex items-center font-semibold text-lg mb-4">
-                              <CalendarDays className="h-5 w-5 mr-2 text-primary" />
-                              {format(new Date(date), 'EEEE, MMMM d')}
-                            </h3>
-                            <div className="space-y-4 ml-7">
-                              {activities.map(activity => (
-                                <ActivityCard
-                                  key={activity.id}
-                                  activity={activity}
-                                  href={`/trips/${trip.id}/activities/${activity.id}`}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  )}
-                </Suspense>
-              </CardContent>
-            </Card>
+            {/* Trip View Container with Daily Routes and Map */}
+            <Suspense fallback={<MapLoadingFallback />}>
+              <TripViewContainer
+                tripId={trip.id}
+                activities={trip.activities}
+                startDate={new Date(trip.startDate)}
+                endDate={new Date(trip.endDate)}
+                accommodation={trip.preferences?.accommodation}
+              />
+            </Suspense>
           </div>
-        </div>
-
-        {/* Right Panel - Map */}
-        <div className="hidden lg:block w-[45%] border-l">
-          <Suspense fallback={<MapLoadingFallback />}>
-            <TripMapView tripId={tripId} />
-          </Suspense>
         </div>
       </div>
     </AutoRefresh>
