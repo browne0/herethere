@@ -311,17 +311,6 @@ export function TripMapView({
               {selectedMarker.notes && (
                 <p className="mt-2 text-sm border-t pt-2">{selectedMarker.notes}</p>
               )}
-              <div className="mt-4 pt-2 border-t">
-                <DirectionsButton
-                  destination={{
-                    latitude: selectedMarker.latitude!,
-                    longitude: selectedMarker.longitude!,
-                  }}
-                  origin={accommodation}
-                  variant="ghost"
-                  size="sm"
-                />
-              </div>
             </div>
           </InfoWindow>
         )}
