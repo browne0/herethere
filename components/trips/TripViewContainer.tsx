@@ -3,7 +3,7 @@
 
 import React from 'react';
 
-import { Activity } from '@prisma/client';
+import { Activity, Trip } from '@prisma/client';
 import { format } from 'date-fns';
 
 import { Accommodation } from '@/lib/trips';
@@ -11,7 +11,7 @@ import { Accommodation } from '@/lib/trips';
 import { DailyRouteSummary } from './DailyRouteSummary';
 
 interface TripViewContainerProps {
-  tripId: string;
+  trip: Trip;
   activities: Activity[];
   startDate: Date;
   endDate: Date;
@@ -19,6 +19,7 @@ interface TripViewContainerProps {
 }
 
 export function TripViewContainer({
+  trip,
   activities,
   startDate,
   endDate,
@@ -75,6 +76,7 @@ export function TripViewContainer({
       {/* Daily Route Summary */}
       <div className="flex-1 min-w-0 overflow-y-auto">
         <DailyRouteSummary
+          trip={trip}
           dates={tripDates}
           activities={activities}
           selectedDate={selectedDate}

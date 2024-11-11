@@ -79,19 +79,21 @@ const NewTripFlow = () => {
   };
 
   const onSubmit = async (preferences: TripPreferences) => {
-    setIsGenerating(true);
     try {
-      const response = await fetch('/api/trips/generate', {
+      const response = await fetch('/api/trips', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          cityData: selectedCity,
-          preferences: {
-            ...preferences,
-            city: selectedCity,
-          },
+          title: `Trip to ${selectedCity?.name}`,
+          preferences,
+          latitude: selectedCity?.latitude,
+          longitude: selectedCity?.longitude,
+          placeId: selectedCity?.placeId,
+          destination: selectedCity?.name,
+          startDate: preferences.dates?.from,
+          endDate: preferences.dates?.to,
         }),
       });
 
@@ -99,13 +101,13 @@ const NewTripFlow = () => {
         throw new Error('Failed to generate trip');
       }
 
-      const { id } = await response.json();
+      const {
+        trip: { id },
+      } = await response.json();
       router.push(`/trips/${id}`);
     } catch (error) {
       console.error('Error generating trip:', error);
       throw new Error('Failed to generate trip. Please try again.');
-    } finally {
-      setIsGenerating(false);
     }
   };
 
@@ -389,9 +391,9 @@ const NewTripFlow = () => {
             <Button
               onClick={step === 6 ? handleSubmit : handleNext}
               className={`bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700 ${
-                !canProceedToNext() || isGenerating ? 'opacity-50 cursor-not-allowed' : ''
+                !canProceedToNext() ? 'opacity-50 cursor-not-allowed' : ''
               }`}
-              disabled={!canProceedToNext() || isGenerating}
+              disabled={!canProceedToNext()}
               size="sm"
             >
               {step === 6 ? (

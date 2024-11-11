@@ -11,8 +11,7 @@ datasource db {
 enum ActivityType {
   DINING
   SIGHTSEEING
-  ACCOMMODATION
-  TRANSPORTATION
+  ACTIVITY
   OTHER
 }
 
@@ -30,32 +29,32 @@ model User {
   @@map("user")
 }
 
+enum TripStatus {
+  DRAFT
+  GENERATING
+  COMPLETE
+  ERROR
+}
+
 model Trip {
-  id             String      @id @default(cuid())
-  userId         String
-  user           User        @relation(fields: [userId], references: [id])
-  title          String
-  destination    String
-  cityBounds     Json?
-  placeId        String?
-  latitude       Float?
-  longitude      Float?
-  startDate      DateTime
-  endDate        DateTime
-  status         String      @default("draft") // draft, generating, basic_ready, complete, error
-  progress       Int         @default(0) // 0-100 progress indicator
-  errorCode      String? // For storing error type
-  errorMessage   String? // For storing error details
-  lastUpdateTime DateTime?
-  attemptsCount  Int         @default(0)
-  preferences    Json
-  createdAt      DateTime    @default(now())
-  updatedAt      DateTime    @updatedAt
-  activities     Activity[]
-  isPublic       Boolean     @default(false)
-  sharedWith     TripShare[]
-  mainPhoto      String?
-  photoCount     Int         @default(0)
+  id          String      @id @default(cuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  title       String
+  destination String
+  cityBounds  Json?
+  placeId     String?
+  latitude    Float?
+  longitude   Float?
+  startDate   DateTime
+  endDate     DateTime
+  preferences Json
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  activities  Activity[]
+  isPublic    Boolean     @default(false)
+  sharedWith  TripShare[]
+  status      TripStatus  @default(DRAFT)
 
   @@index([userId])
   @@map("trip")
@@ -77,10 +76,10 @@ model TripShare {
 }
 
 model Activity {
-  id         String   @id @default(cuid())
+  id         String       @id @default(cuid())
   tripId     String
-  trip       Trip     @relation(fields: [tripId], references: [id])
-  type       String
+  trip       Trip         @relation(fields: [tripId], references: [id])
+  type       ActivityType
   name       String
   address    String?
   latitude   Float?
@@ -90,9 +89,8 @@ model Activity {
   endTime    DateTime
   notes      String?
   priceLevel Int?
-  status     String   @default("pending") // pending, complete, error
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
 
   @@index([tripId])
   @@map("activity")

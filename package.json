@@ -19,6 +19,7 @@
     "db:sync-users": "tsx scripts/sync-dev-users.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^0.0.72",
     "@clerk/nextjs": "^6.0.2",
     "@googlemaps/google-maps-services-js": "^3.4.0",
     "@googlemaps/js-api-loader": "^1.16.8",
@@ -39,6 +40,7 @@
     "@radix-ui/react-tabs": "^1.1.1",
     "@react-google-maps/api": "^2.20.3",
     "@tanstack/react-query": "^5.59.16",
+    "ai": "^3.4.33",
     "axios": "^1.7.7",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",

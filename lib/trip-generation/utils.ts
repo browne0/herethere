@@ -1,8 +1,9 @@
-import OpenAI from 'openai';
+import { Trip, TripStatus } from '@prisma/client';
+import { addDays, parse } from 'date-fns';
 
 import { prisma } from '@/lib/db';
 
-import type { ErrorCode, GeneratedActivity, GeneratedTrip, PlaceDetails } from './types';
+import type { GeneratedActivity, PlaceDetails } from './types';
 import { searchPlaces } from '../places';
 import { City, TripPreferences } from '../types';
 
@@ -20,126 +21,79 @@ const placeCache = new Map<
 
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+function convertTimeToDate(timeStr: string, baseDate: Date): Date {
+  // Parse the time string (e.g., "9:30 AM") to get hours and minutes
+  const parsedTime = parse(timeStr, 'h:mm a', new Date());
 
-export async function handleGenerationError(tripId: string, code: ErrorCode, message: string) {
-  await prisma.trip.update({
-    where: { id: tripId },
-    data: {
-      status: 'error',
-      progress: 0,
-      errorCode: code,
-      errorMessage: message,
-      lastUpdateTime: new Date(),
-    },
-  });
+  // Create a new date using the base date and parsed time
+  const resultDate = new Date(baseDate);
+  resultDate.setHours(parsedTime.getHours());
+  resultDate.setMinutes(parsedTime.getMinutes());
+
+  return resultDate;
 }
 
-async function processBatch(
+export async function processBatch(
   activities: GeneratedActivity[],
   tripId: string,
   startDate: Date,
   batchSize = 3
 ): Promise<void> {
-  for (let i = 0; i < activities.length; i += batchSize) {
-    const batch = activities.slice(i, i + batchSize);
+  const processedActivities = activities.map(activity => {
+    // Calculate the date for this activity based on day number
+    const activityDate = addDays(startDate, activity.day - 1);
+
+    return {
+      ...activity,
+      startTime: convertTimeToDate(activity.startTime, activityDate),
+      endTime: convertTimeToDate(activity.endTime, activityDate),
+    };
+  });
+
+  // Sort activities chronologically
+  processedActivities.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+
+  // Process in batches
+  for (let i = 0; i < processedActivities.length; i += batchSize) {
+    const batch = processedActivities.slice(i, i + batchSize);
 
     await Promise.all(
-      batch.map(async (activity, index) => {
-        const currentDate = new Date(startDate);
-        currentDate.setDate(currentDate.getDate() + Math.floor((i + index) / 5));
-
-        const [startHours, startMinutes] = activity.startTime.split(':').map(Number);
-        const startTime = new Date(currentDate);
-        startTime.setHours(startHours, startMinutes, 0, 0);
-
-        const [endHours, endMinutes] = activity.endTime.split(':').map(Number);
-        const endTime = new Date(currentDate);
-        endTime.setHours(endHours, endMinutes, 0, 0);
-
+      batch.map(async activity => {
         await prisma.activity.create({
           data: {
             tripId,
             name: activity.name,
             type: activity.type,
-            startTime,
-            endTime,
+            startTime: activity.startTime,
+            endTime: activity.endTime,
             notes: activity.notes,
-            status: 'pending',
           },
         });
       })
     );
 
-    await prisma.trip.update({
-      where: { id: tripId },
-      data: {
-        progress: Math.min(30 + Math.floor((i / activities.length) * 40), 70),
-      },
-    });
-
-    if (i + batchSize < activities.length) {
+    // Small delay between batches
+    if (i + batchSize < processedActivities.length) {
       await new Promise(resolve => setTimeout(resolve, 100));
     }
   }
 }
 
 export async function generateTripBackground(
-  tripId: string,
-  cityData: City,
-  preferences: TripPreferences
+  activities: GeneratedActivity[],
+  trip: Trip,
+  cityData: City
 ): Promise<void> {
   try {
-    await prisma.trip.update({
-      where: { id: tripId },
-      data: { progress: 10 },
-    });
+    await processBatch(activities, trip.id, trip.startDate);
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
-      messages: [
-        {
-          role: 'system',
-          content:
-            'You are a travel planning assistant. Generate detailed, realistic travel itineraries using real, existing places that can be found on Google Maps. Respond only with valid JSON that matches the exact structure requested.',
-        },
-        {
-          role: 'user',
-          content: generatePrompt(cityData, preferences),
-        },
-      ],
-      response_format: { type: 'json_object' },
-      temperature: 0.7,
-    });
-
-    const response = JSON.parse(completion.choices[0].message.content!) as GeneratedTrip;
-
-    await prisma.trip.update({
-      where: { id: tripId },
-      data: {
-        progress: 30,
-        status: 'basic_ready',
-      },
-    });
-
-    const allActivities = response.days.flatMap(day => day.activities);
-
-    if (!preferences.dates?.from) {
-      throw new Error('Missing start date');
-    }
-
-    await processBatch(allActivities, tripId, new Date(preferences.dates.from));
-
-    void enhancePlacesBackground(tripId, cityData);
+    void enhancePlacesBackground(trip.id, cityData);
   } catch (error) {
     console.error('Background generation error:', error);
     await prisma.trip.update({
-      where: { id: tripId },
+      where: { id: trip.id },
       data: {
-        status: 'error',
-        progress: 0,
+        status: TripStatus.ERROR,
       },
     });
   }
@@ -148,7 +102,7 @@ export async function generateTripBackground(
 async function enhancePlacesBackground(tripId: string, cityData: City) {
   try {
     const activities = await prisma.activity.findMany({
-      where: { tripId, status: 'pending' },
+      where: { tripId },
     });
 
     for (let i = 0; i < activities.length; i++) {
@@ -165,17 +119,9 @@ async function enhancePlacesBackground(tripId: string, cityData: City) {
               latitude: placeDetails.latitude,
               longitude: placeDetails.longitude,
               address: placeDetails.address,
-              status: 'complete',
             },
           });
         }
-
-        await prisma.trip.update({
-          where: { id: tripId },
-          data: {
-            progress: 70 + Math.floor((i / activities.length) * 30),
-          },
-        });
       } catch (error) {
         console.error(`Error enhancing activity ${activity.id}:`, error);
       }
@@ -184,8 +130,7 @@ async function enhancePlacesBackground(tripId: string, cityData: City) {
     await prisma.trip.update({
       where: { id: tripId },
       data: {
-        status: 'complete',
-        progress: 100,
+        status: TripStatus.COMPLETE,
       },
     });
   } catch (error) {
@@ -193,14 +138,13 @@ async function enhancePlacesBackground(tripId: string, cityData: City) {
     await prisma.trip.update({
       where: { id: tripId },
       data: {
-        status: 'error',
-        progress: 0,
+        status: TripStatus.ERROR,
       },
     });
   }
 }
 
-function generatePrompt(cityData: City, preferences: TripPreferences): string {
+export function generatePrompt(cityData: City, preferences: TripPreferences): string {
   if (!preferences.dates?.from || !preferences.dates?.to) {
     throw new Error('Missing trip dates');
   }
@@ -213,53 +157,48 @@ function generatePrompt(cityData: City, preferences: TripPreferences): string {
   const tripStyle =
     preferences.tripVibe > 75 ? 'Adventurous' : preferences.tripVibe > 25 ? 'Balanced' : 'Relaxed';
 
-  const pace =
-    preferences.pace > 4 ? 'Fast-paced' : preferences.pace > 2 ? 'Moderate' : 'Leisurely';
+  const activitiesPerDay = tripStyle === 'Adventurous' ? 5 : tripStyle === 'Balanced' ? 4 : 3;
 
-  return `Create a ${days}-day trip itinerary for ${cityData.name} with the following preferences:
+  return `Generate a ${days}-day itinerary of activities for a trip to ${cityData.name} with the following preferences:
   - Budget Level: ${preferences.budget}
   - Dietary Restrictions: ${preferences.dietary.length > 0 ? preferences.dietary.join(', ') : 'none'}
   - Travel Style: ${tripStyle}
-  - Pace: ${pace}
+  - Pace: ${preferences.pace > 4 ? 'Fast-paced' : preferences.pace > 2 ? 'Moderate' : 'Leisurely'}
   - Walking Comfort: ${preferences.walkingComfort || 'moderate'}
   - Activities: ${preferences.activities?.length > 0 ? preferences.activities.join(', ') : 'all types'}
   ${preferences.customInterests ? `- Special Interests: ${preferences.customInterests}` : ''}
   
-  Generate ${tripStyle === 'Adventurous' ? '4-5' : tripStyle === 'Balanced' ? '3-4' : '2-3'} activities per day for all ${days} days.
-  
-  For each activity, include:
+  Plan approximately ${activitiesPerDay} activities per day. For each activity, include:
   1. Name (use official, findable place names)
   2. Type (DINING, SIGHTSEEING, ACTIVITY, TRANSPORTATION)
   3. Complete address as it appears on Google Maps
-  4. Start and end times (between 8:00-22:00 ${cityData.name} time)
-  5. Brief description/notes
-  6. Price level (1-4)
+  4. Day number (1 = first day, 2 = second day, etc.)
+  5. Start and end times (between 8:00-22:00 ${cityData.name} time)
+  6. Brief description/notes
+  7. Price level (1-4)
 
   Important:
   - Use verified, existing places findable on Google Maps
   - Include complete addresses
   - Focus on well-reviewed tourist spots
-  - Group activities by location to minimize travel
+  - Include a mix of morning, afternoon, and evening activities each day
   - Account for ${preferences.walkingComfort || 'moderate'} walking preference
-  - Include meal times at logical intervals
+  - Include appropriate meal times each day
   ${preferences.dietary.length > 0 ? `- Ensure dining spots accommodate: ${preferences.dietary.join(', ')}` : ''}
   
   Response format:
+
   {
-    "days": [
+    "activities": [
       {
-        "dayNumber": 1,
-        "activities": [
-          {
-            "name": "string",
-            "type": "string",
-            "address": "string",
-            "startTime": "HH:MM",
-            "endTime": "HH:MM",
-            "notes": "string",
-            "priceLevel": number
-          }
-        ]
+        "name": "string",
+        "type": "string",
+        "address": "string",
+        "day": number,
+        "startTime": "h:mm a",
+        "endTime": "h:mm a",
+        "notes": "string",
+        "priceLevel": number
       }
     ]
   }`;

@@ -10,8 +10,6 @@ import { redirect } from 'next/navigation';
 import { DeleteTripButton } from '@/components/trips/DeleteTripButton';
 import { MapSection } from '@/components/trips/MapSection';
 import { TripActionsDropdown } from '@/components/trips/TripActionsDropdown';
-import TripGenerationError from '@/components/trips/TripGenerationError';
-import { TripGenerationProgress } from '@/components/trips/TripGenerationProgress';
 import { TripHeader } from '@/components/trips/TripHeader';
 import { TripShareDialog } from '@/components/trips/TripShareDialog';
 import { TripViewContainer } from '@/components/trips/TripViewContainer';
@@ -19,11 +17,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { prisma } from '@/lib/db';
-import { MAX_RETRY_ATTEMPTS } from '@/lib/trip-generation/utils';
-import { ErrorCode, TripHeaderProps, TripPreferences } from '@/lib/types';
+import { TripHeaderProps, TripPreferences } from '@/lib/types';
 import { getTripTimingText } from '@/lib/utils';
-
-import { AutoRefresh } from './AutoRefresh';
 
 function convertDbTripToProps(dbTrip: any): TripHeaderProps['trip'] {
   return {
@@ -79,145 +74,106 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
   const tripTiming = getTripTimingText(trip.startDate, trip.endDate);
   const tripProps = convertDbTripToProps(trip);
 
-  // Show error state if trip has an error
-  if (trip.status === 'error') {
-    return (
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        <div className="flex-1 min-w-0 overflow-y-auto">
-          <TripHeader trip={tripProps} />
-          <TripGenerationError
-            tripId={trip.id}
-            error={{
-              code: trip.errorCode as ErrorCode,
-              message: trip.errorMessage || 'An error occurred',
-              recoverable: trip.attemptsCount < MAX_RETRY_ATTEMPTS,
-              details:
-                trip.errorCode === 'TIMEOUT_ERROR'
-                  ? 'The trip generation process took longer than expected.'
-                  : undefined,
-            }}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // Show loading state if trip is not complete
-  if (trip.status !== 'complete') {
-    return (
-      <AutoRefresh status={trip.status}>
-        <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-          <div className="flex-1 min-w-0 overflow-y-auto">
-            <TripHeader trip={tripProps} />
-            <TripGenerationProgress progress={trip.progress} status={trip.status} />
-          </div>
-        </div>
-      </AutoRefresh>
-    );
-  }
-
   return (
-    <AutoRefresh status={trip.status}>
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        {/* Left Panel - Trip Details */}
-        <div className="w-1/2 overflow-y-auto">
-          {/* Header */}
-          <TripHeader trip={tripProps} />
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
+      {/* Left Panel - Trip Details */}
+      <div className="w-1/2 overflow-y-auto">
+        {/* Header */}
+        <TripHeader trip={tripProps} />
 
-          {/* Main Content */}
-          <div className="px-4 lg:px-8 py-6 space-y-6">
-            {/* Quick Actions */}
-            <div className="flex flex-wrap justify-between items-center">
-              <div className="flex flex-wrap gap-4 items-center">
-                <Button asChild>
-                  <Link href={`/trips/${trip.id}/activities/new`}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Activity
-                  </Link>
-                </Button>
+        {/* Main Content */}
+        <div className="px-4 lg:px-8 py-6 space-y-6">
+          {/* Quick Actions */}
+          <div className="flex flex-wrap justify-between items-center">
+            <div className="flex flex-wrap gap-4 items-center">
+              <Button asChild>
+                <Link href={`/trips/${trip.id}/activities/new`}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Activity
+                </Link>
+              </Button>
 
-                <TripShareDialog trip={trip} activityCount={trip.activities?.length || 0} />
-                <DeleteTripButton tripId={trip.id} />
-              </div>
-
-              <TripActionsDropdown trip={trip} />
+              <TripShareDialog trip={trip} activityCount={trip.activities?.length || 0} />
+              <DeleteTripButton tripId={trip.id} />
             </div>
 
-            {/* Trip Stats */}
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    Total Activities
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">{trip.activities.length}</div>
-                  <p className="text-xs text-muted-foreground">
-                    {(trip.activities.length / tripDuration).toFixed(1)} per day
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium">
-                    <Clock className="h-4 w-4 text-primary" />
-                    Trip Duration
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    {tripDuration} {tripDuration === 1 ? 'Day' : 'Days'}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {format(new Date(trip.startDate), 'MMM d')} -{' '}
-                    {format(new Date(trip.endDate), 'MMM d')}
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-base font-medium">
-                    <Route className="h-4 w-4 text-primary" />
-                    Trip Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">
-                    <Badge variant={tripTiming.variant}>{tripTiming.text}</Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Last updated {format(new Date(trip.updatedAt), 'MMM d')}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Trip View Container with Daily Routes and Map */}
-            <Suspense fallback={<MapLoadingFallback />}>
-              <TripViewContainer
-                tripId={trip.id}
-                activities={trip.activities}
-                startDate={new Date(trip.startDate)}
-                endDate={new Date(trip.endDate)}
-                accommodation={trip.preferences?.accommodation}
-              />
-            </Suspense>
+            <TripActionsDropdown trip={trip} />
           </div>
-        </div>
-        <div className="w-1/2 border-l">
+
+          {/* Trip Stats */}
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  Total Activities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{trip.activities.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  {(trip.activities.length / tripDuration).toFixed(1)} per day
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <Clock className="h-4 w-4 text-primary" />
+                  Trip Duration
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {tripDuration} {tripDuration === 1 ? 'Day' : 'Days'}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {format(new Date(trip.startDate), 'MMM d')} -{' '}
+                  {format(new Date(trip.endDate), 'MMM d')}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-2 text-base font-medium">
+                  <Route className="h-4 w-4 text-primary" />
+                  Trip Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  <Badge variant={tripTiming.variant}>{tripTiming.text}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Last updated {format(new Date(trip.updatedAt), 'MMM d')}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Trip View Container with Daily Routes and Map */}
           <Suspense fallback={<MapLoadingFallback />}>
-            <MapSection
-              tripId={tripId}
+            <TripViewContainer
+              trip={trip}
               activities={trip.activities}
+              startDate={new Date(trip.startDate)}
+              endDate={new Date(trip.endDate)}
               accommodation={trip.preferences?.accommodation}
             />
           </Suspense>
         </div>
       </div>
-    </AutoRefresh>
+      {/* <div className="w-1/2 border-l">
+        <Suspense fallback={<MapLoadingFallback />}>
+          <MapSection
+            tripId={tripId}
+            activities={trip.activities}
+            accommodation={trip.preferences?.accommodation}
+          />
+        </Suspense>
+      </div> */}
+    </div>
   );
 }

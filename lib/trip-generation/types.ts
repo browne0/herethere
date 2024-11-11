@@ -1,4 +1,4 @@
-export type TripStatus = 'draft' | 'generating' | 'basic_ready' | 'complete' | 'error';
+import { Activity } from '@prisma/client';
 
 export type ErrorCode =
   | 'OPENAI_ERROR'
@@ -13,11 +13,11 @@ export interface GeneratedActivity {
   type: 'DINING' | 'SIGHTSEEING' | 'ACTIVITY' | 'TRANSPORTATION';
   address: string;
   startTime: string;
+  day: number;
   endTime: string;
   notes: string;
   priceLevel: number;
 }
-
 export interface GeneratedDay {
   dayNumber: number;
   activities: GeneratedActivity[];

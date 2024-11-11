@@ -3,6 +3,43 @@ import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
 
+export const GET = async (_req: Request, { params }: { params: { tripId: string } }) => {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+
+    // Verify the trip exists and belongs to the user
+    const trip = await prisma.trip.findFirst({
+      where: {
+        id: params.tripId,
+        userId,
+      },
+      select: { id: true }, // Only select id for performance
+    });
+
+    if (!trip) {
+      return new Response('Trip not found', { status: 404 });
+    }
+
+    // Fetch activities
+    const activities = await prisma.activity.findMany({
+      where: {
+        tripId: params.tripId,
+      },
+      orderBy: {
+        startTime: 'asc',
+      },
+    });
+
+    return NextResponse.json(activities);
+  } catch (error) {
+    console.error('Error fetching activities:', error);
+    return new Response('Internal Server Error', { status: 500 });
+  }
+};
+
 export async function POST(req: Request, { params }: { params: { tripId: string } }) {
   try {
     const { userId } = await auth();

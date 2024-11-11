@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       const tripData = {
         ...validatedData,
         userId, // Add the userId here
-        preferences: {}, // Default empty preferences
+        preferences: body.preferences || {}, // Default empty preferences
       };
 
       const trip = await prisma.trip.create({

@@ -1,24 +1,24 @@
-// components/trips/DailyRouteSummary.tsx
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
-import { Activity } from '@prisma/client';
-import { format } from 'date-fns';
-import { Clock, Navigation, Home, ArrowRight, CalendarDays } from 'lucide-react';
+import { Activity, Trip, TripStatus } from '@prisma/client';
+import { experimental_useObject as useObject } from 'ai/react';
+import { format, isValid } from 'date-fns';
+import { parse } from 'date-fns';
+import { Clock, Navigation, ArrowRight, CalendarDays } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Card, CardContent } from '@/components/ui/card';
 import { useRouteCalculations } from '@/hooks/useRouteCalculations';
 import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
+import { activitiesSchema } from '@/lib/trip-generation-streaming/types';
 import { Accommodation } from '@/lib/trips';
 import { cn } from '@/lib/utils';
 
-import { DirectionsButton } from './DirectionsButton';
-
 interface DailyRouteSummaryProps {
+  trip: Trip;
   dates: string[];
   activities: Activity[];
   selectedDate: string;
@@ -35,100 +35,91 @@ interface RouteInfo {
   duration: string;
 }
 
-export function DailyRouteSummary({
-  dates,
-  activities,
-  selectedDate,
-  onDateSelect,
-  onActivityHover,
-  onActivitySelect,
-  hoveredActivityId,
-  selectedActivityId,
-  accommodation,
-}: DailyRouteSummaryProps) {
-  // Group activities by date
-  const groupedActivities = React.useMemo(() => {
-    const groups: Record<string, Activity[]> = {};
-    activities.forEach(activity => {
-      const date = format(new Date(activity.startTime), 'yyyy-MM-dd');
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(activity);
-    });
-
-    // Sort activities within each day
-    Object.values(groups).forEach(dayActivities => {
-      dayActivities.sort(
-        (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
-      );
-    });
-
-    return groups;
-  }, [activities]);
+function TimeDisplay({
+  startTime,
+  endTime,
+  isStreaming,
+}: {
+  startTime?: string | Date;
+  endTime?: string | Date;
+  isStreaming: boolean;
+}) {
+  // If we're streaming and either time is undefined, show shimmer
+  if (isStreaming && (!startTime || !endTime)) {
+    return (
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Clock className="h-4 w-4" />
+        <div className="h-4 w-24 bg-muted/80 animate-pulse rounded" />
+      </div>
+    );
+  }
 
   return (
-    <Tabs value={selectedDate} onValueChange={onDateSelect} className="w-full">
-      <Card>
-        <CardHeader className="space-y-2">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-2xl">Daily Routes</CardTitle>
-            <TabsList>
-              {dates.map(date => (
-                <TabsTrigger key={date} value={date} className="min-w-[100px]">
-                  {format(new Date(date), 'MMM d')}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-          {accommodation && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Home className="h-4 w-4" />
-              <span>Based at: {accommodation.name}</span>
-            </div>
-          )}
-        </CardHeader>
-
-        {dates.map(date => (
-          <TabsContent key={date} value={date} className="m-0">
-            <DaySchedule
-              date={date}
-              activities={groupedActivities[date] || []}
-              accommodation={accommodation}
-              onActivityHover={onActivityHover}
-              onActivitySelect={onActivitySelect}
-              hoveredActivityId={hoveredActivityId}
-              selectedActivityId={selectedActivityId}
-            />
-          </TabsContent>
-        ))}
-      </Card>
-    </Tabs>
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <Clock className="h-4 w-4" />
+      <span>{`${startTime} - ${endTime}`}</span>
+    </div>
   );
 }
 
-interface DayScheduleProps {
-  date: string;
-  activities: Activity[];
-  accommodation?: Accommodation;
-  onActivityHover: (activityId: string | null) => void;
-  onActivitySelect: (activityId: string | null) => void;
-  hoveredActivityId: string | null;
-  selectedActivityId: string | null;
-}
-
-function DaySchedule({
-  date,
+export function DailyRouteSummary({
+  trip,
   activities,
   accommodation,
   onActivityHover,
   onActivitySelect,
   hoveredActivityId,
   selectedActivityId,
-}: DayScheduleProps) {
-  const { routeSegments, isCalculating } = useRouteCalculations(activities, accommodation);
+}: DailyRouteSummaryProps) {
+  const generationAttempted = useRef(false);
+  const { object, submit, isLoading } = useObject({
+    api: `/api/trips/${trip.id}/generate`,
+    schema: activitiesSchema,
+    initialValue: { activities: [] },
+  });
 
-  if (activities.length === 0) {
+  const isStreaming = isLoading || trip.status === TripStatus.DRAFT;
+
+  const { routeSegments, isCalculating } = useRouteCalculations(
+    isStreaming ? [] : activities,
+    isStreaming ? undefined : accommodation
+  );
+
+  useEffect(() => {
+    if (trip.status === TripStatus.DRAFT && !generationAttempted.current) {
+      generationAttempted.current = true;
+      void submit({
+        city: { name: trip.destination },
+        preferences: trip.preferences,
+      });
+    }
+  }, [trip.status, trip.destination, trip.preferences, submit]);
+
+  if (trip.status === TripStatus.ERROR) {
+    return (
+      <CardContent>
+        <div className="text-center py-12 bg-destructive/10 rounded-lg">
+          <h3 className="text-lg font-medium mb-2">Generation Failed</h3>
+          <p className="text-muted-foreground mb-4">
+            There was an error generating your itinerary.
+          </p>
+          <Button
+            onClick={() => {
+              generationAttempted.current = false;
+              submit({
+                city: { name: trip.destination },
+                preferences: trip.preferences,
+              });
+            }}
+          >
+            Retry Generation
+          </Button>
+        </div>
+      </CardContent>
+    );
+  }
+
+  if (trip.status === TripStatus.COMPLETE && !activities?.length) {
     return (
       <CardContent>
         <div className="text-center py-12 bg-muted/20 rounded-lg">
@@ -138,62 +129,77 @@ function DaySchedule({
             Start adding activities to build your itinerary for this day
           </p>
           <Button asChild>
-            <a href={`#add-activity`}>Add First Activity</a>
+            <a href="#add-activity">Add First Activity</a>
           </Button>
         </div>
       </CardContent>
     );
   }
 
-  return (
-    <CardContent className="p-6">
-      <div className="space-y-6">
-        {/* Day Summary */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-semibold">{format(new Date(date), 'EEEE, MMMM d')}</h3>
-          <div className="flex gap-2">
-            <Badge variant="secondary">
-              {activities.length} {activities.length === 1 ? 'Activity' : 'Activities'}
-            </Badge>
-          </div>
-        </div>
+  const activitiesToShow = isStreaming ? object?.activities : activities;
 
-        {/* Activities Timeline */}
-        <div className="relative">
-          {/* <div className="absolute left-8 top-4 bottom-4 w-px bg-muted-foreground/20" /> */}
+  if (isStreaming) {
+    return (
+      <div>
+        {activitiesToShow?.map((activity, index) => (
+          <div className="relative mb-8 last:mb-0" key={index}>
+            {/* Activity Card */}
+            <Card className={cn('transition-colors')}>
+              <CardContent className="p-4 space-y-4">
+                {/* Activity Info */}
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h4 className="font-medium">{activity?.name}</h4>
+                  </div>
+                  <Badge>{activity?.type}</Badge>
+                </div>
 
-          {activities.map((activity, index) => {
-            const nextActivity = activities[index + 1];
-            const routeKey = nextActivity
-              ? `${activity.id}-${nextActivity.id}`
-              : index === activities.length - 1 && accommodation
-                ? `${activity.id}-accommodation`
-                : undefined;
-            const routeToNext = routeKey ? routeSegments[routeKey] : undefined;
-
-            return (
-              <div key={activity.id} className="mb-8 last:mb-0">
-                <ActivityTimelineItem
-                  activity={activity}
-                  nextActivity={nextActivity}
-                  previousActivity={activities[index - 1]}
-                  isFirstActivity={index === 0}
-                  isLastActivity={index === activities.length - 1}
-                  accommodation={accommodation}
-                  isLast={index === activities.length - 1}
-                  onHover={onActivityHover}
-                  onSelect={onActivitySelect}
-                  isHovered={hoveredActivityId === activity.id}
-                  isSelected={selectedActivityId === activity.id}
-                  isCalculatingRoutes={isCalculating}
-                  routeToNext={routeToNext}
+                {/* Activity Time */}
+                <TimeDisplay
+                  startTime={activity?.startTime}
+                  endTime={activity?.endTime}
+                  isStreaming={isStreaming}
                 />
-              </div>
-            );
-          })}
-        </div>
+              </CardContent>
+            </Card>
+          </div>
+        ))}
       </div>
-    </CardContent>
+    );
+  }
+
+  return (
+    <div>
+      {activities.map((activity, index) => {
+        const nextActivity = activities[index + 1];
+        const routeKey = nextActivity
+          ? `${activity.id}-${nextActivity.id}`
+          : index === activities.length - 1 && accommodation
+            ? `${activity.id}-accommodation`
+            : undefined;
+        const routeToNext = routeKey ? routeSegments[routeKey] : undefined;
+
+        return (
+          <div key={activity.id} className="mb-8 last:mb-0">
+            <ActivityTimelineItem
+              activity={activity}
+              nextActivity={nextActivity}
+              previousActivity={activities[index - 1]}
+              isFirstActivity={index === 0}
+              isLastActivity={index === activities.length - 1}
+              accommodation={accommodation}
+              isLast={index === activities.length - 1}
+              onHover={onActivityHover}
+              onSelect={onActivitySelect}
+              isHovered={hoveredActivityId === activity.id}
+              isSelected={selectedActivityId === activity.id}
+              isCalculatingRoutes={isCalculating}
+              routeToNext={routeToNext}
+            />
+          </div>
+        );
+      })}
+    </div>
   );
 }
 
@@ -216,7 +222,6 @@ interface ActivityTimelineItemProps {
 function ActivityTimelineItem({
   activity,
   nextActivity,
-  previousActivity,
   accommodation,
   isLast,
   onHover,
@@ -224,8 +229,6 @@ function ActivityTimelineItem({
   isHovered,
   isSelected,
   isCalculatingRoutes,
-  isFirstActivity,
-  isLastActivity,
   routeToNext,
 }: ActivityTimelineItemProps) {
   return (

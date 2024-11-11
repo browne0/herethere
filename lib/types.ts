@@ -1,4 +1,4 @@
-import { Activity } from '@prisma/client';
+import { Activity, TripStatus } from '@prisma/client';
 import { DateRange } from 'react-day-picker';
 
 export interface Location {
@@ -152,8 +152,6 @@ export interface TripHeaderProps {
   showBackButton?: boolean;
   className?: string;
 }
-
-export type TripStatus = 'draft' | 'generating' | 'basic_ready' | 'complete' | 'error';
 
 export interface TripError {
   code:
