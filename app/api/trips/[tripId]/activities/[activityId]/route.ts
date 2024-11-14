@@ -104,11 +104,11 @@ export async function PATCH(
       },
       data: {
         name: json.name,
-        type: json.type,
+        category: json.category,
         address: json.address,
-        latitude: json.latitude || null, // Add these
-        longitude: json.longitude || null, // Add these
-        placeId: json.placeId || null, // Add this
+        latitude: json.latitude || null,
+        longitude: json.longitude || null,
+        placeId: json.placeId || null,
         startTime: new Date(json.startTime),
         endTime: new Date(json.endTime),
         notes: json.notes,

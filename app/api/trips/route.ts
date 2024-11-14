@@ -1,10 +1,37 @@
 import { auth } from '@clerk/nextjs/server';
+import { Client } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 
 import { prisma } from '@/lib/db';
 import { isCityBounds } from '@/lib/types';
 import { tripFormSchema } from '@/lib/validations/trip';
+
+const googleMapsClient = new Client({});
+
+async function getTimeZone(latitude: number, longitude: number): Promise<string> {
+  try {
+    const timestamp = Math.floor(Date.now() / 1000);
+
+    const response = await googleMapsClient.timezone({
+      params: {
+        location: { lat: latitude, lng: longitude },
+        timestamp,
+        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+      },
+    });
+
+    if (response.data.timeZoneId) {
+      return response.data.timeZoneId; // Returns strings like "Asia/Tokyo"
+    }
+
+    throw new Error('Timezone not found');
+  } catch (error) {
+    console.error('Failed to get timezone:', error);
+    // Fallback to UTC if we can't get the timezone
+    return 'UTC';
+  }
+}
 
 export async function POST(req: Request) {
   try {
@@ -26,8 +53,11 @@ export async function POST(req: Request) {
       });
     }
 
+    const timeZone = await getTimeZone(body.latitude, body.longitude);
+
     const parsedBody = {
       ...body,
+      timeZone,
       startDate: new Date(body.startDate),
       endDate: new Date(body.endDate),
     };
@@ -38,7 +68,7 @@ export async function POST(req: Request) {
       // Create the trip data with userId included
       const tripData = {
         ...validatedData,
-        userId, // Add the userId here
+        userId,
         preferences: body.preferences || {}, // Default empty preferences
       };
 

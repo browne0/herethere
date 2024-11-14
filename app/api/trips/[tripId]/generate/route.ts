@@ -35,7 +35,7 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
   });
 
   const { city, preferences }: ActivityGenerationRequest = await req.json();
-  const prompt = generatePrompt(city, preferences);
+  const prompt = generatePrompt(city, preferences, trip.timeZone);
 
   try {
     const result = await streamObject({

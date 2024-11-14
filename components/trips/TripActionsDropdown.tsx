@@ -162,7 +162,7 @@ export function TripActionsDropdown({ trip }: TripActionsDropdownProps) {
                           border-radius: 4px;
                           margin-left: 16px;
                         ">
-                          ${activity.type}
+                          ${activity.category}
                         </div>
                       </div>
                     </div>

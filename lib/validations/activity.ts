@@ -3,7 +3,7 @@ import * as z from 'zod';
 export const activityFormSchema = z
   .object({
     name: z.string().min(1, 'Name is required'),
-    type: z.enum(['OTHER', 'DINING', 'SIGHTSEEING', 'ACCOMMODATION', 'TRANSPORTATION']),
+    category: z.string().min(1, 'Category is required'),
     address: z.string().min(1, 'Location is required'),
     latitude: z.number(),
     longitude: z.number(),

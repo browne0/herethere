@@ -51,14 +51,14 @@ export interface RouteSegment {
   startActivity: {
     id: string;
     name: string;
-    type: string;
+    category: string;
     startTime: string;
     endTime: string;
   };
   endActivity: {
     id: string;
     name: string;
-    type: string;
+    category: string;
     startTime: string;
     endTime: string;
   };

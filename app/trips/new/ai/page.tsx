@@ -15,7 +15,6 @@ import type { City, DateRangeType, TripPreferences } from '@/lib/types';
 const NewTripFlow = () => {
   const [step, setStep] = useState(1);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
   const [preferences, setPreferences] = useState<TripPreferences>({
     dates: {
       from: new Date(),
@@ -51,8 +50,6 @@ const NewTripFlow = () => {
       placeId: popularCity.placeId,
       latitude: popularCity.location.lat,
       longitude: popularCity.location.lng,
-      // For popular cities, we're not setting bounds since we don't have that data
-      // In a production app, you might want to fetch these from the Places API
     };
 
     setSelectedCity(city);
@@ -397,14 +394,7 @@ const NewTripFlow = () => {
               size="sm"
             >
               {step === 6 ? (
-                isGenerating ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Generating Trip...
-                  </>
-                ) : (
-                  'Generate My Trip'
-                )
+                'Generate My Trip'
               ) : (
                 <>
                   Next

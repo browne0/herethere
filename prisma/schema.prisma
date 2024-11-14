@@ -42,6 +42,7 @@ model Trip {
   user        User        @relation(fields: [userId], references: [id])
   title       String
   destination String
+  timeZone    String
   cityBounds  Json?
   placeId     String?
   latitude    Float?
@@ -76,10 +77,11 @@ model TripShare {
 }
 
 model Activity {
-  id         String       @id @default(cuid())
+  id         String   @id @default(cuid())
   tripId     String
-  trip       Trip         @relation(fields: [tripId], references: [id])
-  type       ActivityType
+  trip       Trip     @relation(fields: [tripId], references: [id])
+  category   String
+  placeType  String?
   name       String
   address    String?
   latitude   Float?
@@ -89,8 +91,8 @@ model Activity {
   endTime    DateTime
   notes      String?
   priceLevel Int?
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   @@index([tripId])
   @@map("activity")

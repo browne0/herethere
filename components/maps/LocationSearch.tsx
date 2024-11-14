@@ -8,14 +8,15 @@ import { Search, Loader2 } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Location, ActivitySearchType, CityBounds } from '@/lib/types';
+import { Location, CityBounds } from '@/lib/types';
+import { ACTIVITY_CATEGORIES, ActivityCategory } from '@/lib/types/activities';
 
 const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
   defaultValue?: string;
-  searchType?: ActivitySearchType;
+  searchType?: ActivityCategory;
   cityBounds?: CityBounds;
   cityPlaceId?: string;
 }
@@ -25,7 +26,6 @@ export function LocationSearch({
   defaultValue,
   searchType,
   cityBounds,
-  cityPlaceId,
 }: LocationSearchProps) {
   const [searchInput, setSearchInput] = useState(defaultValue || '');
   const [suggestions, setSuggestions] = useState<google.maps.places.AutocompletePrediction[]>([]);
@@ -52,25 +52,19 @@ export function LocationSearch({
     }
   }, [isLoaded]);
 
-  const getTypeRestrictions = (searchType: string | undefined): string[] | undefined => {
-    if (!searchType) return undefined;
-    switch (searchType) {
-      case 'address':
-        return ['address'];
-      case 'establishment':
-        return ['establishment'];
-      case 'regions':
-        return ['(regions)'];
-      case 'cities':
-        return ['(regions)'];
-      default:
-        return undefined;
-    }
+  const getPlaceTypes = (category?: ActivityCategory): string[] | undefined => {
+    if (!category) return ['establishment'];
+
+    const categoryKey = category.toUpperCase() as keyof typeof ACTIVITY_CATEGORIES;
+    const activityCategory = ACTIVITY_CATEGORIES[categoryKey];
+
+    // Return establishment if no specific category types
+    return activityCategory?.googlePlaceTypes || ['establishment'];
   };
 
   const handleSearch = async (value: string) => {
     setSearchInput(value);
-    setError(''); // Clear any previous errors
+    setError('');
 
     if (!value.trim() || !autocompleteService.current) {
       setSuggestions([]);
@@ -81,7 +75,7 @@ export function LocationSearch({
       setLoading(true);
       const searchOptions: google.maps.places.AutocompletionRequest = {
         input: value,
-        types: getTypeRestrictions(searchType),
+        types: getPlaceTypes(searchType),
       };
 
       if (cityBounds) {
@@ -93,11 +87,10 @@ export function LocationSearch({
       }
 
       const response = await autocompleteService.current.getPlacePredictions(searchOptions);
-      const filteredPredictions = response?.predictions || [];
-      setSuggestions(filteredPredictions);
+      setSuggestions(response?.predictions || []);
 
       // Show a message if no results found
-      if (filteredPredictions.length === 0) {
+      if (response?.predictions.length === 0) {
         setError('No locations found. Try a different search.');
       }
     } catch (error) {
@@ -121,7 +114,7 @@ export function LocationSearch({
     placesService.current.getDetails(
       {
         placeId: suggestion.place_id,
-        fields: ['name', 'formatted_address', 'geometry', 'place_id'],
+        fields: ['name', 'formatted_address', 'geometry', 'place_id', 'types'],
       },
       (result, status) => {
         setLoading(false);
@@ -133,6 +126,7 @@ export function LocationSearch({
             longitude: result.geometry.location.lng(),
             placeId: result.place_id,
             name: result.name,
+            types: result.types,
           };
 
           setSearchInput(location.address);

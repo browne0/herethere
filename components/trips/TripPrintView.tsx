@@ -97,7 +97,7 @@ export function TripPrintView({ trip }: TripPrintViewProps) {
                           <p className="text-gray-600 text-sm mt-1">{activity.notes}</p>
                         )}
                       </div>
-                      <div className="text-sm text-gray-500">{activity.type}</div>
+                      <div className="text-sm text-gray-500">{activity.category}</div>
                     </div>
                   </div>
                 ))}

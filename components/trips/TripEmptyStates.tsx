@@ -20,7 +20,7 @@ const EmptyState = ({ icon: Icon, title, description, actionLabel }: EmptyStateP
       <h3 className="text-lg font-medium mb-2">{title}</h3>
       <p className="text-muted-foreground mb-6 max-w-sm">{description}</p>
       <Button asChild>
-        <Link href="/trips/new">
+        <Link href="/trips/new/ai">
           <Plus className="h-4 w-4 mr-2" />
           {actionLabel}
         </Link>

@@ -6,6 +6,7 @@ import { prisma } from '@/lib/db';
 export const GET = async (_req: Request, { params }: { params: { tripId: string } }) => {
   try {
     const { userId } = await auth();
+    const { tripId } = await params;
     if (!userId) {
       return new Response('Unauthorized', { status: 401 });
     }
@@ -13,7 +14,7 @@ export const GET = async (_req: Request, { params }: { params: { tripId: string 
     // Verify the trip exists and belongs to the user
     const trip = await prisma.trip.findFirst({
       where: {
-        id: params.tripId,
+        id: tripId,
         userId,
       },
       select: { id: true }, // Only select id for performance
@@ -26,7 +27,7 @@ export const GET = async (_req: Request, { params }: { params: { tripId: string 
     // Fetch activities
     const activities = await prisma.activity.findMany({
       where: {
-        tripId: params.tripId,
+        tripId: tripId,
       },
       orderBy: {
         startTime: 'asc',
@@ -49,7 +50,8 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
     }
 
     const body = await req.json();
-    const { name, type, startTime, endTime, notes, address, latitude, longitude, placeId } = body;
+    const { name, category, startTime, endTime, notes, address, latitude, longitude, placeId } =
+      body;
 
     // Validate the trip belongs to the user
     const trip = await prisma.trip.findFirst({
@@ -68,7 +70,7 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       data: {
         tripId,
         name,
-        type,
+        category,
         address,
         latitude: latitude || null,
         longitude: longitude || null,

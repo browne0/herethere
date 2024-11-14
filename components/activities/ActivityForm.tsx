@@ -34,6 +34,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Location } from '@/lib/types';
+import { ACTIVITY_CATEGORIES, ActivityCategory } from '@/lib/types/activities';
 import { cn } from '@/lib/utils';
 import { activityFormSchema, type ActivityFormValues } from '@/lib/validations/activity';
 
@@ -72,7 +73,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
     defaultValues: initialData
       ? {
           name: initialData.name,
-          type: initialData.type as ActivityFormValues['type'],
+          category: initialData.category,
           address: initialData.address || '',
           latitude: initialData.latitude || 0,
           longitude: initialData.longitude || 0,
@@ -85,7 +86,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
         }
       : {
           name: '',
-          type: 'DINING',
+          category: 'food_exploration', // Default category
           address: '',
           latitude: 0,
           longitude: 0,
@@ -138,7 +139,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
 
       const payload = {
         name: data.name,
-        type: data.type,
+        category: data.category,
         address: data.address,
         latitude: data.latitude,
         longitude: data.longitude,
@@ -191,7 +192,7 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
           <LocationSearch
             onLocationSelect={handleLocationSelect}
             defaultValue={initialData?.address || undefined}
-            searchType={form.watch('type')}
+            searchType={form.watch('category') as ActivityCategory}
             cityBounds={selectedCity?.bounds}
           />
         </FormItem>
@@ -203,22 +204,22 @@ export const ActivityForm: React.FC<ActivityFormProps> = ({ tripId, initialData,
         )}
         <FormField
           control={form.control}
-          name="type"
+          name="category"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Activity Type</FormLabel>
+              <FormLabel>Activity Category</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select activity type" />
+                    <SelectValue placeholder="Select activity category" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="DINING">Dining</SelectItem>
-                  <SelectItem value="SIGHTSEEING">Sightseeing</SelectItem>
-                  <SelectItem value="ACCOMMODATION">Accommodation</SelectItem>
-                  <SelectItem value="TRANSPORTATION">Transportation</SelectItem>
-                  <SelectItem value="OTHER">Other</SelectItem>
+                  {Object.entries(ACTIVITY_CATEGORIES).map(([_, category]) => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.label}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <FormMessage />

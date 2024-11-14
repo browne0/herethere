@@ -34,7 +34,7 @@ export function ActivityCard({ activity, href, className }: ActivityCardProps) {
                 <p>
                   {formatTime(activity.startTime)} - {formatTime(activity.endTime)}
                 </p>
-                <Badge variant="secondary">{activity.type}</Badge>
+                <Badge variant="secondary">{activity.category}</Badge>
                 {activity.priceLevel && <span>{'$'.repeat(activity.priceLevel)}</span>}
               </div>
               {activity.address && (

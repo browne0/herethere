@@ -9,61 +9,32 @@ import {
   Wine,
   ShoppingBag,
   Heart,
+  LucideIcon,
 } from 'lucide-react';
 
 import { Textarea } from '@/components/ui/textarea';
 import { DemoTripPreferences, TripPreferences } from '@/lib/types';
+import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
 
-const activityOptions = [
-  {
-    id: 'beaches',
-    label: 'Beaches',
-    icon: Waves,
-    description: 'Beach activities & waterfront',
-  },
-  {
-    id: 'sightseeing',
-    label: 'City sightseeing',
-    icon: Landmark,
-    description: 'Landmarks & urban exploring',
-  },
-  {
-    id: 'outdoor',
-    label: 'Outdoor adventures',
-    icon: Mountain,
-    description: 'Hiking & nature activities',
-  },
-  {
-    id: 'events',
-    label: 'Festivals/events',
-    icon: PartyPopper,
-    description: 'Local events & culture',
-  },
-  {
-    id: 'food',
-    label: 'Food exploration',
-    icon: Utensils,
-    description: 'Restaurants & culinary experiences',
-  },
-  {
-    id: 'nightlife',
-    label: 'Nightlife',
-    icon: Wine,
-    description: 'Bars & evening entertainment',
-  },
-  {
-    id: 'shopping',
-    label: 'Shopping',
-    icon: ShoppingBag,
-    description: 'Markets & shopping areas',
-  },
-  {
-    id: 'wellness',
-    label: 'Spa wellness',
-    icon: Heart,
-    description: 'Relaxation & wellness',
-  },
-] as const;
+// Map icons to our activity categories
+const ACTIVITY_ICONS: Record<keyof typeof ACTIVITY_CATEGORIES, LucideIcon> = {
+  BEACHES: Waves,
+  CITY_SIGHTSEEING: Landmark,
+  OUTDOOR_ADVENTURES: Mountain,
+  FESTIVALS_EVENTS: PartyPopper,
+  FOOD_EXPLORATION: Utensils,
+  NIGHTLIFE: Wine,
+  SHOPPING: ShoppingBag,
+  SPA_WELLNESS: Heart,
+} as const;
+
+// Create our activity options from the categories
+const activityOptions = Object.entries(ACTIVITY_CATEGORIES).map(([key, category]) => ({
+  id: category.id,
+  label: category.label,
+  icon: ACTIVITY_ICONS[key as keyof typeof ACTIVITY_CATEGORIES],
+  description: category.description,
+}));
 
 interface ActivityPreferencesStepProps<T extends DemoTripPreferences | TripPreferences> {
   preferences: T;
@@ -75,9 +46,10 @@ export function ActivityPreferencesStep<T extends DemoTripPreferences | TripPref
   updatePreferences,
 }: ActivityPreferencesStepProps<T>) {
   const toggleActivity = (activityId: string) => {
-    const newActivities = preferences.activities?.includes(activityId)
-      ? preferences.activities.filter(id => id !== activityId)
-      : [...(preferences.activities || []), activityId];
+    const currentActivities = preferences.activities || [];
+    const newActivities = currentActivities.includes(activityId)
+      ? currentActivities.filter(id => id !== activityId)
+      : [...currentActivities, activityId];
 
     updatePreferences('activities', newActivities);
   };
@@ -89,37 +61,32 @@ export function ActivityPreferencesStep<T extends DemoTripPreferences | TripPref
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {activityOptions.map(option => {
-          const Icon = option.icon;
-          return (
-            <button
-              key={option.id}
-              onClick={() => toggleActivity(option.id)}
-              className={`group p-4 rounded-xl border transition-all duration-300 text-left
-                ${
-                  preferences.activities?.includes(option.id)
-                    ? 'border-indigo-600 bg-indigo-50/50'
-                    : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/30'
-                }`}
-            >
-              <div className="flex items-start gap-3">
-                <div className="mt-1">
-                  <Icon
-                    className={`w-5 h-5 ${
-                      preferences.activities?.includes(option.id)
-                        ? 'text-indigo-600'
-                        : 'text-gray-500'
-                    } group-hover:scale-110 transition-transform duration-300`}
-                  />
-                </div>
-                <div>
-                  <span className="font-medium text-gray-900 block">{option.label}</span>
-                  <span className="text-xs text-gray-500">{option.description}</span>
-                </div>
+        {activityOptions.map(({ id, label, icon: Icon, description }) => (
+          <button
+            key={id}
+            onClick={() => toggleActivity(id)}
+            className={`group p-4 rounded-xl border transition-all duration-300 text-left
+              ${
+                preferences.activities?.includes(id)
+                  ? 'border-indigo-600 bg-indigo-50/50'
+                  : 'border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/30'
+              }`}
+          >
+            <div className="flex items-start gap-3">
+              <div className="mt-1">
+                <Icon
+                  className={`w-5 h-5 ${
+                    preferences.activities?.includes(id) ? 'text-indigo-600' : 'text-gray-500'
+                  } group-hover:scale-110 transition-transform duration-300`}
+                />
               </div>
-            </button>
-          );
-        })}
+              <div>
+                <span className="font-medium text-gray-900 block">{label}</span>
+                <span className="text-xs text-gray-500">{description}</span>
+              </div>
+            </div>
+          </button>
+        ))}
       </div>
 
       <div className="space-y-4">

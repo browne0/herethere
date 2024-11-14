@@ -1,11 +1,13 @@
+import { AddressType } from '@googlemaps/google-maps-services-js';
 import { Trip, TripStatus } from '@prisma/client';
-import { addDays, parse } from 'date-fns';
+import { addDays } from 'date-fns';
 
 import { prisma } from '@/lib/db';
 
 import type { GeneratedActivity, PlaceDetails } from './types';
 import { searchPlaces } from '../places';
 import { City, TripPreferences } from '../types';
+import { ACTIVITY_CATEGORIES } from '../types/activities';
 
 export const GENERATION_TIMEOUT = 120000; // 2 minutes
 export const MAX_RETRY_ATTEMPTS = 3;
@@ -21,32 +23,61 @@ const placeCache = new Map<
 
 const CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours
 
-function convertTimeToDate(timeStr: string, baseDate: Date): Date {
-  // Parse the time string (e.g., "9:30 AM") to get hours and minutes
-  const parsedTime = parse(timeStr, 'h:mm a', new Date());
+function convertTimeToDate(timeStr: string, baseDate: Date, timeZone: string): Date {
+  const parsedDate = new Date(timeStr);
+  if (isNaN(parsedDate.getTime())) {
+    throw new Error(`Invalid date format: ${timeStr}`);
+  }
 
-  // Create a new date using the base date and parsed time
-  const resultDate = new Date(baseDate);
-  resultDate.setHours(parsedTime.getHours());
-  resultDate.setMinutes(parsedTime.getMinutes());
+  // Create a formatter that will give us time in the city's timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
 
-  return resultDate;
+  const localDate = new Date(formatter.format(baseDate));
+  localDate.setHours(parsedDate.getHours());
+  localDate.setMinutes(parsedDate.getMinutes());
+  localDate.setSeconds(0);
+
+  return localDate;
 }
 
 export async function processBatch(
   activities: GeneratedActivity[],
-  tripId: string,
-  startDate: Date,
+  trip: Trip,
   batchSize = 3
 ): Promise<void> {
+  const existingActivities = await prisma.activity.findMany({
+    where: { tripId: trip.id },
+    select: { id: true },
+  });
+
+  if (existingActivities.length > 0) {
+    console.log('Activities already exist for this trip, skipping batch processing');
+    return;
+  }
   const processedActivities = activities.map(activity => {
     // Calculate the date for this activity based on day number
-    const activityDate = addDays(startDate, activity.day - 1);
+    const activityDate = addDays(trip.startDate, activity.day - 1);
+
+    const categoryEntry = Object.entries(ACTIVITY_CATEGORIES).find(
+      ([_, category]) => category.label === activity.category
+    );
+    const category = categoryEntry ? categoryEntry[1].id : 'unknown';
 
     return {
-      ...activity,
-      startTime: convertTimeToDate(activity.startTime, activityDate),
-      endTime: convertTimeToDate(activity.endTime, activityDate),
+      name: activity.name,
+      category,
+      startTime: convertTimeToDate(activity.startTime, activityDate, trip.timeZone),
+      endTime: convertTimeToDate(activity.endTime, activityDate, trip.timeZone),
+      notes: activity.notes,
     };
   });
 
@@ -61,12 +92,8 @@ export async function processBatch(
       batch.map(async activity => {
         await prisma.activity.create({
           data: {
-            tripId,
-            name: activity.name,
-            type: activity.type,
-            startTime: activity.startTime,
-            endTime: activity.endTime,
-            notes: activity.notes,
+            tripId: trip.id,
+            ...activity,
           },
         });
       })
@@ -85,7 +112,7 @@ export async function generateTripBackground(
   cityData: City
 ): Promise<void> {
   try {
-    await processBatch(activities, trip.id, trip.startDate);
+    await processBatch(activities, trip);
 
     void enhancePlacesBackground(trip.id, cityData);
   } catch (error) {
@@ -112,10 +139,17 @@ async function enhancePlacesBackground(tripId: string, cityData: City) {
         const placeDetails = await getPlaceDetails(activity.name, cityData);
 
         if (placeDetails) {
+          const activityCategory =
+            ACTIVITY_CATEGORIES[activity.category as keyof typeof ACTIVITY_CATEGORIES];
+          const matchedPlaceType = placeDetails.types?.find(type =>
+            activityCategory?.googlePlaceTypes.includes(type as AddressType)
+          );
+
           await prisma.activity.update({
             where: { id: activity.id },
             data: {
               placeId: placeDetails.placeId,
+              placeType: matchedPlaceType,
               latitude: placeDetails.latitude,
               longitude: placeDetails.longitude,
               address: placeDetails.address,
@@ -144,64 +178,79 @@ async function enhancePlacesBackground(tripId: string, cityData: City) {
   }
 }
 
-export function generatePrompt(cityData: City, preferences: TripPreferences): string {
+export function generatePrompt(
+  cityData: City,
+  preferences: TripPreferences,
+  tripTimeZone: string
+): string {
   if (!preferences.dates?.from || !preferences.dates?.to) {
     throw new Error('Missing trip dates');
   }
   const days =
     Math.ceil(
-      (new Date(preferences.dates.to!).getTime() - new Date(preferences.dates.from!).getTime()) /
+      (new Date(preferences.dates.to).getTime() - new Date(preferences.dates.from).getTime()) /
         (1000 * 60 * 60 * 24)
     ) + 1;
 
   const tripStyle =
     preferences.tripVibe > 75 ? 'Adventurous' : preferences.tripVibe > 25 ? 'Balanced' : 'Relaxed';
 
-  const activitiesPerDay = tripStyle === 'Adventurous' ? 5 : tripStyle === 'Balanced' ? 4 : 3;
+  const activitiesPerDay =
+    preferences.tripVibe > 75
+      ? 6 // Adventurous
+      : preferences.tripVibe > 25
+        ? 5 // Balanced
+        : 4; // Relaxed
 
-  return `Generate a ${days}-day itinerary of activities for a trip to ${cityData.name} with the following preferences:
-  - Budget Level: ${preferences.budget}
-  - Dietary Restrictions: ${preferences.dietary.length > 0 ? preferences.dietary.join(', ') : 'none'}
-  - Travel Style: ${tripStyle}
-  - Pace: ${preferences.pace > 4 ? 'Fast-paced' : preferences.pace > 2 ? 'Moderate' : 'Leisurely'}
-  - Walking Comfort: ${preferences.walkingComfort || 'moderate'}
-  - Activities: ${preferences.activities?.length > 0 ? preferences.activities.join(', ') : 'all types'}
-  ${preferences.customInterests ? `- Special Interests: ${preferences.customInterests}` : ''}
-  
-  Plan approximately ${activitiesPerDay} activities per day. For each activity, include:
-  1. Name (use official, findable place names)
-  2. Type (DINING, SIGHTSEEING, ACTIVITY, TRANSPORTATION)
-  3. Complete address as it appears on Google Maps
-  4. Day number (1 = first day, 2 = second day, etc.)
-  5. Start and end times (between 8:00-22:00 ${cityData.name} time)
-  6. Brief description/notes
-  7. Price level (1-4)
+  return `Create a ${days}-day ${cityData.name} itinerary using timezone: ${tripTimeZone}.
 
-  Important:
-  - Use verified, existing places findable on Google Maps
-  - Include complete addresses
-  - Focus on well-reviewed tourist spots
-  - Include a mix of morning, afternoon, and evening activities each day
-  - Account for ${preferences.walkingComfort || 'moderate'} walking preference
-  - Include appropriate meal times each day
-  ${preferences.dietary.length > 0 ? `- Ensure dining spots accommodate: ${preferences.dietary.join(', ')}` : ''}
-  
-  Response format:
+    IMPORTANT: Generate EXACTLY ${activitiesPerDay} activities per day, including:
+      - Must include both lunch and dinner each day
+      - Remaining ${activitiesPerDay - 2} slots should be a mix of:
+        * Morning activities (9:00-12:00)
+        * Afternoon activities (14:00-17:00)
+        * Evening activities (17:00-22:00)
 
-  {
-    "activities": [
-      {
-        "name": "string",
-        "type": "string",
-        "address": "string",
-        "day": number,
-        "startTime": "h:mm a",
-        "endTime": "h:mm a",
-        "notes": "string",
-        "priceLevel": number
-      }
-    ]
-  }`;
+    STRICT TIME RULES (ALL TIMES IN ${tripTimeZone}):
+    - Morning activities: 09:00 to 12:00
+    - Lunch: 12:00 to 14:00
+    - Afternoon activities: 14:00 to 17:00
+    - Evening activities: 17:00 to 19:00
+    - Dinner: 19:00 to 21:00
+    - Late evening activities (if any): until 22:00
+
+    ALL times MUST be provided in ISO 8601 format with the correct timezone offset.
+    Example for ${tripTimeZone}: 2024-03-15T14:30:00+09:00 (for Tokyo)
+
+    Schedule Guidelines:
+    1. Every activity MUST include timezone offset in times
+    2. Start each day no earlier than 09:00 ${tripTimeZone}
+    3. End each day no later than 22:00 ${tripTimeZone}
+    4. Allow 30-45 minutes between activities for travel
+    5. Schedule meals at culturally appropriate times for ${cityData.name}
+    
+    Trip Details:
+    - Budget Level: ${preferences.budget}
+    - Dietary Restrictions: ${preferences.dietary.length > 0 ? preferences.dietary.join(', ') : 'none'}
+    - Travel Style: ${tripStyle}
+    - Pace: ${preferences.pace > 4 ? 'Fast-paced' : preferences.pace > 2 ? 'Moderate' : 'Leisurely'}
+    
+    Response format:
+    {
+      "activities": [
+        {
+          "name": "string",
+          "category": "string (one of: ${Object.values(ACTIVITY_CATEGORIES)
+            .map(cat => cat.label)
+            .join(', ')})",
+          "address": "string",
+          "day": number,
+          "startTime": "string (ISO 8601 with timezone offset)",
+          "endTime": "string (ISO 8601 with timezone offset)",
+          "notes": "string"
+        }
+      ]
+    }`;
 }
 
 async function getPlaceDetails(activityName: string, cityData: City): Promise<PlaceDetails | null> {

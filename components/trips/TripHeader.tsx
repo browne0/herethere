@@ -1,5 +1,3 @@
-// components/trips/TripHeader.tsx
-
 'use client';
 import { format } from 'date-fns';
 import { CalendarDays, Star, Utensils, ArrowLeft } from 'lucide-react';
@@ -9,30 +7,32 @@ import { CityPhoto } from '@/components/photos/CityPhoto';
 import { PlacePhotos } from '@/components/places/PlacePhotos';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import type { TripHeaderProps } from '@/lib/types';
+import { useTripActivities } from '@/contexts/TripActivitiesContext';
 
-export function TripHeader({ trip, showBackButton = true, className = '' }: TripHeaderProps) {
-  const getTripVibe = (vibe: number) => {
-    if (vibe > 75) return 'Adventurous';
-    if (vibe > 25) return 'Balanced';
-    return 'Relaxed';
-  };
+interface TripHeaderProps {
+  showBackButton?: boolean;
+  className?: string;
+}
 
-  const getPaceDescription = (pace: number) => {
-    if (pace > 4) return 'Fast-paced';
-    if (pace > 2) return 'Moderate';
-    return 'Leisurely';
-  };
+function getTripVibe(vibe: number) {
+  if (vibe > 75) return 'Adventurous';
+  if (vibe > 25) return 'Balanced';
+  return 'Relaxed';
+}
 
-  // Get preferences safely - handle both demo and live trips
-  const preferences = 'preferences' in trip ? trip.preferences : null;
-  const dates = preferences?.dates || {
-    from: trip.startDate,
-    to: trip.endDate,
-  };
-  const dietary = preferences?.dietary || [];
-  const tripVibe = preferences?.tripVibe || 50;
-  const pace = preferences?.pace || 3;
+function getPaceDescription(pace: number) {
+  if (pace > 4) return 'Fast-paced';
+  if (pace > 2) return 'Moderate';
+  return 'Leisurely';
+}
+
+export function TripHeader({ showBackButton = true, className = '' }: TripHeaderProps) {
+  const { trip } = useTripActivities();
+
+  const preferences = trip.preferences || {};
+  const dietary = preferences.dietary || [];
+  const tripVibe = preferences.tripVibe || 50;
+  const pace = preferences.pace || 3;
 
   return (
     <div className="relative">
@@ -86,8 +86,8 @@ export function TripHeader({ trip, showBackButton = true, className = '' }: Trip
                   <div>
                     <p className="font-medium">Trip Dates</p>
                     <p className="text-sm text-muted-foreground">
-                      {format(new Date(dates.from as Date), 'MMM d')} -{' '}
-                      {format(new Date(dates.to as Date), 'MMM d, yyyy')}
+                      {format(new Date(trip.startDate), 'MMM d')} -{' '}
+                      {format(new Date(trip.endDate), 'MMM d, yyyy')}
                     </p>
                   </div>
                 </div>

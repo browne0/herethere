@@ -25,9 +25,10 @@ export const tripFormSchema = z
     }),
     // These fields will be added after form validation, so they should be optional in the schema
     cityBounds: cityBoundsSchema.optional(),
-    placeId: z.string().optional(),
-    latitude: z.number().optional(),
-    longitude: z.number().optional(),
+    placeId: z.string(),
+    timeZone: z.string(),
+    latitude: z.number(),
+    longitude: z.number(),
   })
   .refine(
     data => {

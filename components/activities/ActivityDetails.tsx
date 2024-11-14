@@ -20,10 +20,75 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
+import { cn } from '@/lib/utils';
 
 interface ActivityDetailsProps {
   activity: Activity;
   tripId: string;
+}
+
+type CategoryStyle = { color: string; bg: string };
+
+const CATEGORY_COLORS: Record<keyof typeof ACTIVITY_CATEGORIES, CategoryStyle> = {
+  BEACHES: {
+    color: 'text-cyan-700',
+    bg: 'bg-cyan-50',
+  },
+  CITY_SIGHTSEEING: {
+    color: 'text-blue-700',
+    bg: 'bg-blue-50',
+  },
+  OUTDOOR_ADVENTURES: {
+    color: 'text-emerald-700',
+    bg: 'bg-emerald-50',
+  },
+  FESTIVALS_EVENTS: {
+    color: 'text-purple-700',
+    bg: 'bg-purple-50',
+  },
+  FOOD_EXPLORATION: {
+    color: 'text-orange-700',
+    bg: 'bg-orange-50',
+  },
+  NIGHTLIFE: {
+    color: 'text-indigo-700',
+    bg: 'bg-indigo-50',
+  },
+  SHOPPING: {
+    color: 'text-pink-700',
+    bg: 'bg-pink-50',
+  },
+  SPA_WELLNESS: {
+    color: 'text-teal-700',
+    bg: 'bg-teal-50',
+  },
+} as const;
+
+interface ActivityCategoryBadgeProps {
+  category?: string;
+  className?: string;
+}
+
+export function ActivityCategoryBadge({ category, className }: ActivityCategoryBadgeProps) {
+  // Convert category to match our keys and get colors
+  const categoryKey = category?.toUpperCase() as keyof typeof ACTIVITY_CATEGORIES;
+  const categoryStyle = CATEGORY_COLORS[categoryKey] || {
+    color: 'text-gray-700',
+    bg: 'bg-gray-50',
+  };
+
+  // Get the display label from our categories
+  const categoryLabel = ACTIVITY_CATEGORIES[categoryKey]?.label || category;
+
+  return (
+    <Badge
+      variant="secondary"
+      className={cn(categoryStyle.color, categoryStyle.bg, 'border-none font-medium', className)}
+    >
+      {categoryLabel}
+    </Badge>
+  );
 }
 
 const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) => {
@@ -42,19 +107,6 @@ const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) =
       console.error('Failed to delete activity:', error);
     }
   };
-
-  const getActivityTypeColor = (type: string) => {
-    const types: Record<string, { color: string; bg: string }> = {
-      DINING: { color: 'text-orange-700', bg: 'bg-orange-50' },
-      SIGHTSEEING: { color: 'text-blue-700', bg: 'bg-blue-50' },
-      ACCOMMODATION: { color: 'text-purple-700', bg: 'bg-purple-50' },
-      TRANSPORTATION: { color: 'text-green-700', bg: 'bg-green-50' },
-      OTHER: { color: 'text-gray-700', bg: 'bg-gray-50' },
-    };
-    return types[type] || types.OTHER;
-  };
-
-  const typeStyle = getActivityTypeColor(activity.type);
 
   return (
     <div className="max-w-4xl mx-auto p-4">
@@ -90,9 +142,7 @@ const ActivityDetails: React.FC<ActivityDetailsProps> = ({ activity, tripId }) =
           <Card>
             <CardHeader>
               <div className="space-y-2">
-                <Badge variant="secondary" className={`${typeStyle.color} ${typeStyle.bg}`}>
-                  {activity.type}
-                </Badge>
+                <ActivityCategoryBadge category={activity.category} />
                 <CardTitle>{activity.name}</CardTitle>
               </div>
             </CardHeader>

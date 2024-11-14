@@ -1,9 +1,8 @@
-// components/trips/TripMapView.tsx
 'use client';
 
 import React from 'react';
 
-import { Activity } from '@prisma/client';
+import { Activity, TripStatus } from '@prisma/client';
 import {
   GoogleMap,
   Marker,
@@ -12,137 +11,155 @@ import {
   useLoadScript,
 } from '@react-google-maps/api';
 import { format } from 'date-fns';
-import { Loader2, MapPin, Clock, Home } from 'lucide-react';
+import { Clock, Loader2, MapPin } from 'lucide-react';
 
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { useTripActivities } from '@/contexts/TripActivitiesContext';
 import { Accommodation } from '@/lib/trips';
 
-import { DirectionsButton } from './DirectionsButton';
+import { ActivityCategoryBadge } from '../activities/ActivityDetails';
 
 interface TripMapViewProps {
-  tripId: string;
-  activities: Activity[];
   onMarkerHover: (activityId: string | null) => void;
   onMarkerSelect: (activityId: string | null) => void;
   hoveredActivityId: string | null;
   selectedActivityId: string | null;
   accommodation?: Accommodation;
-  date: string;
 }
-
-const defaultCenter = { lat: 40.7128, lng: -74.006 }; // New York City
-const defaultZoom = 12;
 
 const libraries: ('places' | 'geometry' | 'drawing' | 'visualization')[] = ['places'];
 
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: false,
-  clickableIcons: false,
-  streetViewControl: false,
-  mapTypeControl: false,
-  fullscreenControl: false,
-  styles: [
-    {
-      featureType: 'poi',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }],
-    },
-  ],
+const getMarkerIcon = (activity: Activity, isHighlighted: boolean) => {
+  return {
+    path: google.maps.SymbolPath.CIRCLE,
+    fillColor: getMarkerColor(activity.category),
+    fillOpacity: 1,
+    strokeWeight: isHighlighted ? 3 : 2,
+    strokeColor: isHighlighted ? '#000' : '#FFFFFF',
+    scale: isHighlighted ? 12 : 10,
+  };
+};
+
+const getMarkerColor = (category: string) => {
+  const colors: Record<string, string> = {
+    beaches: '#06b6d4',
+    city_sightseeing: '#2563eb',
+    outdoor_adventures: '#059669',
+    festivals_events: '#9333ea',
+    food_exploration: '#ea580c',
+    nightlife: '#4f46e5',
+    shopping: '#db2777',
+    spa_wellness: '#0d9488',
+  };
+
+  return colors[category] || '#6b7280';
 };
 
 export function TripMapView({
-  activities,
   onMarkerHover,
   onMarkerSelect,
   hoveredActivityId,
   selectedActivityId,
   accommodation,
-  date,
 }: TripMapViewProps) {
+  const { activities, trip, isGenerating, error } = useTripActivities();
   const [directions, setDirections] = React.useState<google.maps.DirectionsResult[]>([]);
   const [selectedMarker, setSelectedMarker] = React.useState<Activity | null>(null);
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
+
+  const mapOptions: google.maps.MapOptions = {
+    disableDefaultUI: false,
+    clickableIcons: false,
+    streetViewControl: false,
+    mapTypeControl: false,
+    fullscreenControl: false,
+    // zoom: 12,
+    // center: { lat: trip.latitude!, lng: trip.longitude! },
+    styles: [
+      {
+        featureType: 'poi',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+    ],
+  };
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
     libraries,
   });
 
-  // Calculate routes between activities
-  React.useEffect(() => {
-    if (!isLoaded || !activities.length) return;
+  // Only calculate routes when we have verified activities
+  // React.useEffect(() => {
+  //   if (!isLoaded || isGenerating || trip.status === TripStatus.GENERATING) return;
 
-    async function calculateRoutes() {
-      const newDirections: google.maps.DirectionsResult[] = [];
-      const directionsService = new google.maps.DirectionsService();
+  //   async function calculateRoutes() {
+  //     const newDirections: google.maps.DirectionsResult[] = [];
+  //     const directionsService = new google.maps.DirectionsService();
 
-      // Filter out activities without coordinates
-      const validActivities = activities.filter(
-        (activity): activity is Activity & { latitude: number; longitude: number } =>
-          activity.latitude !== null && activity.longitude !== null
-      );
+  //     const validActivities = activities.filter(
+  //       (activity): activity is Activity & { latitude: number; longitude: number } =>
+  //         activity.latitude !== null && activity.longitude !== null
+  //     );
 
-      // Start from accommodation if available
-      const points = accommodation ? [accommodation, ...validActivities] : validActivities;
+  //     const points = accommodation ? [accommodation, ...validActivities] : validActivities;
 
-      for (let i = 0; i < points.length - 1; i++) {
-        const start = points[i];
-        const end = points[i + 1];
+  //     for (let i = 0; i < points.length - 1; i++) {
+  //       const start = points[i];
+  //       const end = points[i + 1];
 
-        const origin: google.maps.LatLngLiteral = {
-          lat: 'latitude' in start ? start.latitude : start.latitude,
-          lng: 'longitude' in start ? start.longitude : start.longitude,
-        };
+  //       const origin: google.maps.LatLngLiteral = {
+  //         lat: 'latitude' in start ? start.latitude : start.latitude,
+  //         lng: 'longitude' in start ? start.longitude : start.longitude,
+  //       };
 
-        const destination: google.maps.LatLngLiteral = {
-          lat: 'latitude' in end ? end.latitude : end.latitude,
-          lng: 'longitude' in end ? end.longitude : end.longitude,
-        };
+  //       const destination: google.maps.LatLngLiteral = {
+  //         lat: 'latitude' in end ? end.latitude : end.latitude,
+  //         lng: 'longitude' in end ? end.longitude : end.longitude,
+  //       };
 
-        try {
-          const result = await directionsService.route({
-            origin,
-            destination,
-            travelMode: google.maps.TravelMode.DRIVING,
-          });
+  //       try {
+  //         const result = await directionsService.route({
+  //           origin,
+  //           destination,
+  //           travelMode: google.maps.TravelMode.DRIVING,
+  //         });
 
-          newDirections.push(result);
-        } catch (error) {
-          console.error('Direction service failed:', error);
-        }
-      }
+  //         newDirections.push(result);
+  //       } catch (error) {
+  //         console.error('Direction service failed:', error);
+  //       }
+  //     }
 
-      // Add route back to accommodation if available
-      if (accommodation && activities.length > 0) {
-        const lastActivity = activities[activities.length - 1];
-        try {
-          const result = await directionsService.route({
-            origin: {
-              lat: lastActivity.latitude!,
-              lng: lastActivity.longitude!,
-            },
-            destination: {
-              lat: accommodation.latitude,
-              lng: accommodation.longitude,
-            },
-            travelMode: google.maps.TravelMode.DRIVING,
-          });
-          newDirections.push(result);
-        } catch (error) {
-          console.error('Failed to calculate return route:', error);
-        }
-      }
+  //     if (accommodation && activities.length > 0) {
+  //       const lastActivity = activities[activities.length - 1];
+  //       try {
+  //         const result = await directionsService.route({
+  //           origin: {
+  //             lat: lastActivity.latitude!,
+  //             lng: lastActivity.longitude!,
+  //           },
+  //           destination: {
+  //             lat: accommodation.latitude,
+  //             lng: accommodation.longitude,
+  //           },
+  //           travelMode: google.maps.TravelMode.DRIVING,
+  //         });
+  //         newDirections.push(result);
+  //       } catch (error) {
+  //         console.error('Failed to calculate return route:', error);
+  //       }
+  //     }
 
-      setDirections(newDirections);
-    }
+  //     setDirections(newDirections);
+  //   }
 
-    calculateRoutes();
-  }, [isLoaded, activities, accommodation]);
+  //   calculateRoutes();
+  // }, [isLoaded, activities, accommodation, isGenerating, trip.status]);
 
   // Fit bounds when activities change
   React.useEffect(() => {
-    if (!map || !activities.length) return;
+    if (!map || isGenerating || trip.status === TripStatus.GENERATING) return;
 
     const bounds = new google.maps.LatLngBounds();
 
@@ -157,31 +174,7 @@ export function TripMapView({
     });
 
     map.fitBounds(bounds, 50);
-  }, [map, activities, accommodation]);
-
-  const getMarkerIcon = (activity: Activity) => {
-    const isHighlighted = hoveredActivityId === activity.id || selectedActivityId === activity.id;
-
-    return {
-      path: google.maps.SymbolPath.CIRCLE,
-      fillColor: getMarkerColor(activity.type),
-      fillOpacity: 1,
-      strokeWeight: isHighlighted ? 3 : 2,
-      strokeColor: isHighlighted ? '#000' : '#FFFFFF',
-      scale: isHighlighted ? 12 : 10,
-    };
-  };
-
-  const getMarkerColor = (type: Activity['type']) => {
-    const colors: Record<Activity['type'], string> = {
-      DINING: '#ef4444',
-      SIGHTSEEING: '#3b82f6',
-      ACCOMMODATION: '#22c55e',
-      TRANSPORTATION: '#eab308',
-      OTHER: '#6b7280',
-    };
-    return colors[type];
-  };
+  }, [map, activities, accommodation, isGenerating, trip.status]);
 
   if (!isLoaded) {
     return (
@@ -206,17 +199,23 @@ export function TripMapView({
     );
   }
 
+  if (error) {
+    return (
+      <div className="h-full flex items-center justify-center bg-destructive/10">
+        <Card>
+          <CardContent>
+            <p className="text-destructive">Failed to load map. {error.message}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full relative">
-      <GoogleMap
-        mapContainerClassName="w-full h-full"
-        options={mapOptions}
-        onLoad={setMap}
-        zoom={defaultZoom}
-        center={defaultCenter}
-      >
-        {/* Accommodation Marker */}
-        {accommodation && (
+      <GoogleMap mapContainerClassName="w-full h-full" options={mapOptions} onLoad={setMap}>
+        {/* Only show accommodation marker when not generating */}
+        {!isGenerating && trip.status === TripStatus.COMPLETE && accommodation && (
           <Marker
             position={{
               lat: accommodation.latitude,
@@ -235,51 +234,58 @@ export function TripMapView({
           />
         )}
 
-        {/* Activity Markers */}
-        {activities.map((activity, index) => (
-          <Marker
-            key={activity.id}
-            position={{
-              lat: activity.latitude!,
-              lng: activity.longitude!,
-            }}
-            icon={getMarkerIcon(activity)}
-            label={{
-              text: String(index + 1),
-              color: '#FFFFFF',
-              fontSize: '14px',
-              fontWeight: 'bold',
-            }}
-            onMouseOver={() => onMarkerHover(activity.id)}
-            onMouseOut={() => onMarkerHover(null)}
-            onClick={() => {
-              setSelectedMarker(activity);
-              onMarkerSelect(activity.id);
-            }}
-            zIndex={
-              hoveredActivityId === activity.id || selectedActivityId === activity.id ? 1000 : 1
-            }
-          />
-        ))}
+        {/* Show activities when generation is complete */}
+        {!isGenerating &&
+          trip.status === TripStatus.COMPLETE &&
+          activities.map((activity, index) => {
+            const isHighlighted =
+              hoveredActivityId === activity.id || selectedActivityId === activity.id;
 
-        {/* Route Lines */}
-        {directions.map((direction, index) => (
-          <DirectionsRenderer
-            key={index}
-            directions={direction}
-            options={{
-              suppressMarkers: true,
-              polylineOptions: {
-                strokeColor: '#6b7280',
-                strokeOpacity: 0.8,
-                strokeWeight: 4,
-              },
-            }}
-          />
-        ))}
+            return (
+              <Marker
+                key={activity.id}
+                position={{
+                  lat: activity.latitude!,
+                  lng: activity.longitude!,
+                }}
+                icon={getMarkerIcon(activity, isHighlighted)}
+                label={{
+                  text: String(index + 1),
+                  color: '#FFFFFF',
+                  fontSize: '14px',
+                  fontWeight: 'bold',
+                }}
+                onMouseOver={() => onMarkerHover(activity.id)}
+                onMouseOut={() => onMarkerHover(null)}
+                onClick={() => {
+                  setSelectedMarker(activity);
+                  onMarkerSelect(activity.id);
+                }}
+                zIndex={isHighlighted ? 1000 : 1}
+              />
+            );
+          })}
+
+        {/* Only show directions when generation is complete */}
+        {/* {!isGenerating &&
+          trip.status === TripStatus.COMPLETE &&
+          directions.map((direction, index) => (
+            <DirectionsRenderer
+              key={index}
+              directions={direction}
+              options={{
+                suppressMarkers: true,
+                polylineOptions: {
+                  strokeColor: '#6b7280',
+                  strokeOpacity: 0.8,
+                  strokeWeight: 4,
+                },
+              }}
+            />
+          ))} */}
 
         {/* Info Window */}
-        {selectedMarker && (
+        {selectedMarker && !isGenerating && trip.status === TripStatus.COMPLETE && (
           <InfoWindow
             position={{
               lat: selectedMarker.latitude!,
@@ -293,8 +299,11 @@ export function TripMapView({
             <div className="p-2 max-w-xs">
               <div className="flex items-center justify-between gap-2 mb-2">
                 <h3 className="font-medium">{selectedMarker.name}</h3>
-                <Badge variant="secondary">{selectedMarker.type}</Badge>
+                <ActivityCategoryBadge category={selectedMarker.category} />
               </div>
+              {selectedMarker.placeType && (
+                <div className="text-xs text-muted-foreground mb-2">{selectedMarker.placeType}</div>
+              )}
               {selectedMarker.address && (
                 <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
                   <MapPin className="h-4 w-4" />

@@ -96,7 +96,7 @@ export default async function PublicTripPage({
                                   {format(new Date(activity.endTime), 'h:mm a')}
                                 </p>
                                 <Badge variant="secondary">
-                                  {activity.type}
+                                  {activity.category}
                                 </Badge>
                               </div>
                               {activity.address && (

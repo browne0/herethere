@@ -1,5 +1,3 @@
-import { Activity } from '@prisma/client';
-
 export type ErrorCode =
   | 'OPENAI_ERROR'
   | 'PLACES_ERROR'
@@ -10,10 +8,10 @@ export type ErrorCode =
 
 export interface GeneratedActivity {
   name: string;
-  type: 'DINING' | 'SIGHTSEEING' | 'ACTIVITY' | 'TRANSPORTATION';
+  category: string;
   address: string;
-  startTime: string;
   day: number;
+  startTime: string;
   endTime: string;
   notes: string;
   priceLevel: number;
@@ -32,4 +30,5 @@ export interface PlaceDetails {
   latitude: number;
   longitude: number;
   address: string;
+  types?: string[];
 }

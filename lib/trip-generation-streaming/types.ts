@@ -10,7 +10,7 @@ export interface ActivityGenerationRequest {
 
 export const activitySchema = z.object({
   name: z.string(),
-  type: z.enum(['DINING', 'SIGHTSEEING', 'ACTIVITY', 'TRANSPORTATION']),
+  category: z.string(),
   address: z.string(),
   startTime: z.string(), // Note: Keep as string for JSON
   endTime: z.string(), // Note: Keep as string for JSON

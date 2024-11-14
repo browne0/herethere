@@ -7,6 +7,7 @@ export interface Location {
   longitude: number;
   placeId?: string;
   name?: string;
+  types?: string[];
 }
 
 export interface MapViewport {
@@ -16,14 +17,6 @@ export interface MapViewport {
   };
   zoom: number;
 }
-
-export type ActivitySearchType =
-  | 'DINING'
-  | 'SIGHTSEEING'
-  | 'ACCOMMODATION'
-  | 'TRANSPORTATION'
-  | 'OTHER';
-
 export interface CityBounds {
   ne: {
     lat: number;
@@ -110,7 +103,7 @@ export type DemoTripPreferences = Omit<TripPreferences, 'city' | 'walkingComfort
 export interface DemoActivity {
   id: string;
   name: string;
-  type: string;
+  category: string;
   address: string;
   startTime: string;
   endTime: string;

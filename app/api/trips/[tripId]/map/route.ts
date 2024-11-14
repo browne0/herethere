@@ -3,27 +3,9 @@ import { Client, TravelMode } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
+import { RouteSegment } from '@/lib/trips';
 
 const googleMapsClient = new Client({});
-
-interface RouteSegment {
-  distance: string;
-  duration: string;
-  startActivity: {
-    id: string;
-    name: string;
-    type: string;
-    startTime: string;
-    endTime: string;
-  };
-  endActivity: {
-    id: string;
-    name: string;
-    type: string;
-    startTime: string;
-    endTime: string;
-  };
-}
 
 export async function GET(_request: Request, { params }: { params: { tripId: string } }) {
   try {
@@ -72,7 +54,7 @@ export async function GET(_request: Request, { params }: { params: { tripId: str
           },
           select: {
             id: true,
-            type: true,
+            category: true,
             name: true,
             address: true,
             latitude: true,
@@ -137,14 +119,14 @@ export async function GET(_request: Request, { params }: { params: { tripId: str
               startActivity: {
                 id: startActivity.id,
                 name: startActivity.name,
-                type: startActivity.type,
+                category: startActivity.category,
                 startTime: startActivity.startTime.toISOString(),
                 endTime: startActivity.endTime.toISOString(),
               },
               endActivity: {
                 id: endActivity.id,
                 name: endActivity.name,
-                type: endActivity.type,
+                category: endActivity.category,
                 startTime: endActivity.startTime.toISOString(),
                 endTime: endActivity.endTime.toISOString(),
               },
