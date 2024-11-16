@@ -116,7 +116,7 @@ const CustomMarker: React.FC<CustomMarkerProps> = ({
           </div>
           <div
             className={`pointer-events-none absolute w-[10em] text-2xs font-medium leading-[1.17] text-foreground
-            ${labelPosition === 'right' ? 'left-[calc(100%+0.125rem)]' : 'right-[calc(100%+0.125rem)]'} 
+            ${labelPosition === 'right' ? 'left-[calc(100%+4px)]' : 'right-[calc(100%+4px)]'} 
             top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? '' : 'text-right'}`}
           >
             <span className="rounded-sm bg-background/95 box-decoration-clone px-1">
@@ -128,6 +128,8 @@ const CustomMarker: React.FC<CustomMarkerProps> = ({
     </OverlayView>
   );
 };
+
+const libraries: Libraries = ['places', 'marker'];
 
 export const TripMapView: React.FC<TripMapViewProps> = ({
   onMarkerHover,
@@ -152,10 +154,43 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
         elementType: 'labels',
         stylers: [{ visibility: 'off' }],
       },
+      {
+        featureType: 'transit',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'transit.line',
+        elementType: 'geometry',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'transit.station',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'transit.station.rail',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'road.highway',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'road.arterial',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'road',
+        elementType: 'labels.icon',
+        stylers: [{ visibility: 'off' }],
+      },
     ],
   };
-
-  const libraries: Libraries = ['places', 'marker'];
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
@@ -294,19 +329,6 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
           </>
         )}
       </GoogleMap>
-
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-background/95 p-3 rounded-lg shadow-lg">
-        <h4 className="font-medium mb-2 text-sm">Map Legend</h4>
-        <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-          {Object.entries(ACTIVITY_ICONS).map(([type, Icon]) => (
-            <div key={type} className="flex items-center gap-2">
-              <Icon size={14} />
-              <span className="text-xs">{type.replace(/_/g, ' ').toLowerCase()}</span>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

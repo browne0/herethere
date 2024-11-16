@@ -38,18 +38,18 @@ export function TripHeader({ showBackButton = true, className = '' }: TripHeader
     <div className="relative">
       {/* Back button */}
       {showBackButton && (
-        <div className="absolute left-4 lg:left-8 top-6 z-10">
+        <div className="absolute left-3 lg:left-8 top-4 lg:top-6 z-10">
           <Button variant="secondary" size="sm" className="shadow-md" asChild>
             <Link href="/" className="gap-2">
               <ArrowLeft className="h-4 w-4" />
-              Back
+              <span>Back</span>
             </Link>
           </Button>
         </div>
       )}
 
       {/* Hero Image */}
-      <div className={`relative h-64 overflow-hidden ${className}`}>
+      <div className={`relative h-48 lg:h-64 overflow-hidden ${className}`}>
         {trip.placeId ? (
           <PlacePhotos
             placeId={trip.placeId}
@@ -66,20 +66,20 @@ export function TripHeader({ showBackButton = true, className = '' }: TripHeader
       </div>
 
       {/* Content overlapping the image */}
-      <div className="relative -mt-24 px-4 lg:px-8">
+      <div className="relative -mt-20 px-3 lg:px-8">
         <Card className="backdrop-blur-md bg-background/95">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-6">
+          <CardContent className="pt-4 lg:pt-6">
+            <div className="flex flex-col gap-4 lg:gap-6">
               {/* Title */}
               <div>
-                <h1 className="text-2xl font-bold">
+                <h1 className="text-xl lg:text-2xl font-bold">
                   {trip.title || `Trip to ${trip.destination}`}
                 </h1>
-                <p className="text-muted-foreground">{trip.destination}</p>
+                <p className="text-sm text-muted-foreground">{trip.destination}</p>
               </div>
 
               {/* Trip Details */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
                 {/* Dates */}
                 <div className="flex items-center gap-3">
                   <CalendarDays className="w-5 h-5 text-primary shrink-0" />

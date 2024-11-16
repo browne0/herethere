@@ -114,7 +114,7 @@ export function DailyRouteSummary({
           const routeToNext = routeKey ? routeSegments[routeKey] : undefined;
 
           return (
-            <div key={activity.id} className="mb-8 last:mb-0">
+            <div key={activity.id} className="mb-4 lg:mb-8 last:mb-0">
               <ActivityTimelineItem
                 timeZone={trip.timeZone}
                 activity={activity}

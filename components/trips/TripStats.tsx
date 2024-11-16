@@ -29,16 +29,16 @@ export function TripStats() {
     : (activities.length / tripDuration).toFixed(1);
 
   return (
-    <div className="grid gap-4 grid-cols-1 md:grid-cols-3">
+    <div className="grid gap-3 lg:gap-4 grid-cols-1 sm:grid-cols-3">
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
+        <CardHeader className="pb-2 px-4 lg:px-6">
+          <CardTitle className="flex items-center gap-2 text-sm lg:text-base font-medium">
             <MapPin className="h-4 w-4 text-primary" />
             Total Activities
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
+        <CardContent className="px-4 lg:px-6">
+          <div className="text-xl lg:text-2xl font-bold">
             {isGenerating ? (
               <span>
                 {currentTotal} / {expectedTotal}
@@ -52,14 +52,14 @@ export function TripStats() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
+        <CardHeader className="pb-2 px-4 lg:px-6">
+          <CardTitle className="flex items-center gap-2 text-sm lg:text-base font-medium">
             <Clock className="h-4 w-4 text-primary" />
             Trip Duration
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">
+        <CardContent className="px-4 lg:px-6">
+          <div className="text-xl lg:text-2xl font-bold">
             {tripDuration} {tripDuration === 1 ? 'Day' : 'Days'}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -69,14 +69,14 @@ export function TripStats() {
       </Card>
 
       <Card>
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-base font-medium">
+        <CardHeader className="pb-2 px-4 lg:px-6">
+          <CardTitle className="flex items-center gap-2 text-sm lg:text-base font-medium">
             <Route className="h-4 w-4 text-primary" />
             Trip Status
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">
+          <div className="text-xl lg:text-2xl font-bold">
             <Badge variant={timing.variant}>{timing.text}</Badge>
           </div>
           <p className="text-xs text-muted-foreground">

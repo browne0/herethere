@@ -4,8 +4,11 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { MapSection } from '@/components/trips/MapSection';
+import { MobileMapButton } from '@/components/trips/MobileMapButton';
+import { MobileMapSheet } from '@/components/trips/MobileMapSheet';
 import { TripContent } from '@/components/trips/TripContent';
 import { TripHeader } from '@/components/trips/TripHeader';
+import { MobileMapProvider } from '@/contexts/MobileMapContext';
 import { TripActivitiesProvider } from '@/contexts/TripActivitiesContext';
 import { prisma } from '@/lib/db';
 
@@ -47,20 +50,25 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
 
   return (
     <TripActivitiesProvider trip={initialTripData}>
-      <div className="flex h-[calc(100vh-4rem)] overflow-hidden">
-        {/* Left Panel - Trip Details */}
-        <div className="w-1/2 overflow-y-auto">
-          <TripHeader />
-          <TripContent />
-        </div>
+      <MobileMapProvider>
+        <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden">
+          {/* Left Panel - Trip Details */}
+          <div className="w-full lg:w-1/2 overflow-y-auto">
+            <TripHeader />
+            <TripContent />
+          </div>
 
-        {/* Right Panel - Map */}
-        <div className="w-1/2 border-l">
-          <Suspense fallback={<MapLoadingFallback />}>
-            <MapSection accommodation={initialTripData.preferences?.accommodation} />
-          </Suspense>
+          {/* Right Panel - Map */}
+          <div className="hidden lg:block w-full lg:w-1/2 border-l h-[300px] lg:h-auto">
+            <Suspense fallback={<MapLoadingFallback />}>
+              <MapSection accommodation={initialTripData.preferences?.accommodation} />
+            </Suspense>
+          </div>
+
+          <MobileMapButton />
+          <MobileMapSheet accommodation={initialTripData.preferences?.accommodation} />
         </div>
-      </div>
+      </MobileMapProvider>
     </TripActivitiesProvider>
   );
 }
