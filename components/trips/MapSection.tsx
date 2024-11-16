@@ -3,8 +3,6 @@
 
 import React from 'react';
 
-import { Activity } from '@prisma/client';
-
 import { Accommodation } from '@/lib/trips';
 
 import { TripMapView } from './TripMapView';

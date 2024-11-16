@@ -58,7 +58,7 @@ export function DailyRouteSummary({
     return (
       <div>
         {generatedActivities?.map((activity, index) => (
-          <div className="relative mb-8 last:mb-0" key={index}>
+          <div className="relative mb-8 last:mb-0" key={`${activity?.name}-${activity?.startTime}`}>
             <Card className={cn('transition-colors')}>
               <CardContent className="p-4 space-y-4">
                 <div className="flex items-start justify-between gap-4">

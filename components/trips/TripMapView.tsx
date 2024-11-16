@@ -117,7 +117,7 @@ const CustomMarker: React.FC<CustomMarkerProps> = ({
           <div
             className={`pointer-events-none absolute w-[10em] text-2xs font-medium leading-[1.17] text-foreground
             ${labelPosition === 'right' ? 'left-[calc(100%+4px)]' : 'right-[calc(100%+4px)]'} 
-            top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? '' : 'text-right'}`}
+            top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? 'text-left' : 'text-right'}`}
           >
             <span className="rounded-sm bg-background/95 box-decoration-clone px-1">
               {activity.name}
