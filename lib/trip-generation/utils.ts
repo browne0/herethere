@@ -190,6 +190,7 @@ export function generatePrompt(
   CRITICAL REQUIREMENT: ALL activities MUST be located IN ${cityData.name} proper - not in other countries or nearby cities.
 
     IMPORTANT: Generate EXACTLY ${activitiesPerDay} activities per day, (no more, no fewer) including:
+      - NO overlapping time slots - each activity must end before the next begins
       - Must include both lunch and dinner each day
       - Remaining ${activitiesPerDay - 2} slots should be a mix of:
         * Morning activities (9:00-12:00)
@@ -227,7 +228,7 @@ export function generatePrompt(
     {
       "name": "string",
       "category": "string (one of: ${Object.values(ACTIVITY_CATEGORIES)
-        .map(cat => cat.label)
+        .map(cat => cat.id)
         .join(', ')})",
       "address": "string",
       "day": number,

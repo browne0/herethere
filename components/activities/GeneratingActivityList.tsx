@@ -58,10 +58,31 @@ export default function GeneratingActivityList({
   activities: ProcessedActivity[];
   timeZone: string;
 }) {
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  // Reset visible count when activities array is cleared
+  useEffect(() => {
+    if (activities.length === 0) {
+      setVisibleCount(0);
+    }
+  }, [activities.length]);
+
+  // Incrementally show activities
+  useEffect(() => {
+    if (activities.length > visibleCount) {
+      const timer = setTimeout(() => {
+        setVisibleCount(prev => Math.min(prev + 1, activities.length));
+      }, 200); // Adjust timing as needed
+      return () => clearTimeout(timer);
+    }
+  }, [activities.length, visibleCount]);
+
+  const visibleActivities = activities.slice(0, visibleCount);
+
   return (
     <div>
       <AnimatePresence mode="popLayout">
-        {activities.map(activity => (
+        {visibleActivities.map(activity => (
           <ActivityCard key={activity.id} activity={activity} timeZone={timeZone} />
         ))}
       </AnimatePresence>
