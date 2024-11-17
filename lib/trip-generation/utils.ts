@@ -49,10 +49,9 @@ function convertTimeToDate(timeStr: string, baseDate: Date, timeZone: string): D
   return localDate;
 }
 
-export async function processBatch(
+export async function processActivities(
   activities: GeneratedActivity[],
-  trip: Trip,
-  batchSize = 3
+  trip: Trip
 ): Promise<void> {
   const existingActivities = await prisma.activity.findMany({
     where: { tripId: trip.id },
@@ -63,8 +62,8 @@ export async function processBatch(
     console.log('Activities already exist for this trip, skipping batch processing');
     return;
   }
+
   const processedActivities = activities.map(activity => {
-    // Calculate the date for this activity based on day number
     const activityDate = addDays(trip.startDate, activity.day - 1);
 
     const categoryEntry = Object.entries(ACTIVITY_CATEGORIES).find(
@@ -81,29 +80,13 @@ export async function processBatch(
     };
   });
 
-  // Sort activities chronologically
-  processedActivities.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
-
-  // Process in batches
-  for (let i = 0; i < processedActivities.length; i += batchSize) {
-    const batch = processedActivities.slice(i, i + batchSize);
-
-    await Promise.all(
-      batch.map(async activity => {
-        await prisma.activity.create({
-          data: {
-            tripId: trip.id,
-            ...activity,
-          },
-        });
-      })
-    );
-
-    // Small delay between batches
-    if (i + batchSize < processedActivities.length) {
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-  }
+  // Single bulk create operation
+  await prisma.activity.createMany({
+    data: processedActivities.map(activity => ({
+      tripId: trip.id,
+      ...activity,
+    })),
+  });
 }
 
 export async function generateTripBackground(
@@ -112,7 +95,7 @@ export async function generateTripBackground(
   cityData: City
 ): Promise<void> {
   try {
-    await processBatch(activities, trip);
+    await processActivities(activities, trip);
 
     void enhancePlacesBackground(trip.id, cityData);
   } catch (error) {
@@ -204,6 +187,8 @@ export function generatePrompt(
 
   return `Create a ${days}-day ${cityData.name} itinerary using timezone: ${tripTimeZone}.
 
+  CRITICAL REQUIREMENT: ALL activities MUST be located IN ${cityData.name} proper - not in other countries or nearby cities.
+
     IMPORTANT: Generate EXACTLY ${activitiesPerDay} activities per day, including:
       - Must include both lunch and dinner each day
       - Remaining ${activitiesPerDay - 2} slots should be a mix of:
@@ -228,6 +213,7 @@ export function generatePrompt(
     3. End each day no later than 22:00 ${tripTimeZone}
     4. Allow 30-45 minutes between activities for travel
     5. Schedule meals at culturally appropriate times for ${cityData.name}
+    6. Use verified, existing places findable on Google Maps
     
     Trip Details:
     - Budget Level: ${preferences.budget}

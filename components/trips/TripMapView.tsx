@@ -5,7 +5,6 @@ import {
   GoogleMap,
   Marker,
   InfoWindow,
-  useLoadScript,
   Libraries,
   OverlayView,
   OVERLAY_MOUSE_TARGET,
@@ -30,6 +29,8 @@ import {
 import { Card, CardContent } from '@/components/ui/card';
 import { useTripActivities } from '@/contexts/TripActivitiesContext';
 import { ActivityCategory } from '@/lib/types/activities';
+
+import { useGoogleMapsStatus } from '../maps/GoogleMapsProvider';
 
 interface CustomMarkerProps {
   activity: Activity;
@@ -192,10 +193,7 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
     ],
   };
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
-    libraries,
-  });
+  const { isLoaded, loadError } = useGoogleMapsStatus();
 
   React.useEffect(() => {
     if (!map || isGenerating || trip.status === 'GENERATING') return;

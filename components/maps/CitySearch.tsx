@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { useLoadScript } from '@react-google-maps/api';
-import type { Libraries } from '@react-google-maps/api/dist/utils/make-load-script-url';
 import { Search, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -11,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { City } from '@/lib/types';
 
-const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
+import { useGoogleMapsStatus } from './GoogleMapsProvider';
 
 interface CitySearchProps {
   onCitySelect: (city: City) => void;
@@ -28,10 +26,7 @@ export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProp
   const autocompleteRef = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesServiceRef = useRef<google.maps.places.PlacesService | null>(null);
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded, loadError } = useGoogleMapsStatus();
 
   useEffect(() => {
     if (isLoaded && !autocompleteRef.current) {

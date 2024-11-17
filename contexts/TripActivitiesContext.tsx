@@ -8,14 +8,12 @@ import { experimental_useObject as useObject } from 'ai/react';
 
 import { GeneratedActivity } from '@/lib/trip-generation/types';
 import { activitiesSchema } from '@/lib/trip-generation-streaming/types';
-import { City } from '@/lib/types';
 
 interface TripActivitiesContextType {
-  activities: Activity[];
   trip: Trip & { activities: Activity[] };
   isGenerating: boolean;
   error: Error | null;
-  generatedActivities: DeepPartial<GeneratedActivity[]>;
+  activities: Activity[] | DeepPartial<GeneratedActivity>[];
 }
 
 interface GenerationResponse {
@@ -34,7 +32,7 @@ export function TripActivitiesProvider({
   children: React.ReactNode;
 }) {
   const [trip, setTrip] = React.useState(initialTrip);
-  const [activities, setActivities] = React.useState(initialTrip.activities);
+  const [activities, setActivities] = React.useState<Activity[]>(initialTrip.activities);
   const [isGenerationAttempted, setIsGenerationAttempted] = React.useState(false);
 
   const { object, submit, isLoading, error } = useObject<GenerationResponse>({
@@ -82,12 +80,16 @@ export function TripActivitiesProvider({
     return () => clearInterval(pollInterval);
   }, [trip.id, trip.status]);
 
-  const value = {
-    activities,
+  const value: TripActivitiesContextType = {
     trip,
     isGenerating: isLoading || trip.status === TripStatus.GENERATING,
     error: error || (trip.status === TripStatus.ERROR ? new Error('Generation failed') : null),
-    generatedActivities: object?.activities ?? [],
+    activities:
+      trip.status !== TripStatus.COMPLETE
+        ? ((object?.activities ?? []).map(
+            activity => activity ?? {}
+          ) as DeepPartial<GeneratedActivity>[])
+        : activities,
   };
 
   return <TripActivitiesContext.Provider value={value}>{children}</TripActivitiesContext.Provider>;

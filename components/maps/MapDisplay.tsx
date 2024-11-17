@@ -1,10 +1,12 @@
 // components/maps/MapDisplay.tsx
 'use client';
 
-import { GoogleMap, Marker, useLoadScript } from '@react-google-maps/api';
+import { GoogleMap, Marker } from '@react-google-maps/api';
 import type { Libraries } from '@react-google-maps/api/dist/utils/make-load-script-url';
 
 import { Location } from '@/lib/types';
+
+import { useGoogleMapsStatus } from './GoogleMapsProvider';
 
 const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
 
@@ -15,10 +17,7 @@ interface MapDisplayProps {
 }
 
 export function MapDisplay({ location, zoom = 15, className }: MapDisplayProps) {
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded, loadError } = useGoogleMapsStatus();
 
   const center = {
     lat: location.latitude,

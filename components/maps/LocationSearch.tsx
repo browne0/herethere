@@ -2,8 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { useLoadScript } from '@react-google-maps/api';
-import type { Libraries } from '@react-google-maps/api/dist/utils/make-load-script-url';
 import { Search, Loader2 } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
@@ -11,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Location, CityBounds } from '@/lib/types';
 import { ACTIVITY_CATEGORIES, ActivityCategory } from '@/lib/types/activities';
 
-const GOOGLE_MAPS_LIBRARIES: Libraries = ['places'];
+import { useGoogleMapsStatus } from './GoogleMapsProvider';
 
 interface LocationSearchProps {
   onLocationSelect: (location: Location) => void;
@@ -34,10 +32,7 @@ export function LocationSearch({
   const autocompleteService = useRef<google.maps.places.AutocompleteService | null>(null);
   const placesService = useRef<google.maps.places.PlacesService | null>(null);
 
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-    libraries: GOOGLE_MAPS_LIBRARIES,
-  });
+  const { isLoaded, loadError } = useGoogleMapsStatus();
 
   useEffect(() => {
     if (isLoaded && !autocompleteService.current) {

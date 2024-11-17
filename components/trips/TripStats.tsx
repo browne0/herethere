@@ -1,4 +1,7 @@
 'use client';
+import { useEffect, useState } from 'react';
+
+import { TripStatus } from '@prisma/client';
 import { differenceInDays, format } from 'date-fns';
 import { Clock, MapPin, Route } from 'lucide-react';
 
@@ -8,8 +11,29 @@ import { getTripTimingText } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 
+const SmoothCount = ({ value, isGenerating }: { value: number; isGenerating: boolean }) => {
+  const [displayValue, setDisplayValue] = useState(value);
+
+  useEffect(() => {
+    if (!isGenerating) {
+      setDisplayValue(value);
+      return;
+    }
+
+    // Only update if the new value is higher (during generation)
+    if (value > displayValue) {
+      const timeout = setTimeout(() => {
+        setDisplayValue(value);
+      }, 100); // Small delay to smooth updates
+      return () => clearTimeout(timeout);
+    }
+  }, [value, displayValue, isGenerating]);
+
+  return <>{displayValue}</>;
+};
+
 export function TripStats() {
-  const { trip, activities, isGenerating, generatedActivities } = useTripActivities();
+  const { trip, activities, isGenerating } = useTripActivities();
   const tripDuration = differenceInDays(new Date(trip.endDate), new Date(trip.startDate)) + 1;
   const timing = getTripTimingText(trip.startDate, trip.endDate);
 
@@ -23,7 +47,7 @@ export function TripStats() {
   };
 
   const expectedTotal = tripDuration * getExpectedActivitiesPerDay();
-  const currentTotal = isGenerating ? generatedActivities.length : activities.length;
+  const currentTotal = activities.length;
   const activitiesPerDay = isGenerating
     ? getExpectedActivitiesPerDay()
     : (activities.length / tripDuration).toFixed(1);
@@ -39,9 +63,9 @@ export function TripStats() {
         </CardHeader>
         <CardContent className="px-4 lg:px-6">
           <div className="text-xl lg:text-2xl font-bold">
-            {isGenerating ? (
+            {trip.status !== TripStatus.COMPLETE ? (
               <span>
-                {currentTotal} / {expectedTotal}
+                <SmoothCount value={currentTotal} isGenerating={isGenerating} /> / {expectedTotal}
               </span>
             ) : (
               currentTotal

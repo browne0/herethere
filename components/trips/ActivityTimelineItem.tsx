@@ -1,5 +1,5 @@
 import { Activity } from '@prisma/client';
-import { ArrowRight, Navigation } from 'lucide-react';
+import { Navigation } from 'lucide-react';
 
 import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
 import { Accommodation } from '@/lib/trips';
@@ -8,11 +8,6 @@ import { cn } from '@/lib/utils';
 import { TimeDisplay } from './TimeDisplay';
 import { ActivityCategoryBadge } from '../activities/ActivityDetails';
 import { Card, CardContent } from '../ui/card';
-
-interface RouteInfo {
-  distance: string;
-  duration: string;
-}
 
 interface ActivityTimelineItemProps {
   activity: Activity;
@@ -24,10 +19,8 @@ interface ActivityTimelineItemProps {
   onSelect: (activityId: string | null) => void;
   isHovered: boolean;
   isSelected: boolean;
-  isCalculatingRoutes: boolean;
   isFirstActivity: boolean;
   isLastActivity: boolean;
-  routeToNext?: RouteInfo;
   timeZone: string;
 }
 
@@ -41,8 +34,6 @@ export function ActivityTimelineItem({
   onSelect,
   isHovered,
   isSelected,
-  isCalculatingRoutes,
-  routeToNext,
 }: ActivityTimelineItemProps) {
   return (
     <div className="relative">
@@ -76,7 +67,7 @@ export function ActivityTimelineItem({
           {/* Distance and Next Location */}
           {(nextActivity || (!isLast && accommodation)) && (
             <div className="pt-4 border-t">
-              {routeToNext && activity.latitude && activity.longitude && !isCalculatingRoutes && (
+              {activity.latitude && activity.longitude && (
                 <a
                   href={getGoogleMapsDirectionsUrl(
                     { latitude: activity.latitude, longitude: activity.longitude },
@@ -89,27 +80,11 @@ export function ActivityTimelineItem({
                   className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary transition-colors group"
                 >
                   <Navigation className="h-4 w-4 group-hover:text-primary" />
-                  <span className="font-medium group-hover:text-primary">
-                    {routeToNext.distance}
-                  </span>
-                  <ArrowRight className="h-4 w-4 group-hover:text-primary" />
+
                   <span>
-                    {routeToNext.duration} to{' '}
-                    {nextActivity ? nextActivity.name : accommodation?.name}
+                    Directions to {nextActivity ? nextActivity.name : accommodation?.name}
                   </span>
                 </a>
-              )}
-              {isCalculatingRoutes && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground animate-pulse">
-                  <Navigation className="h-4 w-4" />
-                  <span>Calculating route...</span>
-                </div>
-              )}
-              {!routeToNext && !isCalculatingRoutes && (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Navigation className="h-4 w-4" />
-                  <span>Unable to calculate route</span>
-                </div>
               )}
             </div>
           )}

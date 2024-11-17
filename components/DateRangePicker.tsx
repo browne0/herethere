@@ -15,10 +15,14 @@ interface DateRangeProps {
 
 const DateRangeSelect = ({ dates, onSelect }: DateRangeProps) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
+
+  // Set tomorrow as the default start date
+  const tomorrow = addDays(new Date(), 1);
+
   const [ranges, setRanges] = useState([
     {
-      startDate: dates?.from || new Date(),
-      endDate: dates?.to || addDays(new Date(), 7),
+      startDate: dates?.from || tomorrow,
+      endDate: dates?.to || addDays(tomorrow, 7),
       key: 'selection',
     },
   ]);
@@ -44,7 +48,7 @@ const DateRangeSelect = ({ dates, onSelect }: DateRangeProps) => {
             direction={isMobile ? 'vertical' : 'horizontal'}
             preventSnapRefocus={true}
             calendarFocus="backwards"
-            minDate={new Date()}
+            minDate={tomorrow} // Set minimum date to tomorrow
             rangeColors={['#4F46E5']}
             monthDisplayFormat="MMMM yyyy"
             className="!border-0"

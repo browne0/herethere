@@ -1,20 +1,19 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 
-import { TripStatus } from '@prisma/client';
+import { Activity, TripStatus } from '@prisma/client';
+import { DeepPartial } from 'ai';
 import { CalendarDays } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { useTripActivities } from '@/contexts/TripActivitiesContext';
-import { useRouteCalculations } from '@/hooks/useRouteCalculations';
+import { GeneratedActivity } from '@/lib/trip-generation/types';
 import { Accommodation } from '@/lib/trips';
-import { cn } from '@/lib/utils';
 
 import { ActivityTimelineItem } from './ActivityTimelineItem';
-import { TimeDisplay } from './TimeDisplay';
-import { ActivityCategoryBadge } from '../activities/ActivityDetails';
+import GeneratingActivityList from '../activities/GeneratingActivityList';
 
 interface DailyRouteSummaryProps {
   dates: string[];
@@ -27,6 +26,16 @@ interface DailyRouteSummaryProps {
   accommodation?: Accommodation;
 }
 
+// Type guard to check if we have a complete activity
+function isCompleteActivity(activity: any): activity is Activity {
+  return (
+    activity &&
+    typeof activity.id === 'string' &&
+    typeof activity.tripId === 'string' &&
+    typeof activity.name === 'string'
+  );
+}
+
 export function DailyRouteSummary({
   accommodation,
   onActivityHover,
@@ -34,84 +43,65 @@ export function DailyRouteSummary({
   hoveredActivityId,
   selectedActivityId,
 }: DailyRouteSummaryProps) {
-  const { activities, trip, isGenerating, error, generatedActivities } = useTripActivities();
+  const { activities, trip, isGenerating, error } = useTripActivities();
 
-  const { routeSegments, isCalculating } = useRouteCalculations(
-    isGenerating ? [] : activities,
-    isGenerating ? undefined : accommodation
-  );
+  useEffect(() => {
+    console.log(trip);
+  });
 
-  // Handle error state
-  if (error) {
+  if (error || trip.status === TripStatus.ERROR) {
     return (
-      <CardContent>
-        <div className="text-center py-12 bg-destructive/10 rounded-lg">
-          <h3 className="text-lg font-medium mb-2">Generation Failed</h3>
-          <p className="text-muted-foreground mb-4">{error.message}</p>
-        </div>
-      </CardContent>
+      <Card>
+        <CardContent>
+          <div className="text-center py-12 bg-destructive/10 rounded-lg">
+            <h3 className="text-lg font-medium mb-2">Generation Failed</h3>
+            <p className="text-muted-foreground mb-4">{error?.message}</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // Show generating activities (streaming state)
   if (isGenerating) {
     return (
-      <div>
-        {generatedActivities?.map((activity, index) => (
-          <div className="relative mb-8 last:mb-0" key={`${activity?.name}-${activity?.startTime}`}>
-            <Card className={cn('transition-colors')}>
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <h4 className="font-medium">{activity?.name}</h4>
-                  </div>
-                  <ActivityCategoryBadge category={activity?.category} />
-                </div>
-
-                <TimeDisplay
-                  startTime={activity?.startTime}
-                  endTime={activity?.endTime}
-                  isStreaming={isGenerating}
-                  timeZone={trip.timeZone}
-                />
-              </CardContent>
-            </Card>
-          </div>
-        ))}
-      </div>
+      <GeneratingActivityList
+        activities={activities as DeepPartial<GeneratedActivity>[]}
+        timeZone={trip.timeZone}
+      />
     );
   }
 
   // Handle empty state - only show when generation is complete and no activities
   if (trip.status === TripStatus.COMPLETE && activities.length === 0) {
     return (
-      <CardContent>
-        <div className="text-center py-12 bg-muted/20 rounded-lg">
-          <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Activities Planned</h3>
-          <p className="text-muted-foreground mb-4">
-            Start adding activities to build your itinerary for this day
-          </p>
-          <Button asChild>
-            <a href="#add-activity">Add First Activity</a>
-          </Button>
-        </div>
-      </CardContent>
+      <Card>
+        <CardContent>
+          <div className="text-center py-12 bg-muted/20 rounded-lg">
+            <CalendarDays className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No Activities Planned</h3>
+            <p className="text-muted-foreground mb-4">
+              Start adding activities to build your itinerary for this day
+            </p>
+            <Button asChild>
+              <a href="#add-activity">Add First Activity</a>
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   // Show saved activities - only when we have activities and generation is complete
-  if (activities.length > 0 && trip.status === TripStatus.COMPLETE) {
+  if (trip.status === TripStatus.COMPLETE) {
+    // Filter out any incomplete activities and cast to Activity[]
+    const completeActivities = activities.filter(isCompleteActivity);
+
     return (
       <div>
-        {activities.map((activity, index) => {
-          const nextActivity = activities[index + 1];
-          const routeKey = nextActivity
-            ? `${activity.id}-${nextActivity.id}`
-            : index === activities.length - 1 && accommodation
-              ? `${activity.id}-accommodation`
-              : undefined;
-          const routeToNext = routeKey ? routeSegments[routeKey] : undefined;
+        {completeActivities.map((activity, index) => {
+          const nextActivity = completeActivities[index + 1];
+          const previousActivity = completeActivities[index - 1];
 
           return (
             <div key={activity.id} className="mb-4 lg:mb-8 last:mb-0">
@@ -119,17 +109,15 @@ export function DailyRouteSummary({
                 timeZone={trip.timeZone}
                 activity={activity}
                 nextActivity={nextActivity}
-                previousActivity={activities[index - 1]}
+                previousActivity={previousActivity}
                 isFirstActivity={index === 0}
-                isLastActivity={index === activities.length - 1}
+                isLastActivity={index === completeActivities.length - 1}
                 accommodation={accommodation}
-                isLast={index === activities.length - 1}
+                isLast={index === completeActivities.length - 1}
                 onHover={onActivityHover}
                 onSelect={onActivitySelect}
                 isHovered={hoveredActivityId === activity.id}
                 isSelected={selectedActivityId === activity.id}
-                isCalculatingRoutes={isCalculating}
-                routeToNext={routeToNext}
               />
             </div>
           );
