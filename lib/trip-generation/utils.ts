@@ -189,7 +189,7 @@ export function generatePrompt(
 
   CRITICAL REQUIREMENT: ALL activities MUST be located IN ${cityData.name} proper - not in other countries or nearby cities.
 
-    IMPORTANT: Generate EXACTLY ${activitiesPerDay} activities per day, including:
+    IMPORTANT: Generate EXACTLY ${activitiesPerDay} activities per day, (no more, no fewer) including:
       - Must include both lunch and dinner each day
       - Remaining ${activitiesPerDay - 2} slots should be a mix of:
         * Morning activities (9:00-12:00)
@@ -222,21 +222,21 @@ export function generatePrompt(
     - Pace: ${preferences.pace > 4 ? 'Fast-paced' : preferences.pace > 2 ? 'Moderate' : 'Leisurely'}
     
     Response format:
+    Output each activity as a separate, complete JSON object on a single line. Do not include any other text between activities.
+
     {
-      "activities": [
-        {
-          "name": "string",
-          "category": "string (one of: ${Object.values(ACTIVITY_CATEGORIES)
-            .map(cat => cat.label)
-            .join(', ')})",
-          "address": "string",
-          "day": number,
-          "startTime": "string (ISO 8601 with timezone offset)",
-          "endTime": "string (ISO 8601 with timezone offset)",
-          "notes": "string"
-        }
-      ]
-    }`;
+      "name": "string",
+      "category": "string (one of: ${Object.values(ACTIVITY_CATEGORIES)
+        .map(cat => cat.label)
+        .join(', ')})",
+      "address": "string",
+      "day": number,
+      "startTime": "string (ISO 8601 with timezone offset)",
+      "endTime": "string (ISO 8601 with timezone offset)",
+      "notes": "string"
+    }
+      
+    Repeat this format for each activity, one activity per line, and no extra lines or text between activities.`;
 }
 
 async function getPlaceDetails(activityName: string, cityData: City): Promise<PlaceDetails | null> {

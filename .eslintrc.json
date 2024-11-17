@@ -10,6 +10,7 @@
   ],
   "plugins": ["@typescript-eslint", "react", "import"],
   "rules": {
+    "no-constant-condition": "off",
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",

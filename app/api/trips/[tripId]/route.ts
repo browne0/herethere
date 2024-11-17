@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
+import { Prisma } from '@prisma/client';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
@@ -35,7 +36,7 @@ interface RouteParams {
   }>;
 }
 
-export async function DELETE(req: Request, { params }: RouteParams) {
+export async function DELETE(_req: Request, { params }: RouteParams) {
   try {
     const { userId } = await auth();
     const { tripId } = await params;
@@ -89,8 +90,6 @@ export async function PATCH(req: Request, { params }: { params: { tripId: string
 
     const body = await req.json();
 
-    const { title, destination, startDate, endDate } = body;
-
     // Verify the trip belongs to the user
     const trip = await prisma.trip.findUnique({
       where: {
@@ -103,18 +102,39 @@ export async function PATCH(req: Request, { params }: { params: { tripId: string
       return new NextResponse('Not found', { status: 404 });
     }
 
-    // Update the trip
+    // Build update data object only with provided fields
+    const updateData: Prisma.TripUpdateInput = {};
+
+    if (body.status !== undefined) {
+      updateData.status = body.status;
+    }
+
+    if (body.title !== undefined) {
+      updateData.title = body.title;
+    }
+
+    if (body.destination !== undefined) {
+      updateData.destination = body.destination;
+    }
+
+    if (body.startDate !== undefined) {
+      updateData.startDate = new Date(body.startDate);
+    }
+
+    if (body.endDate !== undefined) {
+      updateData.endDate = new Date(body.endDate);
+    }
+
+    if (body.cityBounds !== undefined) {
+      updateData.cityBounds = body.cityBounds;
+    }
+
+    // Update the trip with only the provided fields
     const updatedTrip = await prisma.trip.update({
       where: {
         id: tripId,
       },
-      data: {
-        title,
-        destination,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
-        cityBounds: {},
-      },
+      data: updateData,
     });
 
     return NextResponse.json(updatedTrip);

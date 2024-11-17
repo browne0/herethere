@@ -70,7 +70,7 @@ const DateRangeSelect = ({ dates, onSelect }: DateRangeProps) => {
                   {Math.ceil(
                     (ranges[0].endDate.getTime() - ranges[0].startDate.getTime()) /
                       (1000 * 60 * 60 * 24)
-                  )}{' '}
+                  ) + 1}{' '}
                   days
                 </>
               )}

@@ -5,7 +5,6 @@ import {
   GoogleMap,
   Marker,
   InfoWindow,
-  Libraries,
   OverlayView,
   OVERLAY_MOUSE_TARGET,
 } from '@react-google-maps/api';
@@ -66,6 +65,61 @@ const ACTIVITY_ICONS: Record<ActivityCategory, LucideIcon> = {
   NIGHTLIFE: Music,
   SHOPPING: ShoppingBag,
   SPA_WELLNESS: Heart,
+};
+
+const mapOptions: google.maps.MapOptions = {
+  disableDefaultUI: false,
+  clickableIcons: false,
+  streetViewControl: false,
+  mapTypeControl: false,
+  fullscreenControl: false,
+  styles: [
+    {
+      featureType: 'poi',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'transit',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'transit.line',
+      elementType: 'geometry',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'transit.station',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'transit.station.rail',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'road.highway',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'road.arterial',
+      elementType: 'labels',
+      stylers: [{ visibility: 'off' }],
+    },
+    {
+      featureType: 'road',
+      elementType: 'labels.icon',
+      stylers: [{ visibility: 'off' }],
+    },
+  ],
+};
+
+const getMarkerLabelPosition = (position: Position, mapCenter: google.maps.LatLng | null) => {
+  if (!mapCenter) return 'right';
+  return position.lng > mapCenter.lng() ? 'left' : 'right';
 };
 
 const CustomMarker: React.FC<CustomMarkerProps> = ({
@@ -130,8 +184,6 @@ const CustomMarker: React.FC<CustomMarkerProps> = ({
   );
 };
 
-const libraries: Libraries = ['places', 'marker'];
-
 export const TripMapView: React.FC<TripMapViewProps> = ({
   onMarkerHover,
   onMarkerSelect,
@@ -139,84 +191,44 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
   selectedActivityId,
   accommodation,
 }) => {
-  const { activities, trip, isGenerating, error } = useTripActivities();
+  const { activities, error } = useTripActivities();
   const [selectedMarker, setSelectedMarker] = React.useState<Activity | null>(null);
   const [map, setMap] = React.useState<google.maps.Map | null>(null);
+  const previousActivitiesLength = React.useRef(0);
 
-  const mapOptions: google.maps.MapOptions = {
-    disableDefaultUI: false,
-    clickableIcons: false,
-    streetViewControl: false,
-    mapTypeControl: false,
-    fullscreenControl: false,
-    styles: [
-      {
-        featureType: 'poi',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'transit',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'transit.line',
-        elementType: 'geometry',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'transit.station',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'transit.station.rail',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'road.highway',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'road.arterial',
-        elementType: 'labels',
-        stylers: [{ visibility: 'off' }],
-      },
-      {
-        featureType: 'road',
-        elementType: 'labels.icon',
-        stylers: [{ visibility: 'off' }],
-      },
-    ],
-  };
+  // Only show markers for activities that have confirmed locations
+  const confirmedActivities = activities.filter(
+    activity =>
+      !activity.isProcessing && // Not still processing
+      !activity.error && // No errors during lookup
+      activity.latitude &&
+      activity.longitude
+  );
+
+  // Update map bounds when we get new confirmed activities
+  React.useEffect(() => {
+    if (!map) return;
+
+    // Only update if we have new confirmed activities
+    if (confirmedActivities.length !== previousActivitiesLength.current) {
+      const bounds = new google.maps.LatLngBounds();
+
+      if (accommodation) {
+        bounds.extend({ lat: accommodation.latitude, lng: accommodation.longitude });
+      }
+
+      confirmedActivities.forEach(activity => {
+        if (activity.latitude && activity.longitude) {
+          bounds.extend({ lat: activity.latitude, lng: activity.longitude });
+        }
+      });
+
+      map.fitBounds(bounds, 50);
+      previousActivitiesLength.current = confirmedActivities.length;
+    }
+  }, [map, confirmedActivities, accommodation]);
 
   const { isLoaded, loadError } = useGoogleMapsStatus();
-
-  React.useEffect(() => {
-    if (!map || isGenerating || trip.status === 'GENERATING') return;
-
-    const bounds = new google.maps.LatLngBounds();
-
-    if (accommodation) {
-      bounds.extend({ lat: accommodation.latitude, lng: accommodation.longitude });
-    }
-
-    activities.forEach(activity => {
-      if (activity.latitude && activity.longitude) {
-        bounds.extend({ lat: activity.latitude, lng: activity.longitude });
-      }
-    });
-
-    map.fitBounds(bounds, 50);
-  }, [map, activities, accommodation, isGenerating, trip.status]);
-
-  const getMarkerLabelPosition = (position: Position, mapCenter: google.maps.LatLng | null) => {
-    if (!mapCenter) return 'right';
-    return position.lng > mapCenter.lng() ? 'left' : 'right';
-  };
 
   if (!isLoaded) {
     return (
@@ -244,87 +256,81 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
   return (
     <div className="h-full relative">
       <GoogleMap mapContainerClassName="w-full h-full" options={mapOptions} onLoad={setMap}>
-        {!isGenerating && trip.status === 'COMPLETE' && (
-          <>
-            {accommodation && (
-              <Marker
-                position={{
-                  lat: accommodation.latitude,
-                  lng: accommodation.longitude,
-                }}
-                icon={{
-                  path: google.maps.SymbolPath.CIRCLE,
-                  fillColor: '#22c55e',
-                  fillOpacity: 1,
-                  strokeWeight: 2,
-                  strokeColor: '#FFFFFF',
-                  scale: 10,
-                }}
-              />
-            )}
+        {accommodation && (
+          <Marker
+            position={{
+              lat: accommodation.latitude,
+              lng: accommodation.longitude,
+            }}
+            icon={{
+              path: google.maps.SymbolPath.CIRCLE,
+              fillColor: '#22c55e',
+              fillOpacity: 1,
+              strokeWeight: 2,
+              strokeColor: '#FFFFFF',
+              scale: 10,
+            }}
+          />
+        )}
 
-            {activities.map(activity => {
-              const isHighlighted =
-                hoveredActivityId === activity.id || selectedActivityId === activity.id;
-              const position = {
-                lat: activity.latitude!,
-                lng: activity.longitude!,
-              };
+        {confirmedActivities.map(activity => {
+          const isHighlighted =
+            hoveredActivityId === activity.id || selectedActivityId === activity.id;
+          const position = {
+            lat: activity.latitude!,
+            lng: activity.longitude!,
+          };
 
-              return (
-                <CustomMarker
-                  key={activity.id}
-                  activity={activity}
-                  isHighlighted={isHighlighted}
-                  onClick={() => {
-                    setSelectedMarker(activity);
-                    onMarkerSelect(activity.id);
-                  }}
-                  onMouseEnter={() => onMarkerHover(activity.id)}
-                  onMouseLeave={() => onMarkerHover(null)}
-                  labelPosition={getMarkerLabelPosition(position, map?.getCenter() ?? null)}
-                />
-              );
-            })}
+          return (
+            <CustomMarker
+              key={activity.id}
+              activity={activity}
+              isHighlighted={isHighlighted}
+              onClick={() => {
+                setSelectedMarker(activity);
+                onMarkerSelect(activity.id);
+              }}
+              onMouseEnter={() => onMarkerHover(activity.id)}
+              onMouseLeave={() => onMarkerHover(null)}
+              labelPosition={getMarkerLabelPosition(position, map?.getCenter() ?? null)}
+            />
+          );
+        })}
 
-            {selectedMarker && (
-              <InfoWindow
-                position={{
-                  lat: selectedMarker.latitude!,
-                  lng: selectedMarker.longitude!,
-                }}
-                onCloseClick={() => {
-                  setSelectedMarker(null);
-                  onMarkerSelect(null);
-                }}
-              >
-                <div className="p-2 max-w-xs">
-                  <h3 className="font-medium mb-2">{selectedMarker.name}</h3>
-                  {selectedMarker.placeType && (
-                    <div className="text-xs text-muted-foreground mb-2">
-                      {selectedMarker.placeType}
-                    </div>
-                  )}
-                  {selectedMarker.address && (
-                    <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                      <MapPin className="h-4 w-4" />
-                      <span>{selectedMarker.address}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Clock className="h-4 w-4" />
-                    <span>
-                      {format(new Date(selectedMarker.startTime), 'h:mm a')} -{' '}
-                      {format(new Date(selectedMarker.endTime), 'h:mm a')}
-                    </span>
-                  </div>
-                  {selectedMarker.notes && (
-                    <p className="mt-2 text-sm border-t pt-2">{selectedMarker.notes}</p>
-                  )}
+        {selectedMarker && (
+          <InfoWindow
+            position={{
+              lat: selectedMarker.latitude!,
+              lng: selectedMarker.longitude!,
+            }}
+            onCloseClick={() => {
+              setSelectedMarker(null);
+              onMarkerSelect(null);
+            }}
+          >
+            <div className="p-2 max-w-xs">
+              <h3 className="font-medium mb-2">{selectedMarker.name}</h3>
+              {selectedMarker.placeType && (
+                <div className="text-xs text-muted-foreground mb-2">{selectedMarker.placeType}</div>
+              )}
+              {selectedMarker.address && (
+                <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+                  <MapPin className="h-4 w-4" />
+                  <span>{selectedMarker.address}</span>
                 </div>
-              </InfoWindow>
-            )}
-          </>
+              )}
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-4 w-4" />
+                <span>
+                  {format(new Date(selectedMarker.startTime), 'h:mm a')} -{' '}
+                  {format(new Date(selectedMarker.endTime), 'h:mm a')}
+                </span>
+              </div>
+              {selectedMarker.notes && (
+                <p className="mt-2 text-sm border-t pt-2">{selectedMarker.notes}</p>
+              )}
+            </div>
+          </InfoWindow>
         )}
       </GoogleMap>
     </div>
