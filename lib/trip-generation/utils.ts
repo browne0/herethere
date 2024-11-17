@@ -206,7 +206,7 @@ export function generatePrompt(
     - Late evening activities (if any): until 22:00
 
     ALL times MUST be provided in ISO 8601 format with the correct timezone offset.
-    Example for ${tripTimeZone}: 2024-03-15T14:30:00+09:00 (for Tokyo)
+    Example for Asia/Tokyo: 2024-03-15T14:30:00+09:00 (for Tokyo)
 
     Schedule Guidelines:
     1. Every activity MUST include timezone offset in times

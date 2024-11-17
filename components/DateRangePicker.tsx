@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { addDays, isSameDay } from 'date-fns';
 import { DateRange } from 'react-date-range';
@@ -41,14 +41,14 @@ const DateRangeSelect = ({ dates, onSelect }: DateRangeProps) => {
         <div className="bg-white rounded-lg shadow-sm p-2 max-w-full">
           <DateRange
             onChange={handleSelect}
-            moveRangeOnFirstSelection={false}
             showDateDisplay={false}
             months={isMobile ? 1 : 2}
             ranges={ranges}
             direction={isMobile ? 'vertical' : 'horizontal'}
             preventSnapRefocus={true}
             calendarFocus="backwards"
-            minDate={tomorrow} // Set minimum date to tomorrow
+            minDate={tomorrow}
+            maxDate={addDays(new Date(), 30)}
             rangeColors={['#4F46E5']}
             monthDisplayFormat="MMMM yyyy"
             className="!border-0"
@@ -67,7 +67,7 @@ const DateRangeSelect = ({ dates, onSelect }: DateRangeProps) => {
                   {' - '}
                   {ranges[0].endDate.toLocaleDateString()}
                   <br />
-                  {Math.ceil(
+                  {Math.floor(
                     (ranges[0].endDate.getTime() - ranges[0].startDate.getTime()) /
                       (1000 * 60 * 60 * 24)
                   ) + 1}{' '}

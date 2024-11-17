@@ -11,24 +11,6 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-class StringBuilder {
-  private buffer: string = '';
-
-  append(str: string): this {
-    this.buffer += str;
-    return this;
-  }
-
-  toString(): string {
-    return this.buffer;
-  }
-
-  clear(): this {
-    this.buffer = '';
-    return this;
-  }
-}
-
 export async function POST(req: Request, { params }: { params: { tripId: string } }) {
   const { userId } = await auth();
   const { tripId } = await params;
@@ -63,7 +45,7 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       messages: [
         {
           role: 'system',
-          content: `You are a travel planning assistant. Generate realistic travel itineraries using real, existing places that can be found on Google Maps.`,
+          content: `You are a travel planning assistant. Generate realistic travel itineraries using real, existing places that can be found on Google Maps. Only return one valid JSON object per line.`,
         },
         {
           role: 'user',
@@ -76,24 +58,23 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
     return new Response(
       new ReadableStream({
         async start(controller) {
-          const buffer = new StringBuilder();
+          let buffer = '';
           const processedActivities = new Set<string>();
 
           try {
             for await (const chunk of stream) {
               const content = chunk.choices[0]?.delta?.content || '';
-              buffer.append(content);
+              buffer += content;
 
-              // Process complete lines
-              const lines = buffer.toString().split('\n');
-              // Keep last line in buffer as it may be incomplete
-              buffer.clear().append(lines.pop() || '');
+              // Split buffer into potential JSON objects
+              const parts = buffer.split('\n');
+              buffer = parts.pop() || ''; // Keep incomplete part for next iteration
 
-              for (const line of lines) {
-                if (!line.trim()) continue;
+              for (const part of parts) {
+                if (!part.trim()) continue;
 
                 try {
-                  const activity = JSON.parse(line);
+                  const activity = JSON.parse(part);
                   const key = `${activity.day}-${activity.startTime}-${activity.name}`;
 
                   if (!processedActivities.has(key)) {
@@ -103,29 +84,28 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
                     );
                   }
                 } catch (e) {
-                  console.error('Failed to parse activity:', e);
+                  console.error('Failed to parse activity:', e, 'Content:', part);
                 }
               }
             }
 
-            // Process any remaining content
-            const remaining = buffer.toString().trim();
-            if (remaining) {
+            // Process remaining buffer
+            if (buffer.trim()) {
               try {
-                const activity = JSON.parse(remaining);
+                const activity = JSON.parse(buffer);
                 const key = `${activity.day}-${activity.startTime}-${activity.name}`;
 
                 if (!processedActivities.has(key)) {
                   controller.enqueue(new TextEncoder().encode(JSON.stringify({ activity }) + '\n'));
                 }
               } catch (e) {
-                console.error('Failed to parse final activity:', e);
+                console.error('Failed to parse final activity:', e, 'Remaining Content:', buffer);
               }
             }
 
             controller.close();
           } catch (error) {
-            console.error('Stream error:', error);
+            console.error('Stream processing error:', error);
             await prisma.trip.update({
               where: { id: tripId },
               data: { status: TripStatus.ERROR },
