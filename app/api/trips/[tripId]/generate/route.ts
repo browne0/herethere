@@ -45,7 +45,7 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       messages: [
         {
           role: 'system',
-          content: `You are a travel planning assistant. Generate detailed, realistic travel itineraries using real, existing places that can be found on Google Maps. Respond only with valid JSON that matches the exact structure requested.`,
+          content: `You are a travel planning assistant. Generate detailed, realistic travel itineraries using real, existing places that can be found on Google Maps. Return each activity as a complete JSON object on its own line.`,
         },
         {
           role: 'user',
@@ -59,82 +59,44 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       new ReadableStream({
         async start(controller) {
           let buffer = '';
-          const processedActivities = new Set<string>();
-          let isControllerClosed = false; // Track if the controller is already closed
-
-          const safeEnqueue = (data: string) => {
-            if (!isControllerClosed) {
-              try {
-                controller.enqueue(new TextEncoder().encode(data + '\n'));
-              } catch (e) {
-                console.error('Error during enqueue:', e);
-              }
-            }
-          };
-
-          const safeClose = () => {
-            if (!isControllerClosed) {
-              try {
-                controller.close();
-                isControllerClosed = true;
-              } catch (e) {
-                console.error('Error during close:', e);
-              }
-            }
-          };
 
           try {
             for await (const chunk of stream) {
               const content = chunk.choices[0]?.delta?.content || '';
               buffer += content;
 
-              while (true) {
-                const openBracket = buffer.indexOf('{');
-                const closeBracket = buffer.indexOf('}', openBracket);
-
-                if (openBracket === -1 || closeBracket === -1) break;
-
-                const possibleJson = buffer.slice(openBracket, closeBracket + 1);
-                buffer = buffer.slice(closeBracket + 1);
+              const newlineIndex = buffer.indexOf('\n');
+              if (newlineIndex !== -1) {
+                const line = buffer.slice(0, newlineIndex);
+                buffer = buffer.slice(newlineIndex + 1);
 
                 try {
-                  const activity = JSON.parse(possibleJson);
-                  const key = `${activity.dayNumber}-${activity.startTime}-${activity.name}`;
-
-                  if (!processedActivities.has(key)) {
-                    processedActivities.add(key);
-                    safeEnqueue(JSON.stringify({ activity }));
+                  // Only attempt to parse if we have what looks like a complete JSON object
+                  if (line.trim().startsWith('{') && line.trim().endsWith('}')) {
+                    const activity = JSON.parse(line);
+                    controller.enqueue(
+                      new TextEncoder().encode(JSON.stringify({ activity }) + '\n')
+                    );
                   }
                 } catch (e) {
-                  console.error('Failed to parse activity:', e, 'Content:', possibleJson);
+                  // Ignore parse errors - likely incomplete JSON
                 }
               }
             }
 
-            // Process remaining buffer
-            if (buffer.trim()) {
-              try {
-                const activity = JSON.parse(buffer);
-                const key = `${activity.dayNumber}-${activity.startTime}-${activity.name}`;
-
-                if (!processedActivities.has(key)) {
-                  processedActivities.add(key);
-                  safeEnqueue(JSON.stringify({ activity }));
-                }
-              } catch (e) {
-                console.error('Failed to parse final activity:', e, 'Remaining Content:', buffer);
-              }
+            // Handle any remaining complete JSON in the buffer
+            if (buffer.trim().startsWith('{') && buffer.trim().endsWith('}')) {
+              controller.enqueue(new TextEncoder().encode(buffer + '\n'));
             }
 
-            safeClose(); // Close the controller safely
+            controller.close();
           } catch (error) {
-            console.error('Stream processing error:', error);
+            console.error('Stream error:', error);
             await prisma.trip.update({
               where: { id: tripId },
               data: { status: TripStatus.ERROR },
             });
-            controller.error(error); // Signal an error state
-            safeClose(); // Ensure the controller is closed
+            controller.error(error);
           }
         },
       }),

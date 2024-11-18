@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 
 import { Activity } from '@prisma/client';
 import { format, differenceInDays } from 'date-fns';
-import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
-import { CalendarDays } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus, CalendarDays } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 import { useTripActivities } from '@/contexts/TripActivitiesContext';
+import { cn } from '@/lib/utils';
 
 import { ActivityTimelineItem } from './ActivityTimelineItem';
 import GeneratingActivityList from '../activities/GeneratingActivityList';
@@ -96,61 +96,63 @@ export function DailyRouteSummary({
     );
   };
 
-  // Get day title
-  const getDayTitle = (dayNumber: number, date: Date) => {
-    if (dayNumber === 1) return 'Arrival Day';
-    const lastDay =
-      differenceInDays(new Date(activities[activities.length - 1].endTime), trip.startDate) + 1;
-    if (dayNumber === lastDay) return 'Departure Day';
-    return `Day ${dayNumber}`;
-  };
-
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {Object.values(groupedActivities)
         .sort((a, b) => a.dayNumber - b.dayNumber)
         .map(group => (
-          <div key={group.dayNumber} className="border rounded-lg overflow-hidden bg-white">
+          <div key={group.dayNumber} className="bg-white rounded-xl">
             {/* Day Header */}
             <button
               onClick={() => toggleDay(group.dayNumber)}
-              className="w-full px-4 py-3 flex items-center gap-2 hover:bg-gray-50 text-left"
+              className="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50 rounded-xl text-left"
             >
-              {expandedDays.includes(group.dayNumber) ? (
-                <ChevronDown className="h-5 w-5 text-gray-500" />
-              ) : (
-                <ChevronRight className="h-5 w-5 text-gray-500" />
-              )}
+              <div
+                className={cn(
+                  'p-2 rounded-lg transition-colors',
+                  expandedDays.includes(group.dayNumber) ? 'bg-primary/10' : 'bg-gray-100'
+                )}
+              >
+                {expandedDays.includes(group.dayNumber) ? (
+                  <ChevronDown className="h-4 w-4 text-primary" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 text-gray-500" />
+                )}
+              </div>
               <div className="flex-1">
-                <span className="font-medium">{getDayTitle(group.dayNumber, group.date)}</span>
+                <span className="font-medium">
+                  {group.dayNumber === 1
+                    ? 'Arrival Day'
+                    : group.dayNumber === Object.keys(groupedActivities).length
+                      ? 'Departure Day'
+                      : `Day ${group.dayNumber}`}
+                </span>
                 <span className="text-gray-500 ml-2">{format(group.date, 'MMM d')}</span>
               </div>
               <span className="text-sm text-gray-500">{group.activities.length} activities</span>
             </button>
 
-            {/* Activities */}
+            {/* Activities List */}
             {expandedDays.includes(group.dayNumber) && (
-              <div className="border-t">
+              <div className="pt-2 pb-4">
                 {group.activities.map((activity, index) => (
-                  <div key={activity.id} className="border-b last:border-b-0">
-                    <ActivityTimelineItem
-                      activity={activity}
-                      timeZone={trip.timeZone}
-                      nextActivity={group.activities[index + 1]}
-                      previousActivity={group.activities[index - 1]}
-                      isLast={index === group.activities.length - 1}
-                      onHover={onActivityHover}
-                      onSelect={onActivitySelect}
-                      isHovered={hoveredActivityId === activity.id}
-                      isSelected={selectedActivityId === activity.id}
-                      isFirstActivity={index === 0}
-                      isLastActivity={index === group.activities.length - 1}
-                    />
-                  </div>
+                  <ActivityTimelineItem
+                    key={activity.id}
+                    activity={activity}
+                    timeZone={trip.timeZone}
+                    nextActivity={group.activities[index + 1]}
+                    previousActivity={group.activities[index - 1]}
+                    onHover={onActivityHover}
+                    onSelect={onActivitySelect}
+                    isHovered={hoveredActivityId === activity.id}
+                    isSelected={selectedActivityId === activity.id}
+                    isFirstActivity={index === 0}
+                    isLastActivity={index === group.activities.length - 1}
+                  />
                 ))}
 
                 {/* Add Activity Button */}
-                <button className="w-full p-4 text-sm text-gray-500 hover:bg-gray-50 flex items-center justify-center gap-2">
+                <button className="ml-8 mt-4 px-6 py-3 text-sm text-gray-500 hover:text-primary hover:bg-gray-50 rounded-lg flex items-center gap-2 transition-colors">
                   <Plus className="h-4 w-4" />
                   Add Activity
                 </button>
