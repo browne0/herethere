@@ -112,6 +112,7 @@ export async function PATCH(
         startTime: new Date(json.startTime),
         endTime: new Date(json.endTime),
         notes: json.notes,
+        dayNumber: json.dayNumber,
       },
     });
 

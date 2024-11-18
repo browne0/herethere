@@ -61,12 +61,12 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
           {/* Right Panel - Map */}
           <div className="hidden lg:block w-full lg:w-1/2 border-l h-[300px] lg:h-auto">
             <Suspense fallback={<MapLoadingFallback />}>
-              <MapSection accommodation={initialTripData.preferences?.accommodation} />
+              <MapSection />
             </Suspense>
           </div>
 
           <MobileMapButton />
-          <MobileMapSheet accommodation={initialTripData.preferences?.accommodation} />
+          <MobileMapSheet />
         </div>
       </MobileMapProvider>
     </TripActivitiesProvider>

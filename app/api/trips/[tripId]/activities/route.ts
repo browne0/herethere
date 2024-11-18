@@ -50,8 +50,18 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
     }
 
     const body = await req.json();
-    const { name, category, startTime, endTime, notes, address, latitude, longitude, placeId } =
-      body;
+    const {
+      name,
+      category,
+      startTime,
+      endTime,
+      notes,
+      address,
+      latitude,
+      longitude,
+      placeId,
+      dayNumber,
+    } = body;
 
     // Validate the trip belongs to the user
     const trip = await prisma.trip.findFirst({
@@ -78,6 +88,7 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
         startTime: new Date(startTime),
         endTime: new Date(endTime),
         notes,
+        dayNumber,
       },
     });
 

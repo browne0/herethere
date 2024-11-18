@@ -45,7 +45,7 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       messages: [
         {
           role: 'system',
-          content: `You are a travel planning assistant. Generate realistic travel itineraries using real, existing places that can be found on Google Maps. Only return one valid JSON object per line.`,
+          content: `You are a travel planning assistant. Generate detailed, realistic travel itineraries using real, existing places that can be found on Google Maps. Respond only with valid JSON that matches the exact structure requested.`,
         },
         {
           role: 'user',
@@ -60,31 +60,53 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
         async start(controller) {
           let buffer = '';
           const processedActivities = new Set<string>();
+          let isControllerClosed = false; // Track if the controller is already closed
+
+          const safeEnqueue = (data: string) => {
+            if (!isControllerClosed) {
+              try {
+                controller.enqueue(new TextEncoder().encode(data + '\n'));
+              } catch (e) {
+                console.error('Error during enqueue:', e);
+              }
+            }
+          };
+
+          const safeClose = () => {
+            if (!isControllerClosed) {
+              try {
+                controller.close();
+                isControllerClosed = true;
+              } catch (e) {
+                console.error('Error during close:', e);
+              }
+            }
+          };
 
           try {
             for await (const chunk of stream) {
               const content = chunk.choices[0]?.delta?.content || '';
               buffer += content;
 
-              // Split buffer into potential JSON objects
-              const parts = buffer.split('\n');
-              buffer = parts.pop() || ''; // Keep incomplete part for next iteration
+              while (true) {
+                const openBracket = buffer.indexOf('{');
+                const closeBracket = buffer.indexOf('}', openBracket);
 
-              for (const part of parts) {
-                if (!part.trim()) continue;
+                if (openBracket === -1 || closeBracket === -1) break;
+
+                const possibleJson = buffer.slice(openBracket, closeBracket + 1);
+                buffer = buffer.slice(closeBracket + 1);
 
                 try {
-                  const activity = JSON.parse(part);
-                  const key = `${activity.day}-${activity.startTime}-${activity.name}`;
+                  const activity = JSON.parse(possibleJson);
+                  const key = `${activity.dayNumber}-${activity.startTime}-${activity.name}`;
 
                   if (!processedActivities.has(key)) {
                     processedActivities.add(key);
-                    controller.enqueue(
-                      new TextEncoder().encode(JSON.stringify({ activity }) + '\n')
-                    );
+                    safeEnqueue(JSON.stringify({ activity }));
                   }
                 } catch (e) {
-                  console.error('Failed to parse activity:', e, 'Content:', part);
+                  console.error('Failed to parse activity:', e, 'Content:', possibleJson);
                 }
               }
             }
@@ -93,24 +115,26 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
             if (buffer.trim()) {
               try {
                 const activity = JSON.parse(buffer);
-                const key = `${activity.day}-${activity.startTime}-${activity.name}`;
+                const key = `${activity.dayNumber}-${activity.startTime}-${activity.name}`;
 
                 if (!processedActivities.has(key)) {
-                  controller.enqueue(new TextEncoder().encode(JSON.stringify({ activity }) + '\n'));
+                  processedActivities.add(key);
+                  safeEnqueue(JSON.stringify({ activity }));
                 }
               } catch (e) {
                 console.error('Failed to parse final activity:', e, 'Remaining Content:', buffer);
               }
             }
 
-            controller.close();
+            safeClose(); // Close the controller safely
           } catch (error) {
             console.error('Stream processing error:', error);
             await prisma.trip.update({
               where: { id: tripId },
               data: { status: TripStatus.ERROR },
             });
-            controller.error(error);
+            controller.error(error); // Signal an error state
+            safeClose(); // Ensure the controller is closed
           }
         },
       }),

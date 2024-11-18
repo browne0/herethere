@@ -4,15 +4,10 @@ import { X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { useMobileMap } from '@/contexts/MobileMapContext';
-import { Accommodation } from '@/lib/trips';
 
 import { MapSection } from './MapSection';
 
-interface MobileMapSheetProps {
-  accommodation?: Accommodation;
-}
-
-export function MobileMapSheet({ accommodation }: MobileMapSheetProps) {
+export function MobileMapSheet() {
   const { isMapOpen, closeMap } = useMobileMap();
 
   return (
@@ -28,7 +23,7 @@ export function MobileMapSheet({ accommodation }: MobileMapSheetProps) {
           </Button>
         </div>
         <div className="flex-1">
-          <MapSection accommodation={accommodation} />
+          <MapSection />
         </div>
       </div>
     </div>

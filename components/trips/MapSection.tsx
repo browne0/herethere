@@ -3,15 +3,9 @@
 
 import React from 'react';
 
-import { Accommodation } from '@/lib/trips';
-
 import { TripMapView } from './TripMapView';
 
-interface MapSectionProps {
-  accommodation?: Accommodation;
-}
-
-export function MapSection({ accommodation }: MapSectionProps) {
+export function MapSection() {
   const [hoveredActivityId, setHoveredActivityId] = React.useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = React.useState<string | null>(null);
 
@@ -21,7 +15,6 @@ export function MapSection({ accommodation }: MapSectionProps) {
       onMarkerSelect={setSelectedActivityId}
       hoveredActivityId={hoveredActivityId}
       selectedActivityId={selectedActivityId}
-      accommodation={accommodation}
     />
   );
 }

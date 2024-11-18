@@ -91,6 +91,8 @@ model Activity {
   endTime    DateTime
   notes      String?
   priceLevel Int?
+  dayNumber  Int
+  dayTitle   String?
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 

@@ -3,20 +3,16 @@
 
 import React from 'react';
 
-import { Trip } from '@prisma/client';
 import { format } from 'date-fns';
-
-import { Accommodation } from '@/lib/trips';
 
 import { DailyRouteSummary } from './DailyRouteSummary';
 
 interface TripViewContainerProps {
   startDate: Date;
   endDate: Date;
-  accommodation?: Accommodation;
 }
 
-export function TripViewContainer({ startDate, endDate, accommodation }: TripViewContainerProps) {
+export function TripViewContainer({ startDate, endDate }: TripViewContainerProps) {
   // State management
   const [selectedDate, setSelectedDate] = React.useState<string>(() => {
     const today = format(new Date(), 'yyyy-MM-dd');
@@ -32,24 +28,6 @@ export function TripViewContainer({ startDate, endDate, accommodation }: TripVie
 
   const [hoveredActivityId, setHoveredActivityId] = React.useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = React.useState<string | null>(null);
-
-  // Get all dates between start and end
-  const tripDates = React.useMemo(() => {
-    const dates: string[] = [];
-    const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-      dates.push(format(currentDate, 'yyyy-MM-dd'));
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-    return dates;
-  }, [startDate, endDate]);
-
-  // Handle date selection
-  const handleDateSelect = (date: string) => {
-    setSelectedDate(date);
-    setSelectedActivityId(null);
-    setHoveredActivityId(null);
-  };
 
   // Handle activity interactions
   const handleActivityHover = (activityId: string | null) => {
@@ -68,14 +46,10 @@ export function TripViewContainer({ startDate, endDate, accommodation }: TripVie
       {/* Daily Route Summary */}
       <div className="flex-1 min-w-0 overflow-y-auto">
         <DailyRouteSummary
-          dates={tripDates}
-          selectedDate={selectedDate}
-          onDateSelect={handleDateSelect}
           onActivityHover={handleActivityHover}
           onActivitySelect={handleActivitySelect}
           hoveredActivityId={hoveredActivityId}
           selectedActivityId={selectedActivityId}
-          accommodation={accommodation}
         />
       </div>
     </div>

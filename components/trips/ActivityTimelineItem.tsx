@@ -2,7 +2,6 @@ import { Activity } from '@prisma/client';
 import { Navigation } from 'lucide-react';
 
 import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
-import { Accommodation } from '@/lib/trips';
 import { cn } from '@/lib/utils';
 
 import { TimeDisplay } from './TimeDisplay';
@@ -13,7 +12,6 @@ interface ActivityTimelineItemProps {
   activity: Activity;
   nextActivity?: Activity;
   previousActivity?: Activity;
-  accommodation?: Accommodation;
   isLast: boolean;
   onHover: (activityId: string | null) => void;
   onSelect: (activityId: string | null) => void;
@@ -28,7 +26,6 @@ export function ActivityTimelineItem({
   activity,
   timeZone,
   nextActivity,
-  accommodation,
   isLast,
   onHover,
   onSelect,
@@ -65,15 +62,13 @@ export function ActivityTimelineItem({
           />
 
           {/* Distance and Next Location */}
-          {(nextActivity || (!isLast && accommodation)) && (
+          {nextActivity && (
             <div className="pt-4 border-t">
               {activity.latitude && activity.longitude && (
                 <a
                   href={getGoogleMapsDirectionsUrl(
                     { latitude: activity.latitude, longitude: activity.longitude },
-                    nextActivity
-                      ? { latitude: nextActivity.latitude!, longitude: nextActivity.longitude! }
-                      : { latitude: accommodation!.latitude, longitude: accommodation!.longitude }
+                    { latitude: nextActivity.latitude!, longitude: nextActivity.longitude! }
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -81,9 +76,7 @@ export function ActivityTimelineItem({
                 >
                   <Navigation className="h-4 w-4 group-hover:text-primary" />
 
-                  <span>
-                    Directions to {nextActivity ? nextActivity.name : accommodation?.name}
-                  </span>
+                  <span>Directions to {nextActivity.name}</span>
                 </a>
               )}
             </div>
