@@ -1,54 +1,71 @@
 'use client';
-import React from 'react';
 
-import { Sparkles, Map } from 'lucide-react';
+import { MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
-import { Card } from '@/components/ui/card';
+import { CitySearch } from '@/components/maps/CitySearch';
+import { Button } from '@/components/ui/button';
+import { useTripStore } from '@/lib/stores/tripStore';
+import { popularDestinations } from '@/lib/trips';
+import type { City } from '@/lib/types';
 
-export const PathSelection = () => {
+export default function CitySelectionPage() {
   const router = useRouter();
+  const { city, setCity } = useTripStore();
+
+  const handleCitySelect = (selectedCity: City) => {
+    setCity(selectedCity);
+    handleNext();
+  };
+
+  const handleNext = () => {
+    if (city) {
+      router.push('/trips/new/dates');
+    }
+  };
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-4 py-8">
-      <h2 className="text-3xl font-bold text-center mb-8">How would you like to plan your trip?</h2>
+    <div className="relative p-4 sm:p-8 rounded-2xl bg-white shadow-xl border border-transparent">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+        Where would you like to explore?
+      </h1>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* AI Path */}
-        <Card
-          className={`p-6 cursor-pointer transition-all hover:shadow-lg`}
-          onClick={() => router.push('/trips/new/ai')}
-        >
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="p-4 bg-primary/10 rounded-full">
-              <Sparkles className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">✨ Create a personalized plan for me</h3>
-            <p className="text-muted-foreground">
-              Let our AI create a custom itinerary based on your preferences, optimized for your
-              schedule and interests.
-            </p>
-          </div>
-        </Card>
+      <div className="space-y-6">
+        <CitySearch value={city} onCitySelect={handleCitySelect} />
+        <div className="flex flex-wrap justify-center gap-2 animate-fade-in">
+          {popularDestinations.map(destination => (
+            <button
+              key={destination.placeId}
+              onClick={() =>
+                handleCitySelect({
+                  name: destination.name,
+                  address: `${destination.name}, ${destination.country}`,
+                  placeId: destination.placeId,
+                  latitude: destination.location.lat,
+                  longitude: destination.location.lng,
+                })
+              }
+              className="group h-9 px-3 rounded-full bg-white text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 shadow-sm border border-gray-100 flex items-center gap-1.5 text-sm"
+            >
+              <MapPin className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-500" />
+              <span className="font-medium">{destination.name}</span>
+              <span className="text-gray-400 text-xs">·</span>
+              <span className="text-gray-400 text-xs">{destination.country}</span>
+            </button>
+          ))}
+        </div>
 
-        {/* Manual Path */}
-        <Card
-          className={`p-6 cursor-pointer transition-all hover:shadow-lg`}
-          onClick={() => router.push('/trips/new/manual')}
-        >
-          <div className="flex flex-col items-center text-center space-y-4">
-            <div className="p-4 bg-primary/10 rounded-full">
-              <Map className="w-8 h-8 text-primary" />
-            </div>
-            <h3 className="text-xl font-semibold">I&apos;ll build my own adventure</h3>
-            <p className="text-muted-foreground">
-              Take full control of your itinerary. Browse activities, create your schedule, and plan
-              at your own pace.
-            </p>
-          </div>
-        </Card>
+        <div className="flex justify-end mt-8">
+          <Button
+            onClick={handleNext}
+            disabled={!city}
+            className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
+            size="sm"
+          >
+            Next
+          </Button>
+        </div>
       </div>
     </div>
   );
-};
-
-export default PathSelection;
+}

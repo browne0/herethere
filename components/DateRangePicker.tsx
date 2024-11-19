@@ -1,92 +1,200 @@
-import React, { useState, useEffect } from 'react';
+'use client';
+import React, { useState } from 'react';
 
-import { addDays, isSameDay } from 'date-fns';
-import { DateRange } from 'react-date-range';
-import 'react-date-range/dist/styles.css';
-import 'react-date-range/dist/theme/default.css';
+import {
+  addMonths,
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  isSameMonth,
+  isToday,
+  isSameDay,
+  isWithinInterval,
+  startOfDay,
+} from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { DateRangeType } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
-interface DateRangeProps {
-  dates: DateRangeType;
-  onSelect: (dates: { from: Date | undefined; to: Date | undefined } | undefined) => void;
+interface DateRangePickerProps {
+  startDate: Date;
+  endDate: Date;
+  onChange: (dates: { startDate: Date; endDate: Date }) => void;
+  minDate?: Date;
+  maxDate?: Date;
 }
 
-const DateRangeSelect = ({ dates, onSelect }: DateRangeProps) => {
-  const isMobile = useMediaQuery('(max-width: 768px)');
+const DateRangePicker = ({
+  startDate,
+  endDate,
+  onChange,
+  minDate = new Date(),
+  maxDate = addMonths(new Date(), 12),
+}: DateRangePickerProps) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
 
-  // Set tomorrow as the default start date
-  const tomorrow = addDays(new Date(), 1);
+  const getMonthDays = (date: Date) => {
+    const start = startOfMonth(date);
+    const end = endOfMonth(date);
+    return eachDayOfInterval({ start, end });
+  };
 
-  const [ranges, setRanges] = useState([
-    {
-      startDate: dates?.from || tomorrow,
-      endDate: dates?.to || addDays(tomorrow, 7),
-      key: 'selection',
-    },
-  ]);
+  const handleDateClick = (date: Date) => {
+    const normalizedDate = startOfDay(date);
 
-  const handleSelect = (ranges: any) => {
-    setRanges([ranges.selection]);
-    onSelect({
-      from: ranges.selection.startDate,
-      to: ranges.selection.endDate,
-    });
+    if (normalizedDate < startDate) {
+      onChange({ startDate: normalizedDate, endDate: startDate });
+    } else {
+      onChange({ startDate, endDate: normalizedDate });
+    }
+  };
+
+  const isInRange = (date: Date) => {
+    if (startDate && endDate) {
+      return isWithinInterval(date, { start: startDate, end: endDate });
+    }
+    return false;
+  };
+
+  const renderMonth = (monthDate: Date) => {
+    const days = getMonthDays(monthDate);
+    const firstDay = days[0].getDay();
+
+    return (
+      <div className="select-none">
+        <div className="mb-2 text-sm font-medium text-gray-900 flex items-center justify-center hidden sm:flex">
+          {format(monthDate, 'MMMM yyyy')}
+        </div>
+        <div className="grid grid-cols-7 gap-1 mb-1">
+          {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
+            <div
+              key={`${day}-${index}`}
+              className="h-6 text-xs text-gray-400 flex items-center justify-center"
+            >
+              {day}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-1">
+          {[...Array(firstDay)].map((_, i) => (
+            <div key={`empty-${i}`} className="h-9 sm:h-8" />
+          ))}
+          {days.map(date => {
+            const isSelected =
+              startDate && endDate
+                ? isSameDay(date, startDate) || isSameDay(date, endDate)
+                : startDate
+                  ? isSameDay(date, startDate)
+                  : false;
+            const inRange = isInRange(date);
+
+            return (
+              <button
+                key={date.toISOString()}
+                onClick={() => handleDateClick(date)}
+                disabled={date < minDate || date > maxDate}
+                className={cn(
+                  'h-9 sm:h-8 text-sm relative flex items-center justify-center rounded',
+                  'focus:outline-none',
+                  {
+                    'bg-indigo-600 text-white': isSelected,
+                    'bg-indigo-50': inRange && !isSelected,
+                    'hover:bg-gray-100': !isSelected && !inRange,
+                    'opacity-50 cursor-not-allowed': date < minDate || date > maxDate,
+                    'font-medium': isToday(date),
+                  }
+                )}
+              >
+                {format(date, 'd')}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-center">
-        <div className="bg-white rounded-lg shadow-sm p-2 max-w-full">
-          <DateRange
-            onChange={handleSelect}
-            showDateDisplay={false}
-            months={isMobile ? 1 : 2}
-            ranges={ranges}
-            direction={isMobile ? 'vertical' : 'horizontal'}
-            preventSnapRefocus={true}
-            calendarFocus="backwards"
-            minDate={tomorrow}
-            maxDate={addDays(new Date(), 30)}
-            rangeColors={['#4F46E5']}
-            monthDisplayFormat="MMMM yyyy"
-            className="!border-0"
-          />
+    <div className="w-full">
+      {/* Selected dates display - Mobile Only */}
+      <div className="mb-4 sm:hidden space-y-2 px-2">
+        <div className="flex justify-between items-center">
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500">Start date</div>
+            <div className="text-sm font-medium">
+              {startDate ? format(startDate, 'EEE, MMM d') : 'Select date'}
+            </div>
+          </div>
+          <div className="h-8 w-px bg-gray-200" />
+          <div className="space-y-1">
+            <div className="text-xs text-gray-500">End date</div>
+            <div className="text-sm font-medium">
+              {endDate ? format(endDate, 'EEE, MMM d') : 'Select date'}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Selected Range Summary */}
-      {ranges[0].startDate && (
-        <div className="text-center text-sm text-gray-600 mt-2">
-          {ranges[0].endDate ? (
-            <>
-              {ranges[0].startDate.toLocaleDateString()}
-              {!isSameDay(ranges[0].startDate, ranges[0].endDate) && (
-                <>
-                  {' - '}
-                  {ranges[0].endDate.toLocaleDateString()}
-                  <br />
-                  {Math.floor(
-                    (ranges[0].endDate.getTime() - ranges[0].startDate.getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  ) + 1}{' '}
-                  days
-                </>
-              )}
-              {isSameDay(ranges[0].startDate, ranges[0].endDate) && (
-                <>
-                  <br />1 day
-                </>
-              )}
-            </>
-          ) : (
-            'Select end date'
-          )}
+      {/* Calendar Section */}
+      <div className="bg-white">
+        {/* Month Navigation */}
+        <div className="flex items-center justify-between px-2 py-3 border-b">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCurrentDate(date => addMonths(date, -1))}
+            disabled={isSameMonth(currentDate, minDate)}
+            className="h-8 w-8"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <div className="text-sm font-medium">
+            {format(currentDate, 'MMMM yyyy')}
+            <span className="hidden sm:inline">
+              {' '}
+              - {format(addMonths(currentDate, 1), 'MMMM yyyy')}
+            </span>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setCurrentDate(date => addMonths(date, 1))}
+            className="h-8 w-8"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
-      )}
+
+        {/* Calendar Grid */}
+        <div className="p-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {renderMonth(currentDate)}
+            <div className="hidden sm:block">{renderMonth(addMonths(currentDate, 1))}</div>
+          </div>
+        </div>
+
+        {/* Selected dates display - Desktop Only */}
+        <div className="hidden sm:block border-t p-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <div className="text-xs text-gray-500">Start date</div>
+              <div className="text-sm font-medium">
+                {startDate ? format(startDate, 'EEE, MMM d') : 'Select date'}
+              </div>
+            </div>
+            <div className="space-y-1">
+              <div className="text-xs text-gray-500">End date</div>
+              <div className="text-sm font-medium">
+                {endDate ? format(endDate, 'EEE, MMM d') : 'Select date'}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
 
-export default DateRangeSelect;
+export default DateRangePicker;
