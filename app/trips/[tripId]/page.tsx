@@ -1,42 +1,49 @@
-import { Suspense } from 'react';
-
+// app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
-import { MapSection } from '@/components/trips/MapSection';
-import { MobileMapButton } from '@/components/trips/MobileMapButton';
-import { MobileMapSheet } from '@/components/trips/MobileMapSheet';
-import { TripContent } from '@/components/trips/TripContent';
-import { TripHeader } from '@/components/trips/TripHeader';
-import { MobileMapProvider } from '@/contexts/MobileMapContext';
-import { TripActivitiesProvider } from '@/contexts/TripActivitiesContext';
 import { prisma } from '@/lib/db';
 
-function MapLoadingFallback() {
-  return (
-    <div className="h-full flex items-center justify-center bg-muted/20">
-      <div className="flex flex-col items-center gap-2">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-r-transparent" />
-        <p className="text-sm text-muted-foreground">Loading map...</p>
-      </div>
-    </div>
-  );
+import { RecommendationsView } from './components/RecommendationsView';
+import { SelectedActivitiesBanner } from './components/SelectedActivitiesBanner';
+import { TripHeader } from './components/TripHeader';
+import type { ParsedActivityRecommendation } from './types';
+
+// Helper to parse JSON fields from ActivityRecommendation
+function parseActivityRecommendation(activity: any): ParsedActivityRecommendation {
+  return {
+    ...activity,
+    location: JSON.parse(activity.location),
+    images: JSON.parse(activity.images),
+    availableDays: JSON.parse(activity.availableDays),
+    openingHours: activity.openingHours ? JSON.parse(activity.openingHours) : null,
+    seasonality: JSON.parse(activity.seasonality),
+    tags: JSON.parse(activity.tags),
+  };
 }
 
-export default async function TripDetailsPage({ params }: { params: { tripId: string } }) {
-  const { userId } = await auth();
-  const { tripId } = await params;
-  if (!userId) {
-    redirect('/sign-in');
-  }
+async function getRecommendations(tripId: string) {
+  // Fetch recommendations based on trip details
+  const recommendations = await prisma.activityRecommendation.findMany({
+    orderBy: {
+      rating: 'desc',
+    },
+  });
 
-  const initialTripData = await prisma.trip.findUnique({
+  return recommendations.map(parseActivityRecommendation);
+}
+
+async function getTripDetails(tripId: string, userId: string) {
+  const trip = await prisma.trip.findUnique({
     where: {
       id: tripId,
       userId,
     },
     include: {
       activities: {
+        include: {
+          recommendation: true,
+        },
         orderBy: {
           startTime: 'asc',
         },
@@ -44,31 +51,57 @@ export default async function TripDetailsPage({ params }: { params: { tripId: st
     },
   });
 
-  if (!initialTripData) {
+  if (!trip) {
     redirect('/trips');
   }
 
+  return {
+    ...trip,
+    activities: trip.activities.map(activity => ({
+      ...activity,
+      recommendation: parseActivityRecommendation(activity.recommendation),
+    })),
+  };
+}
+
+export default async function TripPage({ params }: { params: { tripId: string } }) {
+  const { userId } = await auth();
+  const { tripId } = await params;
+  if (!userId) {
+    redirect('/sign-in');
+  }
+
+  const trip = await getTripDetails(tripId, userId);
+  const recommendations = await getRecommendations(tripId);
+
+  // Organize recommendations into shelves
+  const shelves = [
+    {
+      title: `Popular in ${trip.destination}`,
+      type: 'popular',
+      activities: recommendations.slice(0, 5),
+    },
+    {
+      title: 'Based on your interests',
+      type: 'personalized',
+      activities: recommendations.slice(5, 10),
+    },
+    {
+      title: 'Happening tomorrow',
+      type: 'happening-tomorrow',
+      activities: recommendations.slice(10),
+    },
+  ];
+
   return (
-    <TripActivitiesProvider trip={initialTripData}>
-      <MobileMapProvider>
-        <div className="flex flex-col lg:flex-row h-[calc(100vh-4rem)] overflow-hidden">
-          {/* Left Panel - Trip Details */}
-          <div className="w-full lg:w-1/2 overflow-y-auto">
-            <TripHeader />
-            <TripContent />
-          </div>
-
-          {/* Right Panel - Map */}
-          <div className="hidden lg:block w-full lg:w-1/2 border-l h-[300px] lg:h-auto">
-            <Suspense fallback={<MapLoadingFallback />}>
-              <MapSection />
-            </Suspense>
-          </div>
-
-          <MobileMapButton />
-          <MobileMapSheet />
-        </div>
-      </MobileMapProvider>
-    </TripActivitiesProvider>
+    <main className="min-h-screen bg-gray-50">
+      <TripHeader trip={trip} />
+      <RecommendationsView
+        shelves={shelves}
+        tripId={trip.id}
+        existingActivityIds={trip.activities.map(a => a.recommendationId)}
+      />
+      <SelectedActivitiesBanner tripId={trip.id} activities={trip.activities} />
+    </main>
   );
 }

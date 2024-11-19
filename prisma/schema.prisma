@@ -8,94 +8,75 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum ActivityType {
-  DINING
-  SIGHTSEEING
-  ACTIVITY
-  OTHER
-}
-
 model User {
   id           String   @id
   email        String   @unique
   firstName    String?
   lastName     String?
   profileImage String?
-  preferences  Json? // Store default travel preferences
+  preferences  Json? // For storing user preferences that affect recommendations
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   trips        Trip[]
-
-  @@map("user")
-}
-
-enum TripStatus {
-  DRAFT
-  GENERATING
-  COMPLETE
-  ERROR
 }
 
 model Trip {
-  id          String      @id @default(cuid())
+  id          String              @id @default(cuid())
   userId      String
-  user        User        @relation(fields: [userId], references: [id])
+  user        User                @relation(fields: [userId], references: [id])
   title       String
-  destination String
-  timeZone    String
-  cityBounds  Json?
-  placeId     String?
-  latitude    Float?
-  longitude   Float?
+  destination String // City/location name
   startDate   DateTime
   endDate     DateTime
-  preferences Json
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
-  activities  Activity[]
-  isPublic    Boolean     @default(false)
-  sharedWith  TripShare[]
-  status      TripStatus  @default(DRAFT)
+  preferences Json? // Trip-specific preferences
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  activities  ItineraryActivity[]
 
   @@index([userId])
-  @@map("trip")
 }
 
-model TripShare {
-  id        String   @id @default(cuid())
-  tripId    String
-  trip      Trip     @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  userId    String
-  role      String   @default("VIEWER") // VIEWER, EDITOR
+model ActivityRecommendation {
+  id            String   @id @default(cuid())
+  name          String
+  description   String
+  type          String // e.g., 'tour', 'food', 'museum'
+  category      String // e.g., 'outdoor', 'indoor', 'cultural'
+  duration      Int // in minutes
+  price         Int // in cents
+  location      Json // { latitude: number, longitude: number, address: string, placeId?: string }
+  images        Json // { urls: string[] }
+  rating        Float?
+  reviewCount   Int      @default(0)
+  availableDays Json // { days: number[] } (0-6 for days of week)
+  openingHours  Json? // { periods: { open: { day: number, time: string }, close: { day: number, time: string } }[] }
+  seasonality   Json // { seasons: string[] }
+  tags          Json // { tags: string[] }
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  itineraryActivities ItineraryActivity[]
+
+  @@index([type])
+  @@index([category])
+}
+
+model ItineraryActivity {
+  id               String                 @id @default(cuid())
+  tripId           String
+  trip             Trip                   @relation(fields: [tripId], references: [id])
+  recommendationId String
+  recommendation   ActivityRecommendation @relation(fields: [recommendationId], references: [id])
+
+  startTime      DateTime // When this activity is scheduled
+  endTime        DateTime
+  notes          String? // User notes for this instance
+  status         String   @default("planned") // planned, confirmed, completed, cancelled
+  customizations Json? // Any customizations from the recommendation template
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@unique([tripId, userId])
   @@index([tripId])
-  @@index([userId])
-  @@map("trip_share")
-}
-
-model Activity {
-  id         String   @id @default(cuid())
-  tripId     String
-  trip       Trip     @relation(fields: [tripId], references: [id])
-  category   String
-  placeType  String?
-  name       String
-  address    String?
-  latitude   Float?
-  longitude  Float?
-  placeId    String?
-  startTime  DateTime
-  endTime    DateTime
-  notes      String?
-  priceLevel Int?
-  dayNumber  Int
-  dayTitle   String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-
-  @@index([tripId])
-  @@map("activity")
+  @@index([recommendationId])
 }

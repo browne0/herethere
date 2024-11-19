@@ -7,6 +7,25 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { useTripStore } from '@/lib/stores/tripStore';
+import { BudgetLevel } from '@/lib/types';
+
+interface CreateTripRequest {
+  title: string;
+  destination: string;
+  startDate: Date;
+  endDate: Date;
+  preferences: {
+    budget: BudgetLevel;
+    activities: string[];
+    location: {
+      placeId: string;
+      latitude: number;
+      longitude: number;
+      name: string;
+      address: string;
+    };
+  };
+}
 
 export default function ReviewPage() {
   const router = useRouter();
@@ -28,44 +47,51 @@ export default function ReviewPage() {
   }, [city, dates, budget, activities, router]);
 
   const handleSubmit = async () => {
+    if (!city || !dates?.from || !dates?.to || !budget || !activities.length) {
+      return;
+    }
+
     setIsSubmitting(true);
     setError(null);
 
     try {
+      // Format the request to match our schema
+      const tripData: CreateTripRequest = {
+        title: `Trip to ${city.name}`,
+        destination: city.name,
+        startDate: dates.from,
+        endDate: dates.to,
+        preferences: {
+          budget,
+          activities,
+          location: {
+            placeId: city.placeId,
+            latitude: city.latitude,
+            longitude: city.longitude,
+            name: city.name,
+            address: city.address,
+          },
+        },
+      };
+
       const response = await fetch('/api/trips', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          title: `Trip to ${city?.name}`,
-          preferences: {
-            city,
-            dates,
-            budget,
-            activities,
-          },
-          latitude: city?.latitude,
-          longitude: city?.longitude,
-          placeId: city?.placeId,
-          destination: city?.name,
-          startDate: dates?.from,
-          endDate: dates?.to,
-        }),
+        body: JSON.stringify(tripData),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate trip');
+        throw new Error('Failed to create trip');
       }
 
-      const {
-        trip: { id },
-      } = await response.json();
+      const { trip } = await response.json();
       reset(); // Clear the store after successful creation
-      router.push(`/trips/${id}`);
+      router.push(`/trips/${trip.id}`);
     } catch (error) {
-      console.error('Error generating trip:', error);
-      setError('Failed to generate trip. Please try again.');
+      console.error('Error creating trip:', error);
+      setError('Failed to create trip. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

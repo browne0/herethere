@@ -2,12 +2,12 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { City, DateRangeType } from '@/lib/types';
+import type { BudgetLevel, City, DateRangeType } from '@/lib/types';
 
 interface TripStore {
   city: City | null;
   dates: DateRangeType | null;
-  budget: 'budget' | 'moderate' | 'luxury' | null;
+  budget: BudgetLevel | null;
   activities: string[];
   customInterests: string | null;
   setCity: (city: City) => void;

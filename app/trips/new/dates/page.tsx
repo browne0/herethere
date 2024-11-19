@@ -1,7 +1,7 @@
 'use client';
 import { useEffect } from 'react';
 
-import { addDays, addMonths } from 'date-fns';
+import { addMonths } from 'date-fns';
 import { useRouter } from 'next/navigation';
 
 import DateRangePicker from '@/components/DateRangePicker';
@@ -19,7 +19,7 @@ export default function DatesPage() {
     }
   }, [city, router]);
 
-  const handleDateChange = (newDates: { startDate: Date; endDate: Date }) => {
+  const handleDateChange = (newDates: { startDate: Date | null; endDate: Date | null }) => {
     setDates({
       from: newDates.startDate,
       to: newDates.endDate,
@@ -44,8 +44,8 @@ export default function DatesPage() {
       </h1>
 
       <DateRangePicker
-        startDate={dates?.from ?? new Date()}
-        endDate={dates?.to ?? addDays(new Date(), 7)}
+        startDate={dates?.from ?? null}
+        endDate={dates?.to ?? null}
         onChange={handleDateChange}
         minDate={new Date()}
         maxDate={addMonths(new Date(), 12)}

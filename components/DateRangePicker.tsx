@@ -19,9 +19,9 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
 interface DateRangePickerProps {
-  startDate: Date;
-  endDate: Date;
-  onChange: (dates: { startDate: Date; endDate: Date }) => void;
+  startDate: Date | null;
+  endDate: Date | null;
+  onChange: (dates: { startDate: Date | null; endDate: Date | null }) => void;
   minDate?: Date;
   maxDate?: Date;
 }
@@ -44,10 +44,17 @@ const DateRangePicker = ({
   const handleDateClick = (date: Date) => {
     const normalizedDate = startOfDay(date);
 
-    if (normalizedDate < startDate) {
-      onChange({ startDate: normalizedDate, endDate: startDate });
-    } else {
-      onChange({ startDate, endDate: normalizedDate });
+    // If no start date or we're starting a new selection
+    if (!startDate || endDate) {
+      onChange({ startDate: normalizedDate, endDate: null });
+    }
+    // If we have a start date and are selecting an end date
+    else {
+      if (normalizedDate < startDate) {
+        onChange({ startDate: normalizedDate, endDate: startDate });
+      } else {
+        onChange({ startDate, endDate: normalizedDate });
+      }
     }
   };
 
