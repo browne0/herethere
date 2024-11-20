@@ -1,8 +1,8 @@
 import { ClerkProvider } from '@clerk/nextjs';
 import { Inter } from 'next/font/google';
 
+import { PageLayout } from '@/components/layout/PageLayout';
 import { GoogleMapsProvider } from '@/components/maps/GoogleMapsProvider';
-import { Nav } from '@/components/nav';
 
 import './globals.css';
 
@@ -13,10 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <body className={`${inter.className} bg-gray-50 min-h-screen`}>
-          <Nav />
-          <main className="pt-16">
+          <PageLayout>
             <GoogleMapsProvider>{children}</GoogleMapsProvider>
-          </main>
+          </PageLayout>
         </body>
       </html>
     </ClerkProvider>

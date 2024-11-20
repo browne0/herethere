@@ -1,19 +1,16 @@
 import React from 'react';
 
-import { Activity } from '@prisma/client';
-import { Clock, MapPin, Navigation, ChevronRight } from 'lucide-react';
+import { format } from 'date-fns';
+import { MapPin, Navigation, ChevronRight } from 'lucide-react';
 
+import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
 import { cn } from '@/lib/utils';
 
-import TimeDisplay from './TimeDisplay';
-import { ActivityCategoryBadge } from '../activities/ActivityDetails';
-
 interface ActivityTimelineItemProps {
-  activity: Activity;
-  nextActivity?: Activity;
-  previousActivity?: Activity;
-  timeZone: string;
+  activity: ParsedItineraryActivity;
+  nextActivity?: ParsedItineraryActivity;
+  previousActivity?: ParsedItineraryActivity;
   onHover: (activityId: string | null) => void;
   onSelect: (activityId: string | null) => void;
   isHovered: boolean;
@@ -29,9 +26,9 @@ export function ActivityTimelineItem({
   onSelect,
   isHovered,
   isSelected,
-  isLastActivity,
-  timeZone,
 }: ActivityTimelineItemProps) {
+  const recommendation = activity.recommendation;
+
   return (
     <div className="relative group">
       {/* Left Timeline */}
@@ -61,32 +58,50 @@ export function ActivityTimelineItem({
         <div className="space-y-4">
           {/* Top Row - Category & Time */}
           <div className="flex items-center justify-between gap-4">
-            <ActivityCategoryBadge category={activity.category} />
-            <TimeDisplay
-              timeZone={timeZone}
-              startTime={activity.startTime}
-              endTime={activity.endTime}
-            />
+            <div className="flex items-center gap-2">
+              <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
+                {recommendation.category}
+              </span>
+              {activity.status !== 'planned' && (
+                <span
+                  className={cn(
+                    'px-2 py-1 text-xs font-medium rounded-full',
+                    activity.status === 'confirmed' && 'bg-green-100 text-green-700',
+                    activity.status === 'completed' && 'bg-blue-100 text-blue-700',
+                    activity.status === 'cancelled' && 'bg-red-100 text-red-700'
+                  )}
+                >
+                  {activity.status.charAt(0).toUpperCase() + activity.status.slice(1)}
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-gray-500">
+              {format(new Date(activity.startTime), 'h:mm a')} -{' '}
+              {format(new Date(activity.endTime), 'h:mm a')}
+            </div>
           </div>
 
           {/* Title & Location */}
           <div className="space-y-2">
             <h4 className="text-lg font-medium leading-tight group-hover:text-primary transition-colors">
-              {activity.name}
+              {recommendation.name}
             </h4>
             <div className="flex items-center gap-2 text-sm text-gray-500">
               <MapPin className="h-4 w-4 shrink-0" />
-              <span className="line-clamp-1">{activity.address}</span>
+              <span className="line-clamp-1">{recommendation.location.address}</span>
             </div>
           </div>
+
+          {/* Notes if any */}
+          {activity.notes && <p className="text-sm text-gray-600 italic">{activity.notes}</p>}
 
           {/* Next Location Link */}
           {nextActivity && (
             <div className="pt-4 border-t border-gray-100">
               <a
                 href={getGoogleMapsDirectionsUrl(
-                  { latitude: activity.latitude!, longitude: activity.longitude! },
-                  { latitude: nextActivity.latitude!, longitude: nextActivity.longitude! }
+                  recommendation.location,
+                  nextActivity.recommendation.location
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -94,7 +109,7 @@ export function ActivityTimelineItem({
               >
                 <div className="flex items-center gap-2">
                   <Navigation className="h-4 w-4" />
-                  <span>Next: {nextActivity.name}</span>
+                  <span>Next: {nextActivity.recommendation.name}</span>
                 </div>
                 <ChevronRight className="h-4 w-4 opacity-0 group-hover/link:opacity-100 group-hover/link:translate-x-0.5 transition-all" />
               </a>

@@ -1,59 +1,53 @@
-import React, { useEffect, useRef, useState } from 'react';
+'use client';
 
-import { Activity } from '@prisma/client';
-import { GoogleMap, InfoWindow, OverlayView, OVERLAY_MOUSE_TARGET } from '@react-google-maps/api';
+import { useEffect, useState } from 'react';
+
+import { GoogleMap, InfoWindow, OVERLAY_MOUSE_TARGET, OverlayView } from '@react-google-maps/api';
 import { format } from 'date-fns';
 import {
-  Clock,
-  MapPin,
-  Loader2,
   Camera,
   Music,
   ShoppingBag,
-  LucideIcon,
   Umbrella,
   TreePine,
   PartyPopper,
   Heart,
   Utensils,
   Building2,
+  MapPin,
+  Clock,
+  type LucideIcon,
+  Loader2,
 } from 'lucide-react';
 
+import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
-import { useTripActivities } from '@/contexts/TripActivitiesContext';
-import { ActivityCategory } from '@/lib/types/activities';
 
-import { useGoogleMapsStatus } from '../maps/GoogleMapsProvider';
-
-interface CustomMarkerProps {
-  activity: Activity;
-  isHighlighted: boolean;
-  onClick: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  labelPosition: 'left' | 'right';
-}
+import type { ParsedItineraryActivity } from '../../types';
 
 interface TripMapViewProps {
+  activities: ParsedItineraryActivity[];
   onMarkerHover: (activityId: string | null) => void;
   onMarkerSelect: (activityId: string | null) => void;
   hoveredActivityId: string | null;
   selectedActivityId: string | null;
-  accommodation?: {
+  destination: {
+    name: string;
     latitude: number;
     longitude: number;
   };
 }
 
-const ACTIVITY_ICONS: Record<ActivityCategory, LucideIcon> = {
-  BEACHES: Umbrella,
-  CITY_SIGHTSEEING: Building2,
-  OUTDOOR_ADVENTURES: TreePine,
-  FESTIVALS_EVENTS: PartyPopper,
-  FOOD_EXPLORATION: Utensils,
-  NIGHTLIFE: Music,
-  SHOPPING: ShoppingBag,
-  SPA_WELLNESS: Heart,
+const ACTIVITY_ICONS: Record<string, LucideIcon> = {
+  beaches: Umbrella,
+  sightseeing: Building2,
+  outdoor: TreePine,
+  events: PartyPopper,
+  food: Utensils,
+  nightlife: Music,
+  shopping: ShoppingBag,
+  wellness: Heart,
+  default: Camera,
 };
 
 const mapOptions: google.maps.MapOptions = {
@@ -106,28 +100,32 @@ const mapOptions: google.maps.MapOptions = {
   ],
 };
 
-const getLabelPosition = (
-  markerLng: number,
-  mapCenter: google.maps.LatLng | null
-): 'left' | 'right' => {
-  if (!mapCenter) return 'right';
-  return markerLng > mapCenter.lng() ? 'left' : 'right';
-};
+interface CustomMarkerProps {
+  activity: ParsedItineraryActivity;
+  isHighlighted: boolean;
+  onClick: () => void;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
+  labelPosition: 'left' | 'right';
+}
 
-const CustomMarker: React.FC<CustomMarkerProps> = ({
+function CustomMarker({
   activity,
   isHighlighted,
   onClick,
   onMouseEnter,
   onMouseLeave,
   labelPosition,
-}) => {
-  const IconComponent =
-    ACTIVITY_ICONS[activity.category.toUpperCase() as ActivityCategory] || Camera;
+}: CustomMarkerProps) {
+  const { recommendation } = activity;
+  const IconComponent = ACTIVITY_ICONS[recommendation.type.toLowerCase()] || ACTIVITY_ICONS.default;
 
   return (
     <OverlayView
-      position={{ lat: activity.latitude!, lng: activity.longitude! }}
+      position={{
+        lat: recommendation.location.latitude,
+        lng: recommendation.location.longitude,
+      }}
       mapPaneName={OVERLAY_MOUSE_TARGET}
     >
       <div className="relative">
@@ -145,21 +143,23 @@ const CustomMarker: React.FC<CustomMarkerProps> = ({
             ${isHighlighted ? 'bg-foreground text-background' : 'bg-background text-foreground hover:bg-foreground hover:text-background'}`}
           >
             <IconComponent size={19} strokeWidth={1.5} />
-            <div className="ml-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500 text-white">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="7"
-                height="7"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="m3.643 13.993 3.51 4.513a1.285 1.285 0 0 0 2.006.038L20.357 4.993" />
-              </svg>
-            </div>
+            {activity.status === 'confirmed' && (
+              <div className="ml-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="7"
+                  height="7"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="m3.643 13.993 3.51 4.513a1.285 1.285 0 0 0 2.006.038L20.357 4.993" />
+                </svg>
+              </div>
+            )}
           </div>
           <div
             className={`pointer-events-none absolute w-[10em] text-2xs font-medium leading-[1.17] text-foreground
@@ -167,52 +167,54 @@ const CustomMarker: React.FC<CustomMarkerProps> = ({
             top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? 'text-left' : 'text-right'}`}
           >
             <span className="rounded-sm bg-background/95 box-decoration-clone px-1">
-              {activity.name}
+              {recommendation.name}
             </span>
           </div>
         </button>
       </div>
     </OverlayView>
   );
-};
+}
 
-export const TripMapView: React.FC<TripMapViewProps> = ({
+export function TripMapView({
+  activities,
   onMarkerHover,
   onMarkerSelect,
   hoveredActivityId,
   selectedActivityId,
-  accommodation,
-}) => {
-  const { activities, error } = useTripActivities();
-  const [selectedMarker, setSelectedMarker] = useState<Activity | null>(null);
+  destination,
+}: TripMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
-  const previousActivitiesLength = useRef(0);
+  const [selectedActivity, setSelectedActivity] = useState<ParsedItineraryActivity | null>(null);
 
-  const confirmedActivities = activities.filter(
-    activity => !activity.isProcessing && !activity.error && activity.latitude && activity.longitude
-  );
-
+  // Fit bounds when activities change
+  // Updated bounds effect to handle empty activities
   useEffect(() => {
     if (!map) return;
 
-    // Update bounds when activities change
-    if (confirmedActivities.length !== previousActivitiesLength.current) {
-      const bounds = new google.maps.LatLngBounds();
+    const bounds = new google.maps.LatLngBounds();
 
-      if (accommodation) {
-        bounds.extend({ lat: accommodation.latitude, lng: accommodation.longitude });
-      }
-
-      confirmedActivities.forEach(activity => {
-        if (activity.latitude && activity.longitude) {
-          bounds.extend({ lat: activity.latitude, lng: activity.longitude });
-        }
+    if (activities.length > 0) {
+      // If we have activities, fit bounds to include all activities
+      activities.forEach(activity => {
+        const { location } = activity.recommendation;
+        bounds.extend({ lat: location.latitude, lng: location.longitude });
       });
-
-      map.fitBounds(bounds, 50);
-      previousActivitiesLength.current = confirmedActivities.length;
+    } else {
+      // If no activities, center on destination with appropriate zoom
+      map.setCenter({ lat: destination.latitude, lng: destination.longitude });
+      map.setZoom(13); // City-level zoom
+      return; // Skip bounds fitting for destination-only view
     }
-  }, [map, confirmedActivities, accommodation]);
+
+    map.fitBounds(bounds, 50);
+  }, [map, activities, destination]);
+
+  const getLabelPosition = (lng: number): 'left' | 'right' => {
+    if (!map) return 'right';
+    const center = map.getCenter();
+    return lng > center!.lng() ? 'left' : 'right';
+  };
 
   const { isLoaded, loadError } = useGoogleMapsStatus();
 
@@ -227,7 +229,7 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
     );
   }
 
-  if (loadError || error) {
+  if (loadError) {
     return (
       <div className="h-full flex items-center justify-center bg-destructive/10">
         <Card>
@@ -241,53 +243,55 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
 
   return (
     <div className="h-full relative">
-      <GoogleMap mapContainerClassName="w-full h-full" options={mapOptions} onLoad={setMap}>
-        {confirmedActivities.map(activity => (
+      <GoogleMap
+        mapContainerClassName="w-full h-full"
+        options={{
+          ...mapOptions,
+          center: { lat: destination.latitude, lng: destination.longitude },
+        }}
+        onLoad={setMap}
+      >
+        {activities.map(activity => (
           <CustomMarker
             key={activity.id}
             activity={activity}
             isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
             onClick={() => {
-              setSelectedMarker(activity);
+              setSelectedActivity(activity);
               onMarkerSelect(activity.id);
             }}
             onMouseEnter={() => onMarkerHover(activity.id)}
             onMouseLeave={() => onMarkerHover(null)}
-            labelPosition={getLabelPosition(activity.longitude!, map?.getCenter() ?? null)}
+            labelPosition={getLabelPosition(activity.recommendation.location.longitude)}
           />
         ))}
 
-        {selectedMarker && (
+        {selectedActivity && (
           <InfoWindow
             position={{
-              lat: selectedMarker.latitude!,
-              lng: selectedMarker.longitude!,
+              lat: selectedActivity.recommendation.location.latitude,
+              lng: selectedActivity.recommendation.location.longitude,
             }}
             onCloseClick={() => {
-              setSelectedMarker(null);
+              setSelectedActivity(null);
               onMarkerSelect(null);
             }}
           >
             <div className="p-2 max-w-xs">
-              <h3 className="font-medium mb-2">{selectedMarker.name}</h3>
-              {selectedMarker.placeType && (
-                <div className="text-xs text-muted-foreground mb-2">{selectedMarker.placeType}</div>
-              )}
-              {selectedMarker.address && (
-                <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
-                  <MapPin className="h-4 w-4" />
-                  <span>{selectedMarker.address}</span>
-                </div>
-              )}
+              <h3 className="font-medium mb-2">{selectedActivity.recommendation.name}</h3>
+              <div className="flex items-center gap-2 mb-2 text-sm text-muted-foreground">
+                <MapPin className="h-4 w-4" />
+                <span>{selectedActivity.recommendation.location.address}</span>
+              </div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-4 w-4" />
                 <span>
-                  {format(new Date(selectedMarker.startTime), 'h:mm a')} -{' '}
-                  {format(new Date(selectedMarker.endTime), 'h:mm a')}
+                  {format(new Date(selectedActivity.startTime), 'h:mm a')} -{' '}
+                  {format(new Date(selectedActivity.endTime), 'h:mm a')}
                 </span>
               </div>
-              {selectedMarker.notes && (
-                <p className="mt-2 text-sm border-t pt-2">{selectedMarker.notes}</p>
+              {selectedActivity.notes && (
+                <p className="mt-2 text-sm border-t pt-2">{selectedActivity.notes}</p>
               )}
             </div>
           </InfoWindow>
@@ -295,6 +299,4 @@ export const TripMapView: React.FC<TripMapViewProps> = ({
       </GoogleMap>
     </div>
   );
-};
-
-export default TripMapView;
+}

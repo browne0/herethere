@@ -1,13 +1,10 @@
-// app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
 
-import { RecommendationsView } from './components/RecommendationsView';
-import { SelectedActivitiesBanner } from './components/SelectedActivitiesBanner';
-import { TripHeader } from './components/TripHeader';
-import type { ParsedActivityRecommendation } from './types';
+import { TripPageClient } from './TripPageClient';
+import { ParsedActivityRecommendation } from './types';
 
 // Helper to parse JSON fields from ActivityRecommendation
 function parseActivityRecommendation(activity: any): ParsedActivityRecommendation {
@@ -22,18 +19,14 @@ function parseActivityRecommendation(activity: any): ParsedActivityRecommendatio
   };
 }
 
-async function getRecommendations(tripId: string) {
-  // Fetch recommendations based on trip details
-  const recommendations = await prisma.activityRecommendation.findMany({
-    orderBy: {
-      rating: 'desc',
-    },
-  });
+// Server component
+export default async function TripPage({ params }: { params: { tripId: string } }) {
+  const { userId } = await auth();
+  const { tripId } = await params;
+  if (!userId) {
+    redirect('/sign-in');
+  }
 
-  return recommendations.map(parseActivityRecommendation);
-}
-
-async function getTripDetails(tripId: string, userId: string) {
   const trip = await prisma.trip.findUnique({
     where: {
       id: tripId,
@@ -55,53 +48,35 @@ async function getTripDetails(tripId: string, userId: string) {
     redirect('/trips');
   }
 
-  return {
-    ...trip,
-    activities: trip.activities.map(activity => ({
-      ...activity,
-      recommendation: parseActivityRecommendation(activity.recommendation),
-    })),
-  };
-}
+  const recommendations = await prisma.activityRecommendation.findMany({
+    where: {
+      // Add filters based on trip preferences
+    },
+    orderBy: {
+      rating: 'desc',
+    },
+  });
 
-export default async function TripPage({ params }: { params: { tripId: string } }) {
-  const { userId } = await auth();
-  const { tripId } = await params;
-  if (!userId) {
-    redirect('/sign-in');
-  }
-
-  const trip = await getTripDetails(tripId, userId);
-  const recommendations = await getRecommendations(tripId);
+  const parsedRecommendations = recommendations.map(parseActivityRecommendation);
 
   // Organize recommendations into shelves
   const shelves = [
     {
+      title: 'Happening tomorrow',
+      type: 'happening-tomorrow',
+      activities: parsedRecommendations.slice(0, 5),
+    },
+    {
       title: `Popular in ${trip.destination}`,
       type: 'popular',
-      activities: recommendations.slice(0, 5),
+      activities: parsedRecommendations.slice(5, 10),
     },
     {
       title: 'Based on your interests',
       type: 'personalized',
-      activities: recommendations.slice(5, 10),
-    },
-    {
-      title: 'Happening tomorrow',
-      type: 'happening-tomorrow',
-      activities: recommendations.slice(10),
+      activities: parsedRecommendations.slice(10, 15),
     },
   ];
 
-  return (
-    <main className="min-h-screen bg-gray-50">
-      <TripHeader trip={trip} />
-      <RecommendationsView
-        shelves={shelves}
-        tripId={trip.id}
-        existingActivityIds={trip.activities.map(a => a.recommendationId)}
-      />
-      <SelectedActivitiesBanner tripId={trip.id} activities={trip.activities} />
-    </main>
-  );
+  return <TripPageClient trip={trip as any} shelves={shelves} />;
 }

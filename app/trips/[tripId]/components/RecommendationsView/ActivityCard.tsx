@@ -1,11 +1,10 @@
-// app/trips/[tripId]/components/RecommendationsView/ActivityCard.tsx
 import { useState } from 'react';
 
 import { Heart, Loader2 } from 'lucide-react';
 
 import { formatPrice } from '@/lib/utils';
 
-import type { ParsedActivityRecommendation } from '../../types';
+import { ParsedActivityRecommendation } from '../../types';
 
 interface ActivityCardProps {
   activity: ParsedActivityRecommendation;
@@ -42,13 +41,11 @@ export function ActivityCard({ activity, onAdd, isAdded }: ActivityCardProps) {
     e.preventDefault();
     e.stopPropagation();
     setIsFavorited(!isFavorited);
-    // TODO: Implement favorite functionality
   };
 
   return (
-    <div className="relative flex-shrink-0 w-72 rounded-xl overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow">
-      {/* Image Container */}
-      <div className="relative aspect-[4/3] overflow-hidden">
+    <div className="relative flex-shrink-0 w-72 h-[25rem] rounded-xl overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow flex flex-col">
+      <div className="relative aspect-[4/3] flex-shrink-0">
         <img
           src={'https://placehold.co/400x300'}
           alt={activity.name}
@@ -63,11 +60,16 @@ export function ActivityCard({ activity, onAdd, isAdded }: ActivityCardProps) {
             className={`w-5 h-5 ${isFavorited ? 'fill-current text-red-500' : 'text-gray-600'}`}
           />
         </button>
+        {activity.category && (
+          <div className="absolute top-3 left-3">
+            <span className="px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800">
+              {activity.category}
+            </span>
+          </div>
+        )}
       </div>
 
-      {/* Content */}
-      <div className="p-4">
-        {/* Rating & Duration */}
+      <div className="p-4 flex flex-col flex-grow">
         <div className="flex items-center gap-2 text-sm mb-1">
           <div className="flex items-center gap-1">
             <span className="font-medium">{activity.rating?.toFixed(2) || 'New'}</span>
@@ -77,13 +79,11 @@ export function ActivityCard({ activity, onAdd, isAdded }: ActivityCardProps) {
           <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
         </div>
 
-        {/* Title */}
         <h3 className="font-medium text-lg leading-tight mb-1 line-clamp-2">{activity.name}</h3>
-
-        {/* Price */}
         <p className="text-gray-600">From {formatPrice(activity.price)} / person</p>
 
-        {/* Add to Trip Button */}
+        <div className="flex-grow" />
+
         <button
           onClick={handleAdd}
           disabled={isLoading || isAdded}
@@ -113,15 +113,8 @@ export function ActivityCard({ activity, onAdd, isAdded }: ActivityCardProps) {
           )}
         </button>
       </div>
-
-      {/* Optional category tag */}
-      {activity.category && (
-        <div className="absolute top-3 left-3">
-          <span className="px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800">
-            {activity.category}
-          </span>
-        </div>
-      )}
     </div>
   );
 }
+
+export default ActivityCard;
