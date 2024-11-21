@@ -17,7 +17,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useTripStore } from '@/lib/stores/tripStore';
+import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
 
 // Map icons to activity categories
@@ -43,7 +43,7 @@ const activityOptions = Object.entries(ACTIVITY_CATEGORIES).map(([key, category]
 export default function ActivitiesPage() {
   const router = useRouter();
   const { city, dates, budget, activities, customInterests, setActivities, setCustomInterests } =
-    useTripStore();
+    useTripFormStore();
 
   // Redirect if previous steps not completed
   useEffect(() => {

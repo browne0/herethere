@@ -1,8 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-
 import { useToast } from '@/hooks/use-toast';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ActivityShelfComponent } from './ActivityShelf';
 import type { ParsedActivityRecommendation } from '../../types';
@@ -13,16 +12,10 @@ interface RecommendationsViewProps {
     type: string;
     activities: ParsedActivityRecommendation[];
   }[];
-  tripId: string;
-  existingActivityIds: string[];
 }
 
-export function RecommendationsView({
-  shelves,
-  tripId,
-  existingActivityIds,
-}: RecommendationsViewProps) {
-  const [addedActivities, setAddedActivities] = useState<Set<string>>(new Set(existingActivityIds));
+export function RecommendationsView({ shelves }: RecommendationsViewProps) {
+  const { addActivity, tripId } = useActivitiesStore();
   const { toast } = useToast();
 
   const handleAddActivity = async (activity: ParsedActivityRecommendation) => {
@@ -40,7 +33,26 @@ export function RecommendationsView({
 
       if (!response.ok) throw new Error('Failed to add activity');
 
-      setAddedActivities(prev => new Set([...prev, activity.id]));
+      const { activity: newActivity } = await response.json();
+
+      // Parse the response data
+      const parsedActivity = {
+        ...newActivity,
+        recommendation: {
+          ...newActivity.recommendation,
+          location: JSON.parse(newActivity.recommendation.location),
+          images: JSON.parse(newActivity.recommendation.images),
+          availableDays: JSON.parse(newActivity.recommendation.availableDays),
+          openingHours: newActivity.recommendation.openingHours
+            ? JSON.parse(newActivity.recommendation.openingHours)
+            : null,
+          seasonality: JSON.parse(newActivity.recommendation.seasonality),
+          tags: JSON.parse(newActivity.recommendation.tags),
+        },
+        customizations: newActivity.customizations ? JSON.parse(newActivity.customizations) : null,
+      };
+
+      addActivity(parsedActivity);
 
       toast({
         title: 'Activity added!',
@@ -75,7 +87,6 @@ export function RecommendationsView({
             title={shelf.title}
             activities={shelf.activities}
             onAddActivity={handleAddActivity}
-            addedActivityIds={addedActivities}
           />
         ))}
       </div>

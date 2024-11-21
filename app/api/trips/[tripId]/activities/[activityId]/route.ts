@@ -2,15 +2,15 @@ import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 import { prisma } from '@/lib/db';
-import { activityFormSchema } from '@/lib/validations/activity';
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: { tripId: string; activityId: string } }
 ) {
   try {
     const { userId } = await auth();
     const { tripId, activityId } = await params;
+
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }

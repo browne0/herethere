@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import { format } from 'date-fns';
-import { MapPin, Navigation } from 'lucide-react';
+import { Navigation, Trash2 } from 'lucide-react';
 
 import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
 interface ActivityTimelineItemProps {
@@ -26,10 +39,40 @@ export function ActivityTimelineItem({
   onSelect,
   isHovered,
   isSelected,
-  isFirstActivity,
   isLastActivity,
 }: ActivityTimelineItemProps) {
-  const recommendation = activity.recommendation;
+  const { recommendation } = activity;
+  const { removeActivity, tripId } = useActivitiesStore();
+  const { toast } = useToast();
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/trips/${tripId}/activities/${activity.id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to remove activity');
+
+      // Update store
+      removeActivity(activity.id);
+
+      toast({
+        title: 'Activity removed',
+        description: 'The activity has been removed from your itinerary.',
+      });
+    } catch (error) {
+      console.error('Error removing activity:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to remove activity. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="relative group">
@@ -66,6 +109,39 @@ export function ActivityTimelineItem({
             'relative overflow-hidden'
           )}
         >
+          {/* Delete Button */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <button
+                onClick={e => e.stopPropagation()}
+                className="absolute right-3 top-3 opacity-0 group-hover:opacity-100 
+                     px-2 py-1 rounded-md text-sm text-red-600 hover:bg-red-50 
+                     transition-all flex items-center gap-1"
+              >
+                <Trash2 className="w-4 h-4" />
+                <span>Remove</span>
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent onClick={e => e.stopPropagation()}>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove Activity</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to remove "{recommendation.name}" from your itinerary? This
+                  action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDelete}
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 'Removing...' : 'Remove'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           {/* Category Tag */}
           <div className="mb-3">
             <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">

@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import { useTripStore } from '@/lib/stores/tripStore';
+import { useTripFormStore } from '@/lib/stores/tripFormStore';
 
 const budgetOptions = [
   {
@@ -32,7 +32,7 @@ const budgetOptions = [
 
 export default function BudgetPage() {
   const router = useRouter();
-  const { city, dates, budget, setBudget } = useTripStore();
+  const { city, dates, budget, setBudget } = useTripFormStore();
 
   // Only redirect if previous steps are missing
   useEffect(() => {

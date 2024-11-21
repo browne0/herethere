@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { Heart, Loader2 } from 'lucide-react';
 
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatPrice } from '@/lib/utils';
 
 import { ParsedActivityRecommendation } from '../../types';
@@ -9,7 +10,6 @@ import { ParsedActivityRecommendation } from '../../types';
 interface ActivityCardProps {
   activity: ParsedActivityRecommendation;
   onAdd: (activity: ParsedActivityRecommendation) => Promise<void>;
-  isAdded: boolean;
 }
 
 function getDurationDisplay(minutes: number): string {
@@ -21,9 +21,12 @@ function getDurationDisplay(minutes: number): string {
     : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
-export function ActivityCard({ activity, onAdd, isAdded }: ActivityCardProps) {
+export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
+  const { activities } = useActivitiesStore();
+  const addedActivityIds = new Set(activities.map(a => a.recommendationId));
+  const isAdded = addedActivityIds.has(activity.id);
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();

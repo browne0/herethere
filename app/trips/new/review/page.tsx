@@ -6,7 +6,7 @@ import { CalendarDays, MapPin, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import { useTripStore } from '@/lib/stores/tripStore';
+import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { BudgetLevel } from '@/lib/types';
 
 interface CreateTripRequest {
@@ -29,7 +29,7 @@ interface CreateTripRequest {
 
 export default function ReviewPage() {
   const router = useRouter();
-  const { city, dates, budget, activities, reset } = useTripStore();
+  const { city, dates, budget, activities, reset } = useTripFormStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const shouldCheckValidation = useRef(true);

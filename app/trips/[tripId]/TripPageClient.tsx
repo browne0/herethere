@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { Calendar, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
 import { ItineraryView } from './components/ItineraryView';
@@ -23,11 +24,19 @@ interface TripPageClientProps {
 }
 
 export function TripPageClient({ trip, shelves }: TripPageClientProps) {
-  const { view, setView, totalActivities, initialize } = useTripView();
+  const { view, setView, initialize } = useTripView();
+  const { setActivities, activities, setTripId } = useActivitiesStore();
 
   useEffect(() => {
-    initialize(trip.activities.length);
-  }, [initialize, trip.activities.length]);
+    initialize(activities.length);
+  }, [initialize, activities.length]);
+
+  // Initialize store with trip activities
+  useEffect(() => {
+    setActivities(trip.activities);
+    setTripId(trip.id);
+  }, [trip.activities, setActivities, setTripId, trip.id]);
+
   const recommendedMin =
     Math.ceil(
       (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) /
@@ -64,12 +73,12 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
             {view === 'recommendations' && (
               <div className="flex items-center gap-3 text-sm">
                 <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-800 rounded-full">
-                  <span className="font-medium">{totalActivities}</span>
+                  <span className="font-medium">{activities.length}</span>
                   <span className="text-blue-600">selected</span>
                 </div>
                 <div className="text-gray-500">
-                  {recommendedMin - totalActivities > 0 ? (
-                    <span>Add {recommendedMin - totalActivities} more recommended</span>
+                  {recommendedMin - activities.length > 0 ? (
+                    <span>Add {recommendedMin - activities.length} more recommended</span>
                   ) : (
                     <span className="text-green-600">Ready to organize!</span>
                   )}
@@ -94,9 +103,9 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
                 }
               >
                 {tab}
-                {tab === 'Itinerary' && totalActivities > 0 && view === 'recommendations' && (
+                {tab === 'Itinerary' && activities.length > 0 && view === 'recommendations' && (
                   <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
-                    {totalActivities}
+                    {activities.length}
                   </span>
                 )}
               </button>
@@ -107,13 +116,9 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
 
       {/* Views */}
       {view === 'recommendations' ? (
-        <RecommendationsView
-          shelves={shelves}
-          tripId={trip.id}
-          existingActivityIds={trip.activities.map(a => a.recommendationId)}
-        />
+        <RecommendationsView shelves={shelves} />
       ) : (
-        <ItineraryView trip={trip} activities={trip.activities} />
+        <ItineraryView trip={trip} />
       )}
     </main>
   );

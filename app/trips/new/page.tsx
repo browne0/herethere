@@ -5,13 +5,13 @@ import { useRouter } from 'next/navigation';
 
 import { CitySearch } from '@/components/maps/CitySearch';
 import { Button } from '@/components/ui/button';
-import { useTripStore } from '@/lib/stores/tripStore';
+import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { popularDestinations } from '@/lib/trips';
 import type { City } from '@/lib/types';
 
 export default function CitySelectionPage() {
   const router = useRouter();
-  const { city, setCity } = useTripStore();
+  const { city, setCity } = useTripFormStore();
 
   const handleCitySelect = (selectedCity: City) => {
     setCity(selectedCity);

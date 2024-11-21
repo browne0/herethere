@@ -6,11 +6,11 @@ import { useRouter } from 'next/navigation';
 
 import DateRangePicker from '@/components/DateRangePicker';
 import { Button } from '@/components/ui/button';
-import { useTripStore } from '@/lib/stores/tripStore';
+import { useTripFormStore } from '@/lib/stores/tripFormStore';
 
 export default function DatesPage() {
   const router = useRouter();
-  const { city, dates, setDates } = useTripStore();
+  const { city, dates, setDates } = useTripFormStore();
 
   // Only redirect if we don't have a city at all
   useEffect(() => {

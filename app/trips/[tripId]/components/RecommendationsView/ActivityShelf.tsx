@@ -10,7 +10,6 @@ interface ActivityShelfProps {
   title: string;
   activities: ParsedActivityRecommendation[];
   onAddActivity: (activity: ParsedActivityRecommendation) => Promise<void>;
-  addedActivityIds: Set<string>;
 }
 
 function NavButton({
@@ -46,12 +45,7 @@ function NavButton({
   );
 }
 
-export function ActivityShelfComponent({
-  title,
-  activities,
-  onAddActivity,
-  addedActivityIds,
-}: ActivityShelfProps) {
+export function ActivityShelfComponent({ title, activities, onAddActivity }: ActivityShelfProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState({
     canScrollLeft: false,
@@ -129,12 +123,7 @@ export function ActivityShelfComponent({
         onScroll={updateScrollButtons}
       >
         {activities.map(activity => (
-          <ActivityCard
-            key={activity.id}
-            activity={activity}
-            onAdd={onAddActivity}
-            isAdded={addedActivityIds.has(activity.id)}
-          />
+          <ActivityCard key={activity.id} activity={activity} onAdd={onAddActivity} />
         ))}
       </div>
     </div>

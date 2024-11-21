@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { Trip } from '@prisma/client';
 import { format, isAfter, isBefore, isToday } from 'date-fns';
-import { Calendar, Plus, Plane, Map, ArrowRight } from 'lucide-react';
+import { Calendar, Plus, Plane, Map } from 'lucide-react';
 import Link from 'next/link';
 
 import { Container } from '@/components/layouts/container';
@@ -54,7 +54,7 @@ export default async function TripsPage() {
 
   const trips = await prisma.trip.findMany({
     where: { userId },
-    orderBy: { startDate: 'desc' },
+    orderBy: { startDate: 'asc' },
     include: {
       activities: true,
     },

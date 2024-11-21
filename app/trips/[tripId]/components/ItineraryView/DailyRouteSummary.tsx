@@ -6,6 +6,7 @@ import { Calendar } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 
 import { DayGroup } from './DayGroup';
+import { useTripView } from '../../hooks/useTripView';
 import type { ParsedItineraryActivity, ParsedTrip } from '../../types';
 
 interface DailyRouteSummaryProps {
@@ -32,6 +33,7 @@ export function DailyRouteSummary({
   selectedActivityId,
 }: DailyRouteSummaryProps) {
   // Group activities by day
+  const { setView } = useTripView();
   const groupedActivities = useMemo(() => {
     const totalDays = differenceInDays(trip.endDate, trip.startDate) + 1;
     const days: DayGroup[] = [];
@@ -71,10 +73,16 @@ export function DailyRouteSummary({
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
           <Calendar className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium mb-2">No Activities Planned</h3>
+          <h3 className="text-lg font-medium mb-2">Start Planning Your Days</h3>
           <p className="text-gray-500 text-center mb-4">
-            Start adding activities to build your itinerary
+            Browse activities and add them to your itinerary - we'll help organize them
           </p>
+          <button
+            onClick={() => setView('recommendations')}
+            className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary/90"
+          >
+            Browse Activities
+          </button>
         </CardContent>
       </Card>
     );

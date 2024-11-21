@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { GoogleMap, InfoWindow, OVERLAY_MOUSE_TARGET, OverlayView } from '@react-google-maps/api';
 import { format } from 'date-fns';
@@ -186,38 +186,47 @@ export function TripMapView({
 }: TripMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<ParsedItineraryActivity | null>(null);
+  const { isLoaded, loadError } = useGoogleMapsStatus();
+  const boundsSet = useRef(false);
 
-  // Fit bounds when activities change
-  // Updated bounds effect to handle empty activities
-  useEffect(() => {
-    if (!map) return;
+  const fitBoundsToActivities = useCallback(() => {
+    if (!map || !activities.length) return;
 
     const bounds = new google.maps.LatLngBounds();
-
-    if (activities.length > 0) {
-      // If we have activities, fit bounds to include all activities
-      activities.forEach(activity => {
-        const { location } = activity.recommendation;
-        console.log(location);
-        bounds.extend({ lat: location.latitude, lng: location.longitude });
-      });
-    } else {
-      // If no activities, center on destination with appropriate zoom
-      map.setCenter({ lat: destination.latitude, lng: destination.longitude });
-      map.setZoom(13); // City-level zoom
-      return; // Skip bounds fitting for destination-only view
-    }
-
+    activities.forEach(activity => {
+      const { location } = activity.recommendation;
+      bounds.extend({ lat: location.latitude, lng: location.longitude });
+    });
     map.fitBounds(bounds, 50);
-  }, [map, activities, destination]);
+  }, [map, activities]);
 
-  const getLabelPosition = (lng: number): 'left' | 'right' => {
-    if (!map) return 'right';
-    const center = map.getCenter();
-    return lng > center!.lng() ? 'left' : 'right';
-  };
+  const handleMapLoad = useCallback((mapInstance: google.maps.Map) => {
+    setMap(mapInstance);
+    boundsSet.current = false; // Reset bounds flag on map load
+  }, []);
 
-  const { isLoaded, loadError } = useGoogleMapsStatus();
+  // Only fit bounds when activities change or on initial load
+  useEffect(() => {
+    if (!map || boundsSet.current) return;
+
+    if (activities.length === 0) {
+      map.setCenter({ lat: destination.latitude, lng: destination.longitude });
+      map.setZoom(13);
+    } else {
+      fitBoundsToActivities();
+    }
+    boundsSet.current = true;
+  }, [map, activities, destination, fitBoundsToActivities]);
+
+  const getLabelPosition = useCallback(
+    (lng: number): 'left' | 'right' => {
+      if (!map) return 'right';
+      const center = map.getCenter();
+      if (!center) return 'left';
+      return lng > center.lng() ? 'left' : 'right';
+    },
+    [map]
+  );
 
   if (!isLoaded) {
     return (
@@ -244,14 +253,7 @@ export function TripMapView({
 
   return (
     <div className="h-full relative">
-      <GoogleMap
-        mapContainerClassName="w-full h-full"
-        options={{
-          ...mapOptions,
-          center: { lat: destination.latitude, lng: destination.longitude },
-        }}
-        onLoad={setMap}
-      >
+      <GoogleMap mapContainerClassName="w-full h-full" options={mapOptions} onLoad={handleMapLoad}>
         {activities.map(activity => (
           <CustomMarker
             key={activity.id}

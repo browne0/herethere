@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 
 import type { BudgetLevel, City, DateRangeType } from '@/lib/types';
 
-interface TripStore {
+interface TripFormStore {
   city: City | null;
   dates: DateRangeType | null;
   budget: BudgetLevel | null;
@@ -18,7 +18,7 @@ interface TripStore {
   reset: () => void;
 }
 
-export const useTripStore = create<TripStore>()(
+export const useTripFormStore = create<TripFormStore>()(
   persist(
     set => ({
       city: null,

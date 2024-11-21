@@ -7,35 +7,32 @@ import { Map, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { DailyRouteSummary } from './DailyRouteSummary';
 import { TripMapView } from './TripMapView';
-import { ParsedItineraryActivity, ParsedTrip } from '../../types';
+import { ParsedTrip } from '../../types';
 
 interface ItineraryViewProps {
-  activities: ParsedItineraryActivity[];
   trip: ParsedTrip;
 }
 
 export function ItineraryView({ trip }: ItineraryViewProps) {
+  const activities = useActivitiesStore(state => state.activities);
   const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [isMapOpen, setIsMapOpen] = useState(false);
 
   return (
     <div className="h-[calc(100vh-163px)]">
-      {' '}
-      {/* Updated height on parent */}
       {/* Split View Container */}
       <div className="h-full grid md:grid-cols-[1fr,1fr]">
-        {' '}
-        {/* Changed to h-full */}
         {/* Timeline Panel - Scrollable */}
         <div className="overflow-y-auto border-r bg-white">
           <div className="p-6">
             <DailyRouteSummary
               trip={trip}
-              activities={trip.activities}
+              activities={activities}
               onActivityHover={setHoveredActivityId}
               onActivitySelect={setSelectedActivityId}
               hoveredActivityId={hoveredActivityId}
@@ -46,7 +43,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
         {/* Map Panel - Fixed */}
         <div className="hidden md:block relative h-full">
           <TripMapView
-            activities={trip.activities}
+            activities={activities}
             onMarkerHover={setHoveredActivityId}
             onMarkerSelect={setSelectedActivityId}
             hoveredActivityId={hoveredActivityId}
@@ -85,7 +82,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
               </Button>
             </div>
             <TripMapView
-              activities={trip.activities}
+              activities={activities}
               onMarkerHover={setHoveredActivityId}
               onMarkerSelect={id => {
                 setSelectedActivityId(id);
