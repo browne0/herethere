@@ -1,6 +1,6 @@
 // app/trips/new/review/page.tsx
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { CalendarDays, MapPin, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -32,9 +32,12 @@ export default function ReviewPage() {
   const { city, dates, budget, activities, reset } = useTripStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const shouldCheckValidation = useRef(true);
 
   // Only redirect if previous steps are missing
   useEffect(() => {
+    if (!shouldCheckValidation.current) return;
+
     if (!city) {
       router.push('/trips/new');
     } else if (!dates?.from || !dates?.to) {
@@ -55,7 +58,6 @@ export default function ReviewPage() {
     setError(null);
 
     try {
-      // Format the request to match our schema
       const tripData: CreateTripRequest = {
         title: `Trip to ${city.name}`,
         destination: city.name,
@@ -87,7 +89,11 @@ export default function ReviewPage() {
       }
 
       const { trip } = await response.json();
-      reset(); // Clear the store after successful creation
+
+      // Disable validation checks before resetting and navigating
+      shouldCheckValidation.current = false;
+
+      reset();
       router.push(`/trips/${trip.id}`);
     } catch (error) {
       console.error('Error creating trip:', error);
@@ -98,6 +104,7 @@ export default function ReviewPage() {
   };
 
   const handleEdit = (section: 'city' | 'dates' | 'budget' | 'activities') => {
+    shouldCheckValidation.current = false;
     const routes = {
       city: '/trips/new',
       dates: '/trips/new/dates',
@@ -108,6 +115,7 @@ export default function ReviewPage() {
   };
 
   const handleBack = () => {
+    shouldCheckValidation.current = false;
     router.push('/trips/new/activities');
   };
 

@@ -1,7 +1,4 @@
-import { Client } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
-
-const client = new Client({});
 
 export async function GET(request: Request, { params }: { params: { reference: string } }) {
   try {

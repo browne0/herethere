@@ -15,7 +15,7 @@ export default function CitySelectionPage() {
 
   const handleCitySelect = (selectedCity: City) => {
     setCity(selectedCity);
-    handleNext();
+    router.push('/trips/new/dates');
   };
 
   const handleNext = () => {

@@ -198,6 +198,7 @@ export function TripMapView({
       // If we have activities, fit bounds to include all activities
       activities.forEach(activity => {
         const { location } = activity.recommendation;
+        console.log(location);
         bounds.extend({ lat: location.latitude, lng: location.longitude });
       });
     } else {

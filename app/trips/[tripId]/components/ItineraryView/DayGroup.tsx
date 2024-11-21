@@ -1,12 +1,12 @@
-// app/trips/[tripId]/components/ItineraryView/DayGroup.tsx
 import { useState, useMemo } from 'react';
 
 import { format } from 'date-fns';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 import { ActivityTimelineItem } from './ActivityTimelineItem';
+import { useTripView } from '../../hooks/useTripView';
 import type { ParsedItineraryActivity } from '../../types';
 
 interface DayGroupProps {
@@ -32,7 +32,9 @@ export function DayGroup({
   hoveredActivityId,
   selectedActivityId,
 }: DayGroupProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(day.activities.length > 0);
+
+  const { setView } = useTripView();
 
   const dayTitle = useMemo(() => {
     if (isFirst) return 'Arrival Day';
@@ -40,6 +42,32 @@ export function DayGroup({
     return `Day ${day.dayNumber}`;
   }, [isFirst, isLast, day.dayNumber]);
 
+  // If it's an empty day, show a simplified version
+  if (day.activities.length === 0) {
+    return (
+      <div className="bg-white/50 rounded-xl border border-dashed border-gray-200">
+        <button
+          onClick={() => setView('recommendations')}
+          className="w-full px-6 py-4 flex items-center gap-3 hover:bg-gray-50/50 rounded-xl text-left group"
+        >
+          <div className="p-2 rounded-lg bg-gray-50 group-hover:bg-gray-100 transition-colors">
+            <Plus className="h-4 w-4 text-gray-400 group-hover:text-gray-500" />
+          </div>
+
+          <div className="flex-1">
+            <span className="font-medium text-gray-600">{dayTitle}</span>
+            <span className="text-gray-400 ml-2">{format(day.date, 'MMM d')}</span>
+          </div>
+
+          <span className="text-sm text-gray-400 group-hover:text-gray-500">
+            Add activities to this day
+          </span>
+        </button>
+      </div>
+    );
+  }
+
+  // Regular day with activities
   return (
     <div className="bg-white rounded-xl shadow-sm">
       {/* Day Header */}

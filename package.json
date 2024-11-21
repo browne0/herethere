@@ -12,11 +12,11 @@
     "lint:fix": "next lint --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "db:push": "dotenv -e .env.local -- prisma db push && dotenv -e .env.production -- prisma db push",
     "db:push:dev": "dotenv -e .env.local -- prisma db push",
     "db:push:prod": "dotenv -e .env.production -- prisma db push",
     "db:seed": "tsx prisma/seed/activities.ts",
     "prisma:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset && prisma generate",
     "sync-users": "dotenv -e .env.local -- tsx scripts/sync-clerk-users.ts",
     "sync-users:prod": "dotenv -e .env.production -- tsx scripts/sync-clerk-users.ts"
   },

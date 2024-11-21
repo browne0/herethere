@@ -1,10 +1,12 @@
 // app/api/directions/route.ts
-import { Client, TravelMode } from '@googlemaps/google-maps-services-js';
+import { TravelMode } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
 
-const client = new Client();
+import { GoogleMapsClient } from '@/lib/maps/utils';
 
 export async function POST(request: Request) {
+  const client = await GoogleMapsClient.getInstance();
+
   try {
     const body = await request.json();
     const { origin, destination } = body;

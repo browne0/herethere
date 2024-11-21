@@ -1,73 +1,39 @@
 import { auth } from '@clerk/nextjs/server';
+import { OpeningHours } from '@googlemaps/google-maps-services-js';
+import { addMinutes, isSameDay } from 'date-fns';
 import { NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/db';
+import { getTransitTime } from '@/lib/maps/utils';
 
-export const GET = async (_req: Request, { params }: { params: { tripId: string } }) => {
+import { findAvailableSlots, ItineraryActivity, scoreTimeSlot } from './utils';
+
+export async function POST(request: Request, { params }: { params: { tripId: string } }) {
   try {
-    const { userId } = await auth();
-    const { tripId } = await params;
-    if (!userId) {
-      return new Response('Unauthorized', { status: 401 });
-    }
-
-    // Verify the trip exists and belongs to the user
-    const trip = await prisma.trip.findFirst({
-      where: {
-        id: tripId,
-        userId,
-      },
-      select: { id: true }, // Only select id for performance
-    });
-
-    if (!trip) {
-      return new Response('Trip not found', { status: 404 });
-    }
-
-    // Fetch activities
-    const activities = await prisma.activity.findMany({
-      where: {
-        tripId: tripId,
-      },
-      orderBy: {
-        startTime: 'asc',
-      },
-    });
-
-    return NextResponse.json(activities);
-  } catch (error) {
-    console.error('Error fetching activities:', error);
-    return new Response('Internal Server Error', { status: 500 });
-  }
-};
-
-export async function POST(req: Request, { params }: { params: { tripId: string } }) {
-  try {
+    // Auth check
     const { userId } = await auth();
     const { tripId } = await params;
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const body = await req.json();
-    const {
-      name,
-      category,
-      startTime,
-      endTime,
-      notes,
-      address,
-      latitude,
-      longitude,
-      placeId,
-      dayNumber,
-    } = body;
+    // Get request data
+    const { recommendationId } = await request.json();
 
-    // Validate the trip belongs to the user
-    const trip = await prisma.trip.findFirst({
+    // Fetch trip and validate ownership
+    const trip = await prisma.trip.findUnique({
       where: {
         id: tripId,
-        userId: userId,
+        userId,
+      },
+      include: {
+        activities: {
+          include: {
+            recommendation: true,
+          },
+          orderBy: {
+            startTime: 'asc',
+          },
+        },
       },
     });
 
@@ -75,26 +41,103 @@ export async function POST(req: Request, { params }: { params: { tripId: string 
       return new NextResponse('Trip not found', { status: 404 });
     }
 
-    // Create activity with the new schema structure
-    const activity = await prisma.activity.create({
-      data: {
-        tripId,
-        name,
-        category,
-        address,
-        latitude: latitude || null,
-        longitude: longitude || null,
-        placeId: placeId || null,
-        startTime: new Date(startTime),
-        endTime: new Date(endTime),
-        notes,
-        dayNumber,
+    // Get recommendation
+    const recommendation = await prisma.activityRecommendation.findUnique({
+      where: {
+        id: recommendationId,
       },
     });
 
-    return NextResponse.json(activity);
+    if (!recommendation) {
+      return new NextResponse('Activity recommendation not found', { status: 404 });
+    }
+
+    // Main Scheduling Logic
+    let bestSlot: Date | null = null;
+    let bestScore = -Infinity;
+    let bestTransitTime = Infinity;
+
+    const currentDate = new Date(trip.startDate);
+    const endDate = new Date(trip.endDate);
+    const isRestaurant = recommendation.type === 'restaurant';
+
+    while (currentDate <= endDate && !bestSlot) {
+      const availableSlots = findAvailableSlots(
+        trip.activities,
+        currentDate,
+        recommendation.duration,
+        recommendation.openingHours as OpeningHours,
+        isRestaurant
+      );
+
+      for (const slot of availableSlots) {
+        const previousActivity = trip.activities
+          .filter((a: ItineraryActivity) => new Date(a.endTime) <= slot)
+          .sort(
+            (a: ItineraryActivity, b: ItineraryActivity) =>
+              new Date(b.endTime).getTime() - new Date(a.endTime).getTime()
+          )[0];
+
+        const transitTime = previousActivity
+          ? await getTransitTime(
+              {
+                lat: previousActivity.recommendation.latitude,
+                lng: previousActivity.recommendation.longitude,
+              },
+              {
+                lat: recommendation.latitude,
+                lng: recommendation.longitude,
+              },
+              new Date(previousActivity.endTime)
+            )
+          : 30;
+
+        const score = scoreTimeSlot(
+          slot,
+          transitTime,
+          (trip.activities as ItineraryActivity[]).filter(a =>
+            isSameDay(new Date(a.startTime), currentDate)
+          ),
+          isRestaurant
+        );
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestTransitTime = transitTime;
+          bestSlot = slot;
+        }
+      }
+
+      currentDate.setDate(currentDate.getDate() + 1);
+      currentDate.setHours(10, 0, 0, 0);
+    }
+
+    if (!bestSlot) {
+      return new NextResponse('No suitable time slots found', { status: 400 });
+    }
+
+    // Calculate final times
+    const startTime = addMinutes(bestSlot, bestTransitTime);
+    const endTime = addMinutes(startTime, recommendation.duration);
+
+    // Create the activity
+    const activity = await prisma.itineraryActivity.create({
+      data: {
+        tripId,
+        recommendationId: recommendation.id,
+        startTime,
+        endTime,
+        transitTimeFromPrevious: bestTransitTime,
+        status: 'planned',
+      },
+      include: {
+        recommendation: true,
+      },
+    });
+
+    return NextResponse.json({ activity });
   } catch (error) {
-    console.error('Error creating activity:', error);
-    return new NextResponse('Internal error', { status: 500 });
+    console.error('Error adding activity:', error);
+    return new NextResponse('Internal Error', { status: 500 });
   }
 }

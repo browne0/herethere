@@ -2,9 +2,6 @@
 
 import { useState } from 'react';
 
-import { Info } from 'lucide-react';
-
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useToast } from '@/hooks/use-toast';
 
 import { ActivityShelfComponent } from './ActivityShelf';

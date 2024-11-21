@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
-import { ParsedActivityRecommendation } from './types';
+import { ParsedActivityRecommendation, ParsedItineraryActivity } from './types';
 
 // Helper to parse JSON fields from ActivityRecommendation
 function parseActivityRecommendation(activity: any): ParsedActivityRecommendation {
@@ -16,6 +16,14 @@ function parseActivityRecommendation(activity: any): ParsedActivityRecommendatio
     openingHours: activity.openingHours ? JSON.parse(activity.openingHours) : null,
     seasonality: JSON.parse(activity.seasonality),
     tags: JSON.parse(activity.tags),
+  };
+}
+
+function parseItineraryActivity(activity: any): ParsedItineraryActivity {
+  return {
+    ...activity,
+    recommendation: parseActivityRecommendation(activity.recommendation),
+    customizations: activity.customizations ? JSON.parse(activity.customizations) : null,
   };
 }
 
@@ -48,6 +56,13 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     redirect('/trips');
   }
 
+  console.log(trip.preferences as string);
+
+  const parsedTrip = {
+    ...trip,
+    activities: trip.activities.map(parseItineraryActivity),
+  };
+
   const recommendations = await prisma.activityRecommendation.findMany({
     where: {
       // Add filters based on trip preferences
@@ -62,8 +77,13 @@ export default async function TripPage({ params }: { params: { tripId: string } 
   // Organize recommendations into shelves
   const shelves = [
     {
-      title: 'Happening tomorrow',
-      type: 'happening-tomorrow',
+      title: 'Based on your interests',
+      type: 'personalized',
+      activities: parsedRecommendations.slice(10, 15),
+    },
+    {
+      title: 'Trending on Social Media',
+      type: 'trending-social-media',
       activities: parsedRecommendations.slice(0, 5),
     },
     {
@@ -71,12 +91,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       type: 'popular',
       activities: parsedRecommendations.slice(5, 10),
     },
-    {
-      title: 'Based on your interests',
-      type: 'personalized',
-      activities: parsedRecommendations.slice(10, 15),
-    },
   ];
 
-  return <TripPageClient trip={trip as any} shelves={shelves} />;
+  return <TripPageClient trip={parsedTrip} shelves={shelves} />;
 }

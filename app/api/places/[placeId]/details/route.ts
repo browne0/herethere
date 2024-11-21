@@ -1,17 +1,18 @@
-import { AddressType, Client, Language } from '@googlemaps/google-maps-services-js';
+import { AddressType, Language } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
 
+import { GoogleMapsClient } from '@/lib/maps/utils';
 import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
 
 if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
   throw new Error('Missing Google Maps API key');
 }
 
-const googleMapsClient = new Client({});
 export async function GET(request: Request, { params }: { params: { placeId: string } }) {
+  const client = await GoogleMapsClient.getInstance();
   try {
     const { placeId } = await params;
-    const response = await googleMapsClient.placeDetails({
+    const response = await client.placeDetails({
       params: {
         place_id: placeId,
         fields: [

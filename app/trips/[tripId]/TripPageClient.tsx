@@ -1,22 +1,20 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect } from 'react';
 
-import { Trip } from '@prisma/client';
 import { format } from 'date-fns';
-import { Calendar, ChevronLeft, MapPin, Users } from 'lucide-react';
+import { Calendar, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { cn } from '@/lib/utils';
 
 import { ItineraryView } from './components/ItineraryView';
 import { RecommendationsView } from './components/RecommendationsView';
-import { ParsedActivityRecommendation, ParsedItineraryActivity } from './types';
+import { useTripView } from './hooks/useTripView';
+import { ParsedActivityRecommendation, ParsedTrip } from './types';
 
 interface TripPageClientProps {
-  trip: Trip & {
-    activities: ParsedItineraryActivity[];
-  };
+  trip: ParsedTrip;
   shelves: {
     title: string;
     type: string;
@@ -25,16 +23,22 @@ interface TripPageClientProps {
 }
 
 export function TripPageClient({ trip, shelves }: TripPageClientProps) {
-  const [view, setView] = useState<'recommendations' | 'itinerary'>('recommendations');
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isSelectedOpen, setIsSelectedOpen] = useState(false);
+  const { view, setView, totalActivities, initialize } = useTripView();
+
+  useEffect(() => {
+    initialize(trip.activities.length);
+  }, [initialize, trip.activities.length]);
+  const recommendedMin =
+    Math.ceil(
+      (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) /
+        (1000 * 60 * 60 * 24)
+    ) * 4;
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* Main Header - Always visible */}
-      <div className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          {/* Back Link - Above everything else */}
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4">
+          {/* Back Link */}
           <div className="py-3">
             <Link
               href="/trips"
@@ -44,47 +48,43 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
               Back to Trips
             </Link>
           </div>
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center text-gray-600 text-sm">
-              <MapPin className="w-4 h-4 mr-1" />
-              <span>{trip.destination}</span>
-            </div>
-            <div className="flex items-center text-gray-600 text-sm">
-              <Calendar className="w-4 h-4 mr-1" />
-              <span>
-                {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl font-semibold">
-              {view === 'recommendations'
-                ? `Trip to ${trip.destination}`
-                : `Your ${trip.destination} Itinerary`}
-            </h1>
-            <div className="flex items-center gap-1">
-              {[1, 2].map(i => (
-                <div
-                  key={i}
-                  className="w-6 h-6 rounded-full bg-blue-100 border-2 border-white flex items-center justify-center"
-                >
-                  <Users className="w-3 h-3 text-blue-600" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Navigation Tabs */}
-      <div className="bg-white border-t border-b flex items-center">
-        <div className="max-w-7xl mx-auto px-4">
+          {/* Trip Info with Inline Progress */}
+          <div className="flex items-center justify-between pb-4">
+            <div className="space-y-1">
+              <h1 className="text-xl font-semibold">Trip to {trip.destination}</h1>
+              <div className="gap-4 text-sm text-gray-600">
+                <div className="flex items-center">
+                  <Calendar className="w-4 h-4 mr-1" />
+                  {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
+                </div>
+              </div>
+            </div>
+
+            {view === 'recommendations' && (
+              <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-800 rounded-full">
+                  <span className="font-medium">{totalActivities}</span>
+                  <span className="text-blue-600">selected</span>
+                </div>
+                <div className="text-gray-500">
+                  {recommendedMin - totalActivities > 0 ? (
+                    <span>Add {recommendedMin - totalActivities} more recommended</span>
+                  ) : (
+                    <span className="text-green-600">Ready to organize!</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Navigation Tabs */}
           <div className="flex items-center">
             {['Browse Activities', 'Itinerary'].map(tab => (
               <button
                 key={tab}
                 className={cn(
-                  'px-4 py-4 text-sm font-medium border-b-2 transition-colors',
+                  'px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2',
                   view === (tab === 'Browse Activities' ? 'recommendations' : 'itinerary')
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -94,6 +94,11 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
                 }
               >
                 {tab}
+                {tab === 'Itinerary' && totalActivities > 0 && view === 'recommendations' && (
+                  <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
+                    {totalActivities}
+                  </span>
+                )}
               </button>
             ))}
           </div>
@@ -102,14 +107,11 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
 
       {/* Views */}
       {view === 'recommendations' ? (
-        <>
-          <RecommendationsView
-            shelves={shelves}
-            tripId={trip.id}
-            existingActivityIds={trip.activities.map(a => a.recommendationId)}
-            preferences={trip.preferences}
-          />
-        </>
+        <RecommendationsView
+          shelves={shelves}
+          tripId={trip.id}
+          existingActivityIds={trip.activities.map(a => a.recommendationId)}
+        />
       ) : (
         <ItineraryView trip={trip} activities={trip.activities} />
       )}

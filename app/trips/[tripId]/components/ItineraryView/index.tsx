@@ -3,22 +3,18 @@
 
 import { useState } from 'react';
 
-import { Trip } from '@prisma/client';
-import { format } from 'date-fns';
-import { CalendarDays, Map, MapPin, Users, X } from 'lucide-react';
+import { Map, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent } from '@/components/ui/sheet';
 
 import { DailyRouteSummary } from './DailyRouteSummary';
 import { TripMapView } from './TripMapView';
-import { ParsedItineraryActivity } from '../../types';
+import { ParsedItineraryActivity, ParsedTrip } from '../../types';
 
 interface ItineraryViewProps {
   activities: ParsedItineraryActivity[];
-  trip: Trip & {
-    activities: ParsedItineraryActivity[];
-  };
+  trip: ParsedTrip;
 }
 
 export function ItineraryView({ trip }: ItineraryViewProps) {
@@ -27,7 +23,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
   const [isMapOpen, setIsMapOpen] = useState(false);
 
   return (
-    <div className="h-[calc(100vh-11.91rem)]">
+    <div className="h-[calc(100vh-163px)]">
       {' '}
       {/* Updated height on parent */}
       {/* Split View Container */}

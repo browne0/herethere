@@ -1,18 +1,15 @@
 import { useMemo } from 'react';
 
-import { Trip } from '@prisma/client';
 import { differenceInDays, addDays } from 'date-fns';
 import { Calendar } from 'lucide-react';
 
 import { Card, CardContent } from '@/components/ui/card';
 
 import { DayGroup } from './DayGroup';
-import type { ParsedItineraryActivity } from '../../types';
+import type { ParsedItineraryActivity, ParsedTrip } from '../../types';
 
 interface DailyRouteSummaryProps {
-  trip: Trip & {
-    activities: ParsedItineraryActivity[];
-  };
+  trip: ParsedTrip;
   activities: ParsedItineraryActivity[];
   onActivityHover: (activityId: string | null) => void;
   onActivitySelect: (activityId: string | null) => void;

@@ -1,20 +1,21 @@
-import { Client } from '@googlemaps/google-maps-services-js';
 import type { PlaceInputType, Language } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
+
+import { GoogleMapsClient } from '@/lib/maps/utils';
 
 if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
   throw new Error('Missing Google Maps API key');
 }
 
-const googleMapsClient = new Client({});
-
 // POST for search since we're sending search criteria in body
 export async function POST(request: Request) {
+  const client = await GoogleMapsClient.getInstance();
+
   try {
     const body = await request.json();
     const { query, locationBias } = body;
 
-    const response = await googleMapsClient.findPlaceFromText({
+    const response = await client.findPlaceFromText({
       params: {
         input: query,
         inputtype: 'textquery' as PlaceInputType,

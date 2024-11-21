@@ -1,13 +1,14 @@
-import { Client, Language } from '@googlemaps/google-maps-services-js';
+import { Language } from '@googlemaps/google-maps-services-js';
 import { NextResponse } from 'next/server';
+
+import { GoogleMapsClient } from '@/lib/maps/utils';
 
 if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
   throw new Error('Missing Google Maps API key');
 }
 
-const client = new Client({});
-
 export async function GET(request: Request, { params }: { params: { placeId: string } }) {
+  const client = await GoogleMapsClient.getInstance();
   try {
     const { placeId } = await params;
     const { searchParams } = new URL(request.url);

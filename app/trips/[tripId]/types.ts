@@ -45,3 +45,16 @@ export interface TripDetailsPageProps {
     activities: ParsedItineraryActivity[];
   };
 }
+
+export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences'> {
+  activities: ParsedItineraryActivity[];
+  preferences?: {
+    budget?: string;
+    activities?: string[];
+    location?: {
+      latitude: number;
+      longitude: number;
+      placeId?: string;
+    };
+  };
+}
