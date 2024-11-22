@@ -123,7 +123,7 @@ export default async function PublicTripPage({
       </div>
 
       <div className="mt-8 text-center text-sm text-muted-foreground">
-        Created with WanderAI
+        Created with HereThere
       </div>
     </Container>
   );

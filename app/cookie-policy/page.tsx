@@ -11,7 +11,7 @@ const CookiePolicy: React.FC = () => {
         <section>
           <h2 className="text-2xl font-semibold text-gray-800">1. Introduction</h2>
           <p>
-            At WanderAI, we use cookies to improve your experience on our site and to help us
+            At HereThere, we use cookies to improve your experience on our site and to help us
             understand how you interact with our services. This Cookie Policy explains what cookies
             are, how we use them, and your options regarding their use.
           </p>
@@ -28,7 +28,7 @@ const CookiePolicy: React.FC = () => {
 
         <section>
           <h2 className="text-2xl font-semibold text-gray-800">3. Types of Cookies We Use</h2>
-          <p>We use the following types of cookies on WanderAI:</p>
+          <p>We use the following types of cookies on HereThere:</p>
           <ul className="list-disc pl-6 space-y-2">
             <li>
               <strong>Essential Cookies:</strong> These cookies are necessary for the functionality
@@ -37,12 +37,12 @@ const CookiePolicy: React.FC = () => {
             </li>
             <li>
               <strong>Analytical Cookies:</strong> These cookies help us analyze how visitors use
-              our site, allowing us to improve and optimize WanderAI’s performance. Data collected
+              our site, allowing us to improve and optimize HereThere’s performance. Data collected
               by these cookies is aggregated and anonymous.
             </li>
             <li>
               <strong>Functional Cookies:</strong> These cookies allow us to remember your
-              preferences and personalize your experience on WanderAI, such as remembering your
+              preferences and personalize your experience on HereThere, such as remembering your
               language preferences or login details.
             </li>
             <li>
@@ -56,9 +56,9 @@ const CookiePolicy: React.FC = () => {
         <section>
           <h2 className="text-2xl font-semibold text-gray-800">4. How We Use Cookies</h2>
           <p>
-            We use cookies to provide a seamless experience on WanderAI, to analyze website traffic,
-            to personalize content, and to serve targeted advertisements. For more information on
-            how we use your data, please refer to our{' '}
+            We use cookies to provide a seamless experience on HereThere, to analyze website
+            traffic, to personalize content, and to serve targeted advertisements. For more
+            information on how we use your data, please refer to our{' '}
             <a href="/privacy-policy" className="text-blue-600 hover:underline">
               Privacy Policy
             </a>
@@ -73,7 +73,7 @@ const CookiePolicy: React.FC = () => {
           <p>
             You can manage your cookie preferences by adjusting the settings on your browser. Most
             browsers allow you to control cookies through their settings. However, please note that
-            disabling certain cookies may impact your experience on WanderAI and limit some
+            disabling certain cookies may impact your experience on HereThere and limit some
             functionalities.
           </p>
           <p>
@@ -85,7 +85,7 @@ const CookiePolicy: React.FC = () => {
         <section>
           <h2 className="text-2xl font-semibold text-gray-800">6. Third-Party Cookies</h2>
           <p>
-            Some cookies on WanderAI are placed by third-party service providers, such as analytics
+            Some cookies on HereThere are placed by third-party service providers, such as analytics
             or advertising partners. These cookies allow these providers to collect information
             about your device and browsing behavior on our site and, in some cases, across other
             websites.
@@ -109,8 +109,8 @@ const CookiePolicy: React.FC = () => {
           <h2 className="text-2xl font-semibold text-gray-800">8. Contact Us</h2>
           <p>
             If you have any questions or concerns about our use of cookies, please contact us at{' '}
-            <a href="mailto:support@wanderai.com" className="text-blue-600 hover:underline">
-              support@wanderai.com
+            <a href="mailto:support@HereThere.com" className="text-blue-600 hover:underline">
+              support@HereThere.com
             </a>
             .
           </p>

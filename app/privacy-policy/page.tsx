@@ -11,7 +11,7 @@ const PrivacyPolicy: React.FC = () => {
         <section>
           <h2 className="text-2xl font-semibold text-gray-800">1. Introduction</h2>
           <p>
-            Welcome to WanderAI! This Privacy Policy explains how we collect, use, and share your
+            Welcome to HereThere! This Privacy Policy explains how we collect, use, and share your
             personal information when you use our AI-powered travel itinerary planner. We prioritize
             your privacy and are committed to protecting your personal data.
           </p>
@@ -42,7 +42,7 @@ const PrivacyPolicy: React.FC = () => {
         <section>
           <h2 className="text-2xl font-semibold text-gray-800">3. How We Use Your Information</h2>
           <p>
-            WanderAI uses your information to generate AI-powered, personalized itineraries,
+            HereThere uses your information to generate AI-powered, personalized itineraries,
             tailored to your preferences and dietary needs. We may also use your data to improve our
             services, communicate with you, and keep our system secure.
           </p>
@@ -77,7 +77,7 @@ const PrivacyPolicy: React.FC = () => {
           <h2 className="text-2xl font-semibold text-gray-800">6. Your Rights</h2>
           <p>
             You have the right to access, update, or delete your personal data. You can manage your
-            data by logging into your account or contacting us at support@WanderAI.com.
+            data by logging into your account or contacting us at support@HereThere.com.
           </p>
         </section>
 
@@ -93,7 +93,7 @@ const PrivacyPolicy: React.FC = () => {
           <h2 className="text-2xl font-semibold text-gray-800">8. Contact Us</h2>
           <p>
             If you have questions or concerns about this Privacy Policy, please contact us at
-            support@wanderai.com.
+            support@HereThere.com.
           </p>
         </section>
       </div>

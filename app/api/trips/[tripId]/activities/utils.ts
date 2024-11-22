@@ -183,6 +183,18 @@ export function scoreTimeSlot(
   return score;
 }
 
+function conflictsWithMeals(requiredMealBlocks: TimeBlock[], start: Date, end: Date): boolean {
+  return requiredMealBlocks.some(block => {
+    const blockStart = block.start.getTime();
+    const blockEnd = block.end.getTime();
+    const slotStart = start.getTime();
+    const slotEnd = end.getTime();
+
+    // Check if any part of the activity overlaps with meal block
+    return slotStart < blockEnd && slotEnd > blockStart;
+  });
+}
+
 export function findAvailableSlots(
   activities: ItineraryActivity[],
   date: Date,
@@ -195,9 +207,8 @@ export function findAvailableSlots(
   );
 
   const slots: Date[] = [];
-  const reservedBlocks = getReservedMealBlocks(activities, date);
 
-  // For restaurants, prioritize meal times
+  // For restaurants, only return meal time slots
   if (isRestaurant) {
     Object.entries(MEAL_WINDOWS).forEach(([mealType, window]) => {
       if (!hasMealScheduled(dayActivities, mealType as 'breakfast' | 'lunch' | 'dinner')) {
@@ -220,61 +231,110 @@ export function findAvailableSlots(
     return slots;
   }
 
-  // For regular activities
-  let currentTime = new Date(date);
-  currentTime.setHours(10, 0, 0, 0);
-  const endTime = new Date(date);
-  endTime.setHours(20, 0, 0, 0);
+  // For regular activities, first get all reserved blocks
+  const reservedBlocks = getReservedMealBlocks(activities, date);
+  const requiredMealBlocks = reservedBlocks.filter(block => block.required);
+  const breakfastBlock = reservedBlocks.find(block => !block.required);
 
-  // Combine activities and required meal blocks for gap finding
-  const allBlocks = [
-    ...reservedBlocks.filter(block => block.required),
-    ...dayActivities.map(activity => ({
-      start: new Date(activity.startTime),
-      end: new Date(activity.endTime),
-      type: 'activity' as const,
-      required: true,
-    })),
-  ].sort((a, b) => a.start.getTime() - b.start.getTime());
+  // Try slots within current day that maintain meal gaps
+  if (dayActivities.length > 0) {
+    const lastActivity = dayActivities[dayActivities.length - 1];
+    const lastEnd = new Date(lastActivity.endTime);
 
-  // Find gaps between blocks
-  while (currentTime < endTime) {
-    const nextBlock = allBlocks.find(block => block.start > currentTime);
+    // If activity ends before lunch window, try after lunch
+    if (lastEnd.getHours() < MEAL_WINDOWS.lunch.end) {
+      const afterLunch = new Date(date);
+      afterLunch.setHours(MEAL_WINDOWS.lunch.end + 0.5, 30, 0, 0); // 2:00 PM
 
-    if (!nextBlock) {
-      // Check if we can fit activity before end of day
-      const potentialEndTime = addMinutes(currentTime, duration);
       if (
-        potentialEndTime <= endTime &&
-        isOpenAtTime(openingHours, currentTime) &&
-        isOpenAtTime(openingHours, potentialEndTime)
+        isOpenAtTime(openingHours, afterLunch) &&
+        isOpenAtTime(openingHours, addMinutes(afterLunch, duration))
       ) {
-        slots.push(new Date(currentTime));
-      }
-      break;
-    }
-
-    const gap = nextBlock.start.getTime() - currentTime.getTime();
-    const gapMinutes = gap / (1000 * 60);
-
-    if (gapMinutes >= duration) {
-      const potentialEndTime = addMinutes(currentTime, duration);
-      if (isOpenAtTime(openingHours, currentTime) && isOpenAtTime(openingHours, potentialEndTime)) {
-        slots.push(new Date(currentTime));
+        slots.push(afterLunch);
       }
     }
+    // If activity ends after lunch but before dinner, try after dinner
+    else if (lastEnd.getHours() < MEAL_WINDOWS.dinner.start) {
+      const afterDinner = new Date(date);
+      afterDinner.setHours(MEAL_WINDOWS.dinner.end, 30, 0, 0); // 8:30 PM
 
-    currentTime = new Date(nextBlock.end);
+      if (
+        isOpenAtTime(openingHours, afterDinner) &&
+        isOpenAtTime(openingHours, addMinutes(afterDinner, duration))
+      ) {
+        slots.push(afterDinner);
+      }
+    }
   }
 
-  // Add breakfast time as a potential slot for non-restaurants
-  const breakfastBlock = reservedBlocks.find(
-    block => !block.required && new Date(block.start).getHours() === MEAL_WINDOWS.breakfast.start
-  );
+  // If no same-day slots work, look for slots on this or future days
+  if (slots.length === 0) {
+    let currentTime = new Date(date);
+    currentTime.setHours(10, 0, 0, 0);
+    const endTime = new Date(date);
+    endTime.setHours(20, 0, 0, 0);
 
+    // Combine all existing activities and required meal blocks
+    const allBlocks = [
+      ...requiredMealBlocks,
+      ...dayActivities.map(activity => ({
+        start: new Date(activity.startTime),
+        end: new Date(activity.endTime),
+        type: 'activity' as const,
+        required: true,
+      })),
+    ].sort((a, b) => a.start.getTime() - b.start.getTime());
+
+    // Find gaps between blocks
+    while (currentTime < endTime) {
+      const nextBlock = allBlocks.find(block => block.start > currentTime);
+
+      if (!nextBlock) {
+        const potentialEndTime = addMinutes(currentTime, duration);
+        if (
+          potentialEndTime <= endTime &&
+          isOpenAtTime(openingHours, currentTime) &&
+          isOpenAtTime(openingHours, potentialEndTime) &&
+          !conflictsWithMeals(requiredMealBlocks, currentTime, potentialEndTime)
+        ) {
+          slots.push(new Date(currentTime));
+        }
+        break;
+      }
+
+      const gap = nextBlock.start.getTime() - currentTime.getTime();
+      const gapMinutes = gap / (1000 * 60);
+
+      if (gapMinutes >= duration) {
+        const potentialEndTime = addMinutes(currentTime, duration);
+        if (
+          isOpenAtTime(openingHours, currentTime) &&
+          isOpenAtTime(openingHours, potentialEndTime) &&
+          !conflictsWithMeals(requiredMealBlocks, currentTime, potentialEndTime)
+        ) {
+          slots.push(new Date(currentTime));
+        }
+      }
+
+      currentTime = new Date(nextBlock.end);
+    }
+  }
+
+  // Add breakfast time as a potential slot if activity is short enough
   if (breakfastBlock && duration <= MEAL_WINDOWS.breakfast.duration) {
-    if (isOpenAtTime(openingHours, breakfastBlock.start)) {
-      slots.push(new Date(breakfastBlock.start));
+    const breakfastStart = new Date(breakfastBlock.start);
+    const breakfastEnd = addMinutes(breakfastStart, duration);
+
+    if (
+      isOpenAtTime(openingHours, breakfastStart) &&
+      isOpenAtTime(openingHours, breakfastEnd) &&
+      !dayActivities.some(
+        activity =>
+          isSameDay(breakfastStart, new Date(activity.startTime)) &&
+          new Date(activity.startTime).getHours() === MEAL_WINDOWS.breakfast.start
+      )
+    ) {
+      slots.push(breakfastStart);
     }
   }
 

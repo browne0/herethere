@@ -27,7 +27,7 @@ export function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 lg:gap-16">
           <div className="col-span-2 md:col-span-1">
-            <div className="text-2xl font-bold text-white mb-4">WanderAI</div>
+            <div className="text-2xl font-bold text-white mb-4">HereThere</div>
             <p className="text-gray-400 text-sm mb-4">
               Making travel planning simple with AI-powered personalization.
             </p>
@@ -54,7 +54,7 @@ export function Footer() {
 
         <div className="mt-12 pt-8 border-t border-gray-800 text-gray-400 text-sm">
           <div className="flex flex-col md:flex-row justify-between items-center">
-            <div>© {new Date().getFullYear()} WanderAI. All rights reserved.</div>
+            <div>© {new Date().getFullYear()} HereThere. All rights reserved.</div>
             <div className="mt-4 md:mt-0">Made with ❤️ for travelers worldwide</div>
           </div>
         </div>

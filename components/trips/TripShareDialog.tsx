@@ -45,7 +45,7 @@ export function TripShareDialog({ trip, open, onOpenChange, trigger }: TripShare
     setShareUrl(`${window.location.origin}/trips/${trip.id}/public`);
   }, [trip.id]);
 
-  const shareText = `Check out my trip to ${trip.title} on WanderAI!`;
+  const shareText = `Check out my trip to ${trip.title} on HereThere!`;
   const encodedShareText = encodeURIComponent(shareText);
   const encodedUrl = encodeURIComponent(shareUrl);
 

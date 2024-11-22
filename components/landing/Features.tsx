@@ -84,7 +84,7 @@ export function Features() {
             Features That Set Us Apart
           </h2>
           <p className="text-lg text-gray-600">
-            Discover how WanderAI makes your travel planning experience seamless and personalized
+            Discover how HereThere makes your travel planning experience seamless and personalized
           </p>
         </div>
 

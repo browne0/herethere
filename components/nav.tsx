@@ -46,7 +46,7 @@ export function Nav() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="font-bold text-xl hover:text-indigo-600 transition-colors">
-            WanderAI
+            HereThere
           </Link>
 
           {/* Desktop Navigation */}

@@ -41,9 +41,9 @@ export function FAQ() {
 
   const faqs = [
     {
-      question: 'How does WanderAI create personalized itineraries?',
+      question: 'How does HereThere create personalized itineraries?',
       answer:
-        'WanderAI uses advanced AI technology to analyze your preferences, dietary requirements, and travel style to create a custom itinerary. We consider factors like your chosen pace, budget, and specific interests to ensure every recommendation is perfectly suited to you.',
+        'HereThere uses advanced AI technology to analyze your preferences, dietary requirements, and travel style to create a custom itinerary. We consider factors like your chosen pace, budget, and specific interests to ensure every recommendation is perfectly suited to you.',
     },
     {
       question: "Can I modify my itinerary after it's generated?",
@@ -51,9 +51,9 @@ export function FAQ() {
         'Absolutely! Your itinerary is fully customizable. You can add, remove, or modify activities, adjust timings, and make any changes needed to perfect your trip plan. The AI-generated itinerary serves as a smart starting point that you can fine-tune to your exact preferences.',
     },
     {
-      question: 'What dietary restrictions can WanderAI accommodate?',
+      question: 'What dietary restrictions can HereThere accommodate?',
       answer:
-        'WanderAI supports a wide range of dietary requirements including vegetarian, vegan, gluten-free, kosher, halal, and various food allergies. Our system ensures all restaurant recommendations align with your specific dietary needs and preferences.',
+        'HereThere supports a wide range of dietary requirements including vegetarian, vegan, gluten-free, kosher, halal, and various food allergies. Our system ensures all restaurant recommendations align with your specific dietary needs and preferences.',
     },
     {
       question: 'How far in advance should I plan my trip?',
@@ -66,9 +66,9 @@ export function FAQ() {
         "Yes! You can easily share your itinerary with travel companions, who can view and even collaborate on the trip planning if you grant them permission. This makes group trip planning seamless and ensures everyone's preferences are considered.",
     },
     {
-      question: 'Is WanderAI available worldwide?',
+      question: 'Is HereThere available worldwide?',
       answer:
-        'WanderAI currently supports major tourist destinations across the globe, with new locations being added regularly. Our service is particularly comprehensive in popular cities, ensuring detailed and accurate recommendations wherever you travel.',
+        'HereThere currently supports major tourist destinations across the globe, with new locations being added regularly. Our service is particularly comprehensive in popular cities, ensuring detailed and accurate recommendations wherever you travel.',
     },
   ];
 
