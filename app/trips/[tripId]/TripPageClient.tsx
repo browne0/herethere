@@ -28,8 +28,8 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
   const { setActivities, activities, setTripId } = useActivitiesStore();
 
   useEffect(() => {
-    initialize(activities.length);
-  }, [initialize, activities.length]);
+    initialize('recommendations');
+  }, [initialize]);
 
   // Initialize store with trip activities
   useEffect(() => {

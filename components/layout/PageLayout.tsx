@@ -4,11 +4,12 @@ import { usePathname } from 'next/navigation';
 import { Nav } from '@/components/nav';
 
 export const ROUTES_WITHOUT_NAV = [
-  '/trips/[tripId]', // Hide nav on trip view for focused experience
-  '/sign-in', // Authentication pages should be clean
+  // Hide nav only on specific trip view, but show for all /new/* routes
+  '/trips/[tripId](?!/new(?:/.*)?)',
+  '/sign-in',
   '/sign-up',
-  '/verify', // Email verification page
-  '/reset-password', // Password reset flow
+  '/verify',
+  '/reset-password',
 ];
 
 interface PageLayoutProps {
@@ -18,11 +19,18 @@ interface PageLayoutProps {
 export function PageLayout({ children }: PageLayoutProps) {
   const pathname = usePathname();
 
-  // Check if current path matches any of our no-nav routes
-  // Uses a function to allow for pattern matching (e.g., dynamic routes)
   const shouldShowNav = !ROUTES_WITHOUT_NAV.some(route => {
-    // Convert route patterns with parameters (e.g., [demoTripId]) to regex
-    const routePattern = route.replace(/\[.*?\]/g, '[^/]+');
+    // Convert route patterns with parameters to regex
+    const routePattern = route
+      // Replace route params with regex pattern
+      .replace(/\[.*?\]/g, '[^/]+')
+      // Escape forward slashes and other special regex characters
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      // Remove the escape for any intentional regex we added (like negative lookahead)
+      .replace('\\(\\?\\!', '(?!')
+      // Remove escape for any intentional regex we added (like optional group)
+      .replace('\\(\\.\\*\\)', '(.*)');
+
     const regex = new RegExp(`^${routePattern}$`);
     return regex.test(pathname);
   });

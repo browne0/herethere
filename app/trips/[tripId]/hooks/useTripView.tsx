@@ -5,16 +5,15 @@ type TripView = 'recommendations' | 'itinerary';
 interface TripViewState {
   view: TripView;
   setView: (view: TripView) => void;
-  initialize: (initialActivities: number) => void;
+  initialize: (view: string) => void;
 }
 
 const useTripViewStore = create<TripViewState>(set => ({
-  view: 'itinerary',
-  totalActivities: 0,
+  view: 'recommendations',
   setView: view => set({ view }),
-  initialize: initialActivities =>
+  initialize: () =>
     set({
-      view: initialActivities > 0 ? 'itinerary' : 'recommendations',
+      view: 'recommendations',
     }),
 }));
 

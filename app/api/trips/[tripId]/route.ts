@@ -1,6 +1,8 @@
 import { auth } from '@clerk/nextjs/server';
 import { Prisma } from '@prisma/client';
+import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
 import { prisma } from '@/lib/db';
 
@@ -38,108 +40,149 @@ interface RouteParams {
 
 export async function DELETE(_req: Request, { params }: RouteParams) {
   try {
+    // Auth check
     const { userId } = await auth();
-    const { tripId } = await params;
-
     if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // Verify the trip belongs to the user
+    const { tripId } = await params;
+
+    // Verify the trip exists and belongs to the user
     const trip = await prisma.trip.findUnique({
       where: {
         id: tripId,
-        userId,
+        userId, // Ensure it belongs to the user
+      },
+      include: {
+        _count: {
+          select: {
+            activities: true,
+          },
+        },
       },
     });
 
     if (!trip) {
-      return new NextResponse('Trip not found', { status: 404 });
+      return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
     }
 
-    // Delete all activities first (if not using cascade)
-    await prisma.activity.deleteMany({
-      where: {
-        tripId,
-      },
+    // Use a transaction to ensure all related data is deleted
+    const result = await prisma.$transaction(async tx => {
+      // Delete all itinerary activities first
+      await tx.itineraryActivity.deleteMany({
+        where: { tripId },
+      });
+
+      // Delete the trip
+      const deletedTrip = await tx.trip.delete({
+        where: { id: tripId },
+        include: {
+          _count: {
+            select: {
+              activities: true,
+            },
+          },
+        },
+      });
+
+      return deletedTrip;
     });
 
-    // Then delete the trip
-    await prisma.trip.delete({
-      where: {
-        id: tripId,
+    return NextResponse.json(
+      {
+        message: 'Trip deleted successfully',
+        data: {
+          tripId: result.id,
+          destination: result.destination,
+          activitiesRemoved: result._count.activities,
+        },
       },
-    });
-
-    return new NextResponse(null, { status: 204 });
+      { status: 200 }
+    );
   } catch (error) {
     console.error('[TRIP_DELETE]', error);
-    return new NextResponse(error instanceof Error ? error.message : 'Internal Error', {
-      status: 500,
-    });
+
+    if (error instanceof PrismaClientKnownRequestError) {
+      // Handle specific Prisma errors
+      switch (error.code) {
+        case 'P2025': // Record not found
+          return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+        case 'P2003': // Foreign key constraint failed
+          return NextResponse.json(
+            { error: 'Failed to delete related activities' },
+            { status: 400 }
+          );
+        default:
+          return NextResponse.json({ error: 'Database operation failed' }, { status: 400 });
+      }
+    }
+
+    // Generic error
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: { tripId: string } }) {
-  try {
-    const { userId } = await auth();
-    const { tripId } = await params;
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
+// export async function PATCH(req: Request, { params }: { params: { tripId: string } }) {
+//   try {
+//     const { userId } = await auth();
+//     const { tripId } = await params;
+//     if (!userId) {
+//       return new NextResponse('Unauthorized', { status: 401 });
+//     }
 
-    const body = await req.json();
+//     const body = await req.json();
 
-    // Verify the trip belongs to the user
-    const trip = await prisma.trip.findUnique({
-      where: {
-        id: tripId,
-        userId,
-      },
-    });
+//     // Verify the trip belongs to the user
+//     const trip = await prisma.trip.findUnique({
+//       where: {
+//         id: tripId,
+//         userId,
+//       },
+//     });
 
-    if (!trip) {
-      return new NextResponse('Not found', { status: 404 });
-    }
+//     if (!trip) {
+//       return new NextResponse('Not found', { status: 404 });
+//     }
 
-    // Build update data object only with provided fields
-    const updateData: Prisma.TripUpdateInput = {};
+//     // Build update data object only with provided fields
+//     const updateData: Prisma.TripUpdateInput = {};
 
-    if (body.status !== undefined) {
-      updateData.status = body.status;
-    }
+//     if (body.status !== undefined) {
+//       updateData.status = body.status;
+//     }
 
-    if (body.title !== undefined) {
-      updateData.title = body.title;
-    }
+//     if (body.title !== undefined) {
+//       updateData.title = body.title;
+//     }
 
-    if (body.destination !== undefined) {
-      updateData.destination = body.destination;
-    }
+//     if (body.destination !== undefined) {
+//       updateData.destination = body.destination;
+//     }
 
-    if (body.startDate !== undefined) {
-      updateData.startDate = new Date(body.startDate);
-    }
+//     if (body.startDate !== undefined) {
+//       updateData.startDate = new Date(body.startDate);
+//     }
 
-    if (body.endDate !== undefined) {
-      updateData.endDate = new Date(body.endDate);
-    }
+//     if (body.endDate !== undefined) {
+//       updateData.endDate = new Date(body.endDate);
+//     }
 
-    if (body.cityBounds !== undefined) {
-      updateData.cityBounds = body.cityBounds;
-    }
+//     if (body.cityBounds !== undefined) {
+//       updateData.cityBounds = body.cityBounds;
+//     }
 
-    // Update the trip with only the provided fields
-    const updatedTrip = await prisma.trip.update({
-      where: {
-        id: tripId,
-      },
-      data: updateData,
-    });
+//     // Update the trip with only the provided fields
+//     const updatedTrip = await prisma.trip.update({
+//       where: {
+//         id: tripId,
+//       },
+//       data: updateData,
+//     });
 
-    return NextResponse.json(updatedTrip);
-  } catch (error) {
-    console.error('Error updating trip:', error);
-    return new NextResponse('Internal error', { status: 500 });
-  }
-}
+//     return NextResponse.json(updatedTrip);
+//   } catch (error) {
+//     console.error('Error updating trip:', error);
+//     return new NextResponse('Internal error', { status: 500 });
+//   }
+// }
