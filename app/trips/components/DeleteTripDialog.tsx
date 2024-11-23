@@ -14,12 +14,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 
+import { ParsedTrip } from '../[tripId]/types';
+
 interface TripWithActivities extends Trip {
   activities: Array<ItineraryActivity>;
 }
 
 interface DeleteTripDialogProps {
-  trip: TripWithActivities | null;
+  trip: TripWithActivities | ParsedTrip | null;
   isOpen: boolean;
   onClose: () => void;
   onDelete: (tripId: string) => Promise<void>;

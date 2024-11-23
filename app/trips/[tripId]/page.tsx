@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
-import { ParsedActivityRecommendation, ParsedItineraryActivity } from './types';
+import { ParsedActivityRecommendation, ParsedItineraryActivity, ParsedTrip } from './types';
 
 // Helper to parse JSON fields from ActivityRecommendation
 function parseActivityRecommendation(activity: any): ParsedActivityRecommendation {
@@ -61,7 +61,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
   const parsedTrip = {
     ...trip,
     activities: trip.activities.map(parseItineraryActivity),
-  };
+  } as ParsedTrip;
 
   const recommendations = await prisma.activityRecommendation.findMany({
     where: {

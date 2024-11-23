@@ -224,7 +224,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
                   ) : (
                     <>
                       <p className="text-base sm:text-xl text-muted-foreground">None planned</p>
-                      <p className="text-xs sm:text-sm text-green-600">Start planning →</p>
+                      <p className="text-xs sm:text-sm text-green-600">Start planning now →</p>
                     </>
                   )}
                 </div>
@@ -413,22 +413,6 @@ export function TripsList({ initialTrips }: TripsListProps) {
             </Card>
           )}
         </div>
-
-        {/* Empty State */}
-        {trips.length === 0 && (
-          <Card className="p-6 sm:p-12 text-center">
-            <h3 className="text-lg sm:text-xl font-medium mb-2">Ready to start your adventure?</h3>
-            <p className="text-sm sm:text-base text-muted-foreground mb-6">
-              Create your first trip and begin planning your perfect getaway.
-            </p>
-            <Button asChild className="w-full sm:w-auto">
-              <Link href="/trips/new" className="flex items-center justify-center">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Your First Trip
-              </Link>
-            </Button>
-          </Card>
-        )}
       </div>
       <DeleteTripDialog
         trip={tripToDelete}
