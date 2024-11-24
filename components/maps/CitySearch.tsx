@@ -2,19 +2,19 @@
 
 import { useEffect, useRef, useState } from 'react';
 
+import { City, Prisma } from '@prisma/client';
 import { Search, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { City } from '@/lib/types';
 
 import { useGoogleMapsStatus } from './GoogleMapsProvider';
 
 interface CitySearchProps {
-  onCitySelect: (city: City) => void;
+  onCitySelect: (city: Prisma.CityCreateInput) => void;
   defaultValue?: string;
-  value?: City | null;
+  value?: Prisma.CityCreateInput | null;
   onChange?: (value: string) => void;
 }
 
@@ -73,24 +73,12 @@ export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProp
       },
       (result, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && result?.geometry) {
-          const city: City = {
+          const city: Prisma.CityCreateInput = {
             name: suggestion.structured_formatting.main_text,
-            address: result.formatted_address || suggestion.description,
             latitude: result.geometry.location!.lat(),
             longitude: result.geometry.location!.lng(),
             placeId: result.place_id!,
-            bounds: result.geometry.viewport
-              ? {
-                  ne: {
-                    lat: result.geometry.viewport.getNorthEast().lat(),
-                    lng: result.geometry.viewport.getNorthEast().lng(),
-                  },
-                  sw: {
-                    lat: result.geometry.viewport.getSouthWest().lat(),
-                    lng: result.geometry.viewport.getSouthWest().lng(),
-                  },
-                }
-              : undefined,
+            countryCode: result.address_components ? result.address_components[0].short_name : 'US',
           };
 
           setSearchInput(city.name);

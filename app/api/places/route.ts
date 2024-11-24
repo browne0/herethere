@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server';
 
 import { GoogleMapsClient } from '@/lib/maps/utils';
 
-if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+if (!process.env.GOOGLE_MAPS_API_KEY) {
   throw new Error('Missing Google Maps API key');
 }
 
@@ -21,7 +21,7 @@ export async function POST(request: Request) {
         inputtype: 'textquery' as PlaceInputType,
         locationbias: locationBias,
         fields: ['place_id', 'formatted_address', 'geometry', 'photos', 'name'],
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+        key: process.env.GOOGLE_MAPS_API_KEY!,
         language: 'en' as Language,
       },
     });

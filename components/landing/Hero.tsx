@@ -1,28 +1,18 @@
 'use client';
 import React from 'react';
 
+import { Prisma } from '@prisma/client';
 import { MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { popularDestinations } from '@/lib/trips';
-import { City } from '@/lib/types';
 
 import { CitySearch } from '../maps/CitySearch';
-import { LocationSearch } from '../maps/LocationSearch';
-
-interface SelectedCity {
-  name: string;
-  place_id: string;
-  geometry: {
-    bounds?: google.maps.LatLngBounds;
-    location: google.maps.LatLng;
-  };
-}
 
 export function Hero() {
   const router = useRouter();
 
-  const handleCitySelect = (city: City) => {
+  const handleCitySelect = (city: Prisma.CityCreateInput) => {
     // Encode the city data in the URL to pass it to the preferences page
     const cityData = encodeURIComponent(
       JSON.stringify({
@@ -32,7 +22,6 @@ export function Hero() {
           lat: city.latitude,
           lng: city.longitude,
         },
-        bounds: city.bounds,
       })
     );
 
@@ -41,12 +30,12 @@ export function Hero() {
 
   const handlePopularCityClick = (popularCity: (typeof popularDestinations)[0]) => {
     // Create a simplified City object for popular destinations
-    const city: City = {
+    const city: Prisma.CityCreateInput = {
       name: popularCity.name,
-      address: `${popularCity.name}, ${popularCity.country}`,
       placeId: popularCity.placeId,
       latitude: popularCity.location.lat,
       longitude: popularCity.location.lng,
+      countryCode: popularCity.countryCode,
     };
 
     handleCitySelect(city);

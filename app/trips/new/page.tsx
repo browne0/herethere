@@ -1,5 +1,6 @@
 'use client';
 
+import { Prisma } from '@prisma/client';
 import { MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -7,13 +8,12 @@ import { CitySearch } from '@/components/maps/CitySearch';
 import { Button } from '@/components/ui/button';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { popularDestinations } from '@/lib/trips';
-import type { City } from '@/lib/types';
 
 export default function CitySelectionPage() {
   const router = useRouter();
   const { city, setCity } = useTripFormStore();
 
-  const handleCitySelect = (selectedCity: City) => {
+  const handleCitySelect = (selectedCity: Prisma.CityCreateInput) => {
     setCity(selectedCity);
     router.push('/trips/new/dates');
   };
@@ -39,10 +39,10 @@ export default function CitySelectionPage() {
               onClick={() =>
                 handleCitySelect({
                   name: destination.name,
-                  address: `${destination.name}, ${destination.country}`,
                   placeId: destination.placeId,
                   latitude: destination.location.lat,
                   longitude: destination.location.lng,
+                  countryCode: destination.countryCode,
                 })
               }
               className="group h-9 px-3 rounded-full bg-white text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 shadow-sm border border-gray-100 flex items-center gap-1.5 text-sm"

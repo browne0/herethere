@@ -4,7 +4,7 @@ import { OpenAI } from 'openai';
 import { searchPlaces } from '@/lib/places';
 import type { DemoTrip, DemoActivity } from '@/lib/types';
 
-if (!process.env.OPENAI_API_KEY || !process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
+if (!process.env.OPENAI_API_KEY || !process.env.GOOGLE_MAPS_API_KEY) {
   throw new Error('Missing required environment variables');
 }
 

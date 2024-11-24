@@ -24,8 +24,9 @@ model Trip {
   id          String              @id @default(cuid())
   userId      String
   user        User                @relation(fields: [userId], references: [id])
+  cityId      String
+  city        City                @relation(fields: [cityId], references: [id])
   title       String
-  destination String // City/location name
   startDate   DateTime
   endDate     DateTime
   preferences Json? // Trip-specific preferences
@@ -34,14 +35,16 @@ model Trip {
   activities  ItineraryActivity[]
 
   @@index([userId])
+  @@index([cityId])
 }
 
 model ActivityRecommendation {
   id            String   @id @default(cuid())
   name          String
   description   String
-  type          String // e.g., 'tour', 'food', 'museum'
   category      String // e.g., 'outdoor', 'indoor', 'cultural'
+  cityId        String
+  city          City     @relation(fields: [cityId], references: [id])
   duration      Int // in minutes
   price         Int // in cents
   location      Json // { latitude: number, longitude: number, address: string, placeId?: string }
@@ -57,7 +60,7 @@ model ActivityRecommendation {
 
   itineraryActivities ItineraryActivity[]
 
-  @@index([type])
+  @@index([cityId])
   @@index([category])
 }
 
@@ -80,4 +83,19 @@ model ItineraryActivity {
 
   @@index([tripId])
   @@index([recommendationId])
+}
+
+model City {
+  id          String                   @id @default(cuid())
+  name        String
+  countryCode String
+  placeId     String
+  latitude    Float
+  longitude   Float
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+  activities  ActivityRecommendation[]
+  trips       Trip[]
+
+  @@unique([name, countryCode])
 }

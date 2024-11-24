@@ -1,16 +1,17 @@
 // lib/stores/tripStore.ts
+import { Prisma } from '@prisma/client';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
-import type { BudgetLevel, City, DateRangeType } from '@/lib/types';
+import type { BudgetLevel, DateRangeType } from '@/lib/types';
 
 interface TripFormStore {
-  city: City | null;
+  city: Prisma.CityCreateInput | null;
   dates: DateRangeType | null;
   budget: BudgetLevel | null;
   activities: string[];
   customInterests: string | null;
-  setCity: (city: City) => void;
+  setCity: (city: Prisma.CityCreateInput) => void;
   setDates: (dates: DateRangeType) => void;
   setBudget: (budget: 'budget' | 'moderate' | 'luxury') => void;
   setActivities: (activities: string[]) => void;

@@ -8,7 +8,7 @@ export async function GET(request: Request, { params }: { params: { reference: s
       return new NextResponse('Photo reference is required', { status: 400 });
     }
 
-    const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${reference}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+    const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${reference}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
 
     const response = await fetch(photoUrl);
 

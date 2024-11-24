@@ -2,6 +2,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 
+import { Prisma } from '@prisma/client';
 import { CalendarDays, MapPin, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -11,20 +12,13 @@ import { BudgetLevel } from '@/lib/types';
 
 interface CreateTripRequest {
   title: string;
-  destination: string;
   startDate: Date;
   endDate: Date;
   preferences: {
     budget: BudgetLevel;
     activities: string[];
-    location: {
-      placeId: string;
-      latitude: number;
-      longitude: number;
-      name: string;
-      address: string;
-    };
   };
+  city: Prisma.CityCreateInput;
 }
 
 export default function ReviewPage() {
@@ -60,20 +54,13 @@ export default function ReviewPage() {
     try {
       const tripData: CreateTripRequest = {
         title: `Trip to ${city.name}`,
-        destination: city.name,
         startDate: dates.from,
         endDate: dates.to,
         preferences: {
           budget,
           activities,
-          location: {
-            placeId: city.placeId,
-            latitude: city.latitude,
-            longitude: city.longitude,
-            name: city.name,
-            address: city.address,
-          },
         },
+        city,
       };
 
       const response = await fetch('/api/trips', {
@@ -88,7 +75,7 @@ export default function ReviewPage() {
         throw new Error('Failed to create trip');
       }
 
-      const { trip } = await response.json();
+      const trip = await response.json();
 
       // Disable validation checks before resetting and navigating
       shouldCheckValidation.current = false;
