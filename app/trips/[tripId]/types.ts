@@ -1,4 +1,4 @@
-import type { Trip, ActivityRecommendation, ItineraryActivity } from '@prisma/client';
+import type { Trip, ActivityRecommendation, ItineraryActivity, City } from '@prisma/client';
 
 export interface Location {
   latitude: number;
@@ -40,21 +40,11 @@ export interface ActivityShelf {
   activities: ParsedActivityRecommendation[];
 }
 
-export interface TripDetailsPageProps {
-  trip: Trip & {
-    activities: ParsedItineraryActivity[];
-  };
-}
-
 export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences'> {
   activities: ParsedItineraryActivity[];
+  city: City;
   preferences?: {
     budget?: string;
     activities?: string[];
-    location?: {
-      latitude: number;
-      longitude: number;
-      placeId?: string;
-    };
   };
 }

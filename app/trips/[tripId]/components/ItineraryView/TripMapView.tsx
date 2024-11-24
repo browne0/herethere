@@ -23,7 +23,7 @@ import {
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
 
-import type { ParsedItineraryActivity } from '../../types';
+import type { ParsedItineraryActivity, ParsedTrip } from '../../types';
 
 interface TripMapViewProps {
   activities: ParsedItineraryActivity[];
@@ -31,11 +31,7 @@ interface TripMapViewProps {
   onMarkerSelect: (activityId: string | null) => void;
   hoveredActivityId: string | null;
   selectedActivityId: string | null;
-  destination: {
-    name: string;
-    latitude: number;
-    longitude: number;
-  };
+  trip: ParsedTrip;
 }
 
 const ACTIVITY_ICONS: Record<string, LucideIcon> = {
@@ -118,7 +114,8 @@ function CustomMarker({
   labelPosition,
 }: CustomMarkerProps) {
   const { recommendation } = activity;
-  const IconComponent = ACTIVITY_ICONS[recommendation.type.toLowerCase()] || ACTIVITY_ICONS.default;
+  const IconComponent =
+    ACTIVITY_ICONS[recommendation.category.toLowerCase()] || ACTIVITY_ICONS.default;
 
   return (
     <OverlayView
@@ -182,7 +179,7 @@ export function TripMapView({
   onMarkerSelect,
   hoveredActivityId,
   selectedActivityId,
-  destination,
+  trip,
 }: TripMapViewProps) {
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<ParsedItineraryActivity | null>(null);
@@ -210,13 +207,13 @@ export function TripMapView({
     if (!map || boundsSet.current) return;
 
     if (activities.length === 0) {
-      map.setCenter({ lat: destination.latitude, lng: destination.longitude });
+      map.setCenter({ lat: trip.city.latitude, lng: trip.city.longitude });
       map.setZoom(13);
     } else {
       fitBoundsToActivities();
     }
     boundsSet.current = true;
-  }, [map, activities, destination, fitBoundsToActivities]);
+  }, [map, activities, trip, fitBoundsToActivities]);
 
   const getLabelPosition = useCallback(
     (lng: number): 'left' | 'right' => {

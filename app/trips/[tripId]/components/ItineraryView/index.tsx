@@ -48,11 +48,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
             onMarkerSelect={setSelectedActivityId}
             hoveredActivityId={hoveredActivityId}
             selectedActivityId={selectedActivityId}
-            destination={{
-              name: trip.destination,
-              latitude: trip.preferences?.location?.latitude || 0,
-              longitude: trip.preferences?.location?.longitude || 0,
-            }}
+            trip={trip}
           />
         </div>
       </div>
@@ -91,11 +87,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
               }}
               hoveredActivityId={hoveredActivityId}
               selectedActivityId={selectedActivityId}
-              destination={{
-                name: trip.destination,
-                latitude: trip.preferences?.location?.latitude || 0,
-                longitude: trip.preferences?.location?.longitude || 0,
-              }}
+              trip={trip}
             />
           </div>
         </SheetContent>

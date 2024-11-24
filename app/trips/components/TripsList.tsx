@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { ItineraryActivity, Trip } from '@prisma/client';
+import { City, ItineraryActivity, Trip } from '@prisma/client';
 import { format, isAfter, isBefore, isToday } from 'date-fns';
 import {
   Calendar,
@@ -31,15 +31,16 @@ import { useToast } from '@/hooks/use-toast';
 
 import { DeleteTripDialog } from './DeleteTripDialog';
 
-interface TripWithActivities extends Trip {
+interface TripWithActivitiesAndCity extends Trip {
   activities: Array<ItineraryActivity>;
+  city: City;
 }
 
 interface TripsListProps {
-  initialTrips: TripWithActivities[];
+  initialTrips: TripWithActivitiesAndCity[];
 }
 
-function groupTripsByStatus(trips: TripWithActivities[]) {
+function groupTripsByStatus(trips: TripWithActivitiesAndCity[]) {
   const now = new Date();
   return {
     upcoming: trips.filter(trip => isAfter(new Date(trip.startDate), now)),
@@ -73,7 +74,7 @@ function TripActions({
   trip,
   onDeleteClick,
 }: {
-  trip: TripWithActivities;
+  trip: TripWithActivitiesAndCity;
   onDeleteClick: () => void;
 }) {
   return (
@@ -108,13 +109,13 @@ function TripActions({
 }
 
 export function TripsList({ initialTrips }: TripsListProps) {
-  const [tripToDelete, setTripToDelete] = useState<TripWithActivities | null>(null);
+  const [tripToDelete, setTripToDelete] = useState<TripWithActivitiesAndCity | null>(null);
   const [trips, setTrips] = useState(initialTrips);
   const { toast } = useToast();
   const router = useRouter();
 
   const { upcoming, ongoing, past } = groupTripsByStatus(trips);
-  const uniqueDestinations = new Set(trips.map(trip => trip.destination)).size;
+  const uniqueDestinations = new Set(trips.map(trip => trip.city.name)).size;
   const totalActivities = trips.reduce((acc, trip) => acc + trip.activities.length, 0);
 
   const handleDeleteTrip = async (tripId: string) => {
@@ -184,7 +185,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
                   {ongoing[0] ? (
                     <>
                       <p className="text-lg sm:text-2xl font-bold truncate">
-                        {ongoing[0].destination}
+                        {ongoing[0].city.name}
                       </p>
                       <p className="text-xs sm:text-sm text-gray-500">
                         {formatTripDates(ongoing[0].startDate, ongoing[0].endDate, 'short')}
@@ -214,7 +215,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
                   {upcoming[0] ? (
                     <>
                       <p className="text-lg sm:text-2xl font-bold truncate">
-                        {upcoming[0].destination}
+                        {upcoming[0].city.name}
                       </p>
                       <p className="text-xs sm:text-sm text-gray-500">
                         {formatTripDates(upcoming[0].startDate, upcoming[0].endDate, 'short')}
@@ -282,7 +283,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
                             </div>
                             <Link href={`/trips/${trip.id}`}>
                               <h3 className="text-xl font-semibold mb-1 hover:text-blue-600 transition-colors">
-                                {trip.destination}
+                                {trip.city.name}
                               </h3>
                             </Link>
                             <p className="text-gray-500">
@@ -383,7 +384,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
                             <MapPin className="w-4 h-4 text-gray-600" />
                           </div>
                           <div>
-                            <h3 className="font-medium">{trip.destination}</h3>
+                            <h3 className="font-medium">{trip.city.name}</h3>
                             <p className="text-sm text-gray-500">
                               {formatTripDates(trip.startDate, trip.endDate, 'short')}
                             </p>

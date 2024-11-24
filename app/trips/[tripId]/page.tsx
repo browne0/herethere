@@ -49,6 +49,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
           startTime: 'asc',
         },
       },
+      city: true,
     },
   });
 
@@ -87,7 +88,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       activities: parsedRecommendations.slice(0, 5),
     },
     {
-      title: `Popular in ${trip.destination}`,
+      title: `Popular in ${trip.city.name}`,
       type: 'popular',
       activities: parsedRecommendations.slice(5, 10),
     },

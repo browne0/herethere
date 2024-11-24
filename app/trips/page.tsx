@@ -13,6 +13,7 @@ export default async function TripsPage() {
     orderBy: { startDate: 'asc' },
     include: {
       activities: true,
+      city: true,
     },
   });
 

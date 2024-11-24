@@ -97,7 +97,7 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
           {/* Trip Info with Inline Progress */}
           <div className="flex flex-col pb-4">
             <div className="space-y-2">
-              <h1 className="text-xl font-semibold">Trip to {trip.destination}</h1>
+              <h1 className="text-xl font-semibold">Trip to {trip.city.name}</h1>
               <div className="text-sm text-gray-600">
                 <div className="flex items-center">
                   <Calendar className="w-4 h-4 mr-1" />
