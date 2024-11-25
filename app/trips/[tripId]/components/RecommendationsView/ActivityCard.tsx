@@ -1,10 +1,11 @@
 import { useState } from 'react';
 
 import { ActivityRecommendation } from '@prisma/client';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart, Loader2, Star, Clock, MapPin } from 'lucide-react';
 
+import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { formatNumberIntl, formatPrice } from '@/lib/utils';
+import { formatNumberIntl } from '@/lib/utils';
 
 interface ActivityCardProps {
   activity: ActivityRecommendation;
@@ -18,6 +19,23 @@ function getDurationDisplay(minutes: number): string {
   return remainingMinutes > 0
     ? `${hours}h ${remainingMinutes}m`
     : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
+}
+
+function getPriceDisplay(level: string) {
+  switch (level) {
+    case 'FREE':
+      return 'Free';
+    case 'LOW':
+      return '$';
+    case 'MODERATE':
+      return '$$';
+    case 'HIGH':
+      return '$$$';
+    case 'VERY_HIGH':
+      return '$$$$';
+    default:
+      return '';
+  }
 }
 
 export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
@@ -46,17 +64,23 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   };
 
   return (
-    <div className="relative flex-shrink-0 w-72 h-[25rem] rounded-xl overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow flex flex-col">
-      <div className="relative aspect-[4/3] flex-shrink-0">
+    <div className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col">
+      <div className="relative aspect-[4/3]">
         <img
           src={activity.images.urls[0].url}
           alt={activity.name}
           className="absolute inset-0 w-full h-full object-cover"
         />
+        {activity.isMustSee && (
+          <div className="absolute top-3 left-3">
+            <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
+              Must See
+            </Badge>
+          </div>
+        )}
         <button
           onClick={handleFavorite}
           className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors"
-          aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
         >
           <Heart
             className={`w-5 h-5 ${isFavorited ? 'fill-current text-red-500' : 'text-gray-600'}`}
@@ -64,26 +88,32 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
         </button>
       </div>
 
-      <div className="p-4 flex flex-col flex-grow">
-        <div className="flex items-center gap-2 text-sm mb-1">
+      <div className="p-4 flex flex-col gap-2">
+        <div className="flex items-center justify-between text-sm">
           <div className="flex items-center gap-1">
-            <span className="font-medium">{activity.rating?.toFixed(2) || 'New'}</span>
+            <Star className="w-4 h-4 text-yellow-500" />
+            <span className="font-medium">{activity.rating?.toFixed(1)}</span>
             <span className="text-gray-600">({formatNumberIntl(activity.reviewCount)})</span>
+            <span className="text-gray-600 mx-1">·</span>
+            <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
           </div>
-          <span className="text-gray-600">·</span>
-          <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
+          <span className="text-gray-900 font-medium">{getPriceDisplay(activity.priceLevel)}</span>
         </div>
 
-        <h3 className="font-medium text-lg leading-tight mb-1 line-clamp-2">{activity.name}</h3>
-        <p className="text-gray-600">{activity.priceLevel}</p>
+        <h3 className="font-medium text-base leading-tight">{activity.name}</h3>
 
-        <div className="flex-grow" />
+        <div className="flex flex-col gap-1.5">
+          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+            <MapPin className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{activity.location.neighborhood}</span>
+          </div>
+        </div>
 
         <button
           onClick={handleAdd}
           disabled={isLoading || isAdded}
           className={`
-            mt-3 w-full py-2 px-4 rounded-lg
+            mt-2 w-full py-2 px-4 rounded-lg
             font-medium text-sm
             transition-all duration-200
             flex items-center justify-center gap-2

@@ -2,7 +2,7 @@
 import React from 'react';
 
 import { format } from 'date-fns';
-import { Calendar } from 'lucide-react';
+import { Calendar, Trash2 } from 'lucide-react';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
@@ -52,8 +52,9 @@ export default function TripHeader({
               {/* Delete Button */}
               <button
                 onClick={onDeleteClick}
-                className="text-sm text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-md transition-colors"
+                className="flex text-sm text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-md transition-colors"
               >
+                <Trash2 className="w-5 h-5 pr-1" />
                 Delete Trip
               </button>
             </div>
