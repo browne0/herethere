@@ -38,7 +38,7 @@ export function PageLayout({ children }: PageLayoutProps) {
   return (
     <>
       {shouldShowNav && <Nav />}
-      <div className={shouldShowNav ? 'pt-16' : ''}>{children}</div>
+      <div>{children}</div>
     </>
   );
 }

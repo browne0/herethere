@@ -1,15 +1,15 @@
 'use client';
 import { useRef, useState, useCallback, useEffect } from 'react';
 
+import { ActivityRecommendation } from '@prisma/client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { ActivityCard } from './ActivityCard';
-import type { ParsedActivityRecommendation } from '../../types';
 
 interface ActivityShelfProps {
   title: string;
-  activities: ParsedActivityRecommendation[];
-  onAddActivity: (activity: ParsedActivityRecommendation) => Promise<void>;
+  activities: ActivityRecommendation[];
+  onAddActivity: (activity: ActivityRecommendation) => Promise<void>;
 }
 
 function NavButton({

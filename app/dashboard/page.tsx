@@ -1,4 +1,4 @@
-import { Container } from '@/components/layouts/container';
+import { Container } from '@/components/layout/container';
 
 export default async function DashboardPage() {
   return (

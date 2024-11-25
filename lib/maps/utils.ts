@@ -85,7 +85,7 @@ export async function getTransitTime(
         destinations: [`${destination.lat},${destination.lng}`],
         mode: TravelMode.transit,
         departure_time: departureTime,
-        key: process.env.GOOGLE_MAPS_API_KEY!,
+        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
       },
     });
 

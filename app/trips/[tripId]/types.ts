@@ -7,26 +7,8 @@ export interface Location {
   placeId?: string;
 }
 
-export interface ParsedActivityRecommendation
-  extends Omit<
-    ActivityRecommendation,
-    'location' | 'images' | 'availableDays' | 'openingHours' | 'seasonality' | 'tags'
-  > {
-  location: Location;
-  images: { urls: string[] };
-  availableDays: { days: number[] };
-  openingHours?: {
-    periods: Array<{
-      open: { day: number; time: string };
-      close: { day: number; time: string };
-    }>;
-  };
-  seasonality: { seasons: string[] };
-  tags: { tags: string[] };
-}
-
 export interface ParsedItineraryActivity extends Omit<ItineraryActivity, 'customizations'> {
-  recommendation: ParsedActivityRecommendation;
+  recommendation: ActivityRecommendation;
   customizations?: {
     duration?: number;
     notes?: string;
@@ -37,7 +19,7 @@ export interface ParsedItineraryActivity extends Omit<ItineraryActivity, 'custom
 export interface ActivityShelf {
   title: string;
   type: string;
-  activities: ParsedActivityRecommendation[];
+  activities: ActivityRecommendation[];
 }
 
 export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences'> {

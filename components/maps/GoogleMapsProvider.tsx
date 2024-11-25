@@ -22,7 +22,8 @@ export const GoogleMapsProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: process.env.GOOGLE_MAPS_API_KEY!,
+    id: 'google-map-script',
+    googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
     libraries,
   });
 

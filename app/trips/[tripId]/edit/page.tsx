@@ -1,7 +1,7 @@
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
-import { Container } from '@/components/layouts/container';
+import { Container } from '@/components/layout/container';
 import { TripForm } from '@/components/trips/TripForm';
 import { prisma } from '@/lib/db';
 

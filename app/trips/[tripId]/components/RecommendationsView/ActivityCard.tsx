@@ -1,15 +1,14 @@
 import { useState } from 'react';
 
+import { ActivityRecommendation } from '@prisma/client';
 import { Heart, Loader2 } from 'lucide-react';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { formatPrice } from '@/lib/utils';
-
-import { ParsedActivityRecommendation } from '../../types';
+import { formatNumberIntl, formatPrice } from '@/lib/utils';
 
 interface ActivityCardProps {
-  activity: ParsedActivityRecommendation;
-  onAdd: (activity: ParsedActivityRecommendation) => Promise<void>;
+  activity: ActivityRecommendation;
+  onAdd: (activity: ActivityRecommendation) => Promise<void>;
 }
 
 function getDurationDisplay(minutes: number): string {
@@ -50,9 +49,9 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
     <div className="relative flex-shrink-0 w-72 h-[25rem] rounded-xl overflow-hidden bg-white shadow-md hover:shadow-lg transition-shadow flex flex-col">
       <div className="relative aspect-[4/3] flex-shrink-0">
         <img
-          src={'https://placehold.co/400x300'}
+          src={activity.images.urls[0].url}
           alt={activity.name}
-          className="w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-cover"
         />
         <button
           onClick={handleFavorite}
@@ -63,27 +62,20 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
             className={`w-5 h-5 ${isFavorited ? 'fill-current text-red-500' : 'text-gray-600'}`}
           />
         </button>
-        {activity.category && (
-          <div className="absolute top-3 left-3">
-            <span className="px-2 py-1 rounded-full text-xs font-medium bg-white/90 text-gray-800">
-              {activity.category}
-            </span>
-          </div>
-        )}
       </div>
 
       <div className="p-4 flex flex-col flex-grow">
         <div className="flex items-center gap-2 text-sm mb-1">
           <div className="flex items-center gap-1">
             <span className="font-medium">{activity.rating?.toFixed(2) || 'New'}</span>
-            <span className="text-gray-600">({activity.reviewCount})</span>
+            <span className="text-gray-600">({formatNumberIntl(activity.reviewCount)})</span>
           </div>
           <span className="text-gray-600">·</span>
           <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
         </div>
 
         <h3 className="font-medium text-lg leading-tight mb-1 line-clamp-2">{activity.name}</h3>
-        <p className="text-gray-600">From {formatPrice(activity.price)} / person</p>
+        <p className="text-gray-600">{activity.priceLevel}</p>
 
         <div className="flex-grow" />
 

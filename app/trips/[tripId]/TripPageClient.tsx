@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { ActivityRecommendation } from '@prisma/client';
 import { format } from 'date-fns';
 import { Calendar, ChevronLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
@@ -14,7 +15,7 @@ import { cn } from '@/lib/utils';
 import { ItineraryView } from './components/ItineraryView';
 import { RecommendationsView } from './components/RecommendationsView';
 import { useTripView } from './hooks/useTripView';
-import { ParsedActivityRecommendation, ParsedTrip } from './types';
+import { ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
 
 interface TripPageClientProps {
@@ -22,7 +23,7 @@ interface TripPageClientProps {
   shelves: {
     title: string;
     type: string;
-    activities: ParsedActivityRecommendation[];
+    activities: ActivityRecommendation[];
   }[];
 }
 

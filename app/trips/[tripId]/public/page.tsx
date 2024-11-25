@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { format, differenceInDays } from 'date-fns';
 import { CalendarDays, MapPin, Clock } from 'lucide-react';
 
-import { Container } from '@/components/layouts/container';
+import { Container } from '@/components/layout/container';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { prisma } from '@/lib/db';

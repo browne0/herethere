@@ -8,6 +8,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum RatingTier {
+  EXCEPTIONAL
+  HIGH
+  AVERAGE
+  LOW
+}
+
+enum ReviewCountTier {
+  VERY_HIGH
+  HIGH
+  MODERATE
+  LOW
+}
+
+enum PriceLevel {
+  FREE
+  LOW
+  MODERATE
+  HIGH
+  VERY_HIGH
+}
+
+enum IndoorOutdoor {
+  INDOOR
+  OUTDOOR
+  BOTH
+}
+
+enum SeasonalAvailability {
+  ALL_YEAR
+  SEASONAL
+}
+
 model User {
   id           String   @id
   email        String   @unique
@@ -39,29 +72,51 @@ model Trip {
 }
 
 model ActivityRecommendation {
-  id            String   @id @default(cuid())
-  name          String
-  description   String
-  category      String // e.g., 'outdoor', 'indoor', 'cultural'
-  cityId        String
-  city          City     @relation(fields: [cityId], references: [id])
-  duration      Int // in minutes
-  price         Int // in cents
-  location      Json // { latitude: number, longitude: number, address: string, placeId?: string }
-  images        Json // { urls: string[] }
-  rating        Float?
-  reviewCount   Int      @default(0)
-  availableDays Json // { days: number[] } (0-6 for days of week)
-  openingHours  Json? // { periods: { open: { day: number, time: string }, close: { day: number, time: string } }[] }
-  seasonality   Json // { seasons: string[] }
-  tags          Json // { tags: string[] }
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id          String @id @default(cuid())
+  name        String
+  description String
+  cityId      String
+  city        City   @relation(fields: [cityId], references: [id])
 
+  // Core quality metrics
+  rating          Float
+  ratingTier      RatingTier
+  reviewCount     Int
+  reviewCountTier ReviewCountTier
+
+  // Basic attributes
+  isMustSee           Boolean  @default(false)
+  isTouristAttraction Boolean  @default(false)
+  placeTypes          String[] // ['museum', 'art_gallery', etc.]
+
+  // Characteristics
+  indoorOutdoor        IndoorOutdoor
+  duration             Int // in minutes
+  priceLevel           PriceLevel
+  seasonalAvailability SeasonalAvailability @default(ALL_YEAR)
+
+  // Location and media
+  location Json // { latitude: number, longitude: number, address: string, placeId: string, neighborhood: string }
+  images   Json // { urls: string[] }
+
+  // Operating hours
+  openingHours  Json? // { periods: { open: { day: number, time: string }, close: { day: number, time: string } }[] }
+  availableDays Int[] // [0,1,2,3,4,5,6] for days of week
+
+  // External IDs and metadata
+  googlePlaceId String?  @unique // For updating from Google Places
+  googleTypes   String[] // Raw place types from Google
+  lastSyncedAt  DateTime // Track when we last synced with Google
+
+  // Relations and timestamps
   itineraryActivities ItineraryActivity[]
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
 
   @@index([cityId])
-  @@index([category])
+  @@index([isMustSee])
+  @@index([placeTypes])
+  @@index([googlePlaceId])
 }
 
 model ItineraryActivity {

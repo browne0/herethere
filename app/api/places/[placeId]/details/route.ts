@@ -4,7 +4,7 @@ import { NextResponse } from 'next/server';
 import { GoogleMapsClient } from '@/lib/maps/utils';
 import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
 
-if (!process.env.GOOGLE_MAPS_API_KEY) {
+if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY) {
   throw new Error('Missing Google Maps API key');
 }
 
@@ -26,7 +26,7 @@ export async function GET(request: Request, { params }: { params: { placeId: str
           'rating',
           'user_ratings_total',
         ],
-        key: process.env.GOOGLE_MAPS_API_KEY!,
+        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
         language: Language.en,
       },
     });

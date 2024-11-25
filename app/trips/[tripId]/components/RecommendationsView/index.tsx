@@ -1,16 +1,17 @@
 'use client';
 
+import { ActivityRecommendation } from '@prisma/client';
+
 import { useToast } from '@/hooks/use-toast';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ActivityShelfComponent } from './ActivityShelf';
-import type { ParsedActivityRecommendation } from '../../types';
 
 interface RecommendationsViewProps {
   shelves: {
     title: string;
     type: string;
-    activities: ParsedActivityRecommendation[];
+    activities: ActivityRecommendation[];
   }[];
 }
 
@@ -18,7 +19,7 @@ export function RecommendationsView({ shelves }: RecommendationsViewProps) {
   const { addActivity, tripId } = useActivitiesStore();
   const { toast } = useToast();
 
-  const handleAddActivity = async (activity: ParsedActivityRecommendation) => {
+  const handleAddActivity = async (activity: ActivityRecommendation) => {
     try {
       const response = await fetch(`/api/trips/${tripId}/activities`, {
         method: 'POST',
