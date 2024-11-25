@@ -108,6 +108,10 @@ model ActivityRecommendation {
   googleTypes   String[] // Raw place types from Google
   lastSyncedAt  DateTime // Track when we last synced with Google
 
+  viatorProductId String?
+  viatorData      Json? // Store full Viator product data
+  lastViatorSync  DateTime? // Track when we last synced with Viator
+
   // Relations and timestamps
   itineraryActivities ItineraryActivity[]
   createdAt           DateTime            @default(now())
@@ -141,16 +145,20 @@ model ItineraryActivity {
 }
 
 model City {
-  id          String                   @id @default(cuid())
-  name        String
-  countryCode String
-  placeId     String
-  latitude    Float
-  longitude   Float
-  createdAt   DateTime                 @default(now())
-  updatedAt   DateTime                 @updatedAt
-  activities  ActivityRecommendation[]
-  trips       Trip[]
+  id             String                   @id @default(cuid())
+  name           String
+  countryCode    String
+  placeId        String
+  latitude       Float
+  longitude      Float
+  viatorDestId   Int? // Store the matching Viator destinationId
+  viatorLookupId String? // Store the lookupId for API calls
+  viatorData     Json? // Store the full destination data
+  lastViatorSync DateTime? // Track when we last synced with Viator
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  activities     ActivityRecommendation[]
+  trips          Trip[]
 
   @@unique([name, countryCode])
 }
