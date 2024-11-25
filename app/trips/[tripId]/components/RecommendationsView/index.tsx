@@ -36,24 +36,7 @@ export function RecommendationsView({ shelves }: RecommendationsViewProps) {
 
       const { activity: newActivity } = await response.json();
 
-      // Parse the response data
-      const parsedActivity = {
-        ...newActivity,
-        recommendation: {
-          ...newActivity.recommendation,
-          location: JSON.parse(newActivity.recommendation.location),
-          images: JSON.parse(newActivity.recommendation.images),
-          availableDays: JSON.parse(newActivity.recommendation.availableDays),
-          openingHours: newActivity.recommendation.openingHours
-            ? JSON.parse(newActivity.recommendation.openingHours)
-            : null,
-          seasonality: JSON.parse(newActivity.recommendation.seasonality),
-          tags: JSON.parse(newActivity.recommendation.tags),
-        },
-        customizations: newActivity.customizations ? JSON.parse(newActivity.customizations) : null,
-      };
-
-      addActivity(parsedActivity);
+      addActivity(newActivity);
 
       toast({
         title: 'Activity added!',

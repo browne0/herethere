@@ -37,16 +37,18 @@ export function Nav() {
   const { isLoaded, isSignedIn, user } = useUser();
 
   return (
-    <header className={`w-full z-50 transition-all duration-300`}>
+    <header
+      className={`sticky top-0 bg-white border-b border-gray-100 w-full z-50 transition-all duration-300`}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-18">
           {/* Logo */}
           <Link href="/" className="font-bold text-xl hover:text-indigo-600 transition-colors">
             HereThere
           </Link>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center space-x-8">
+          <nav className="flex items-center space-x-8">
             <SignedIn>
               {/* Authenticated state - show only My Trips and UserButton */}
               <Link href="/trips">

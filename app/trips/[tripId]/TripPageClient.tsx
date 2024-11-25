@@ -17,6 +17,7 @@ import { RecommendationsView } from './components/RecommendationsView';
 import { useTripView } from './hooks/useTripView';
 import { ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
+import TripHeader from './components/TripHeader';
 
 interface TripPageClientProps {
   trip: ParsedTrip;
@@ -73,83 +74,8 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
   };
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      <div className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4">
-          {/* Header Section */}
-          <div className="flex items-center justify-between py-3">
-            <Link
-              href="/trips"
-              className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Back to Trips
-            </Link>
-
-            <button
-              onClick={() => setIsDeleteDialogOpen(true)}
-              className="inline-flex items-center px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete Trip
-            </button>
-          </div>
-
-          {/* Trip Info with Inline Progress */}
-          <div className="flex flex-col pb-4">
-            <div className="space-y-2">
-              <h1 className="text-xl font-semibold">Trip to {trip.city.name}</h1>
-              <div className="text-sm text-gray-600">
-                <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
-                </div>
-              </div>
-            </div>
-
-            {view === 'recommendations' && (
-              <div className="mt-4 space-y-2 sm:space-y-0 sm:flex sm:items-center sm:gap-3 text-sm">
-                <div className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-50 text-blue-800 rounded-full">
-                  <span className="font-medium">{activities.length}</span>
-                  <span className="text-blue-600">activities selected</span>
-                </div>
-                <div className="text-center sm:text-left text-gray-500">
-                  {recommendedMin - activities.length > 0 ? (
-                    <span>Add {recommendedMin - activities.length} more activities</span>
-                  ) : (
-                    <span className="text-green-600">Ready to go!</span>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex items-center">
-            {['Browse Activities', 'Itinerary'].map(tab => (
-              <button
-                key={tab}
-                className={cn(
-                  'px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2',
-                  view === (tab === 'Browse Activities' ? 'recommendations' : 'itinerary')
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-600 hover:text-gray-900'
-                )}
-                onClick={() =>
-                  setView(tab === 'Browse Activities' ? 'recommendations' : 'itinerary')
-                }
-              >
-                {tab}
-                {tab === 'Itinerary' && activities.length > 0 && view === 'recommendations' && (
-                  <span className="px-1.5 py-0.5 text-xs bg-blue-100 text-blue-800 rounded-full">
-                    {activities.length}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+    <main className="bg-white">
+      <TripHeader trip={trip} onDeleteClick={() => setIsDeleteDialogOpen(true)} />
 
       {/* Views */}
       {view === 'recommendations' ? (

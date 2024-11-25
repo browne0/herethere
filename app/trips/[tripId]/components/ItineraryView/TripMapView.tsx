@@ -115,13 +115,13 @@ function CustomMarker({
 }: CustomMarkerProps) {
   const { recommendation } = activity;
   const IconComponent =
-    ACTIVITY_ICONS[recommendation.category.toLowerCase()] || ACTIVITY_ICONS.default;
+    /*ACTIVITY_ICONS[recommendation.category.toLowerCase()] || */ ACTIVITY_ICONS.default;
 
   return (
     <OverlayView
       position={{
-        lat: recommendation.location.latitude,
-        lng: recommendation.location.longitude,
+        lat: recommendation.location!.latitude,
+        lng: recommendation.location!.longitude,
       }}
       mapPaneName={OVERLAY_MOUSE_TARGET}
     >
@@ -194,7 +194,7 @@ export function TripMapView({
       const { location } = activity.recommendation;
       bounds.extend({ lat: location.latitude, lng: location.longitude });
     });
-    map.fitBounds(bounds, 50);
+    map.fitBounds(bounds, 100);
   }, [map, activities]);
 
   const handleMapLoad = useCallback((mapInstance: google.maps.Map) => {

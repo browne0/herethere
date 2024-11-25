@@ -24,7 +24,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
   const [isMapOpen, setIsMapOpen] = useState(false);
 
   return (
-    <div className="h-[calc(100vh-163px)]">
+    <div className="h-[calc(100vh-186px)]">
       {/* Split View Container */}
       <div className="h-full grid md:grid-cols-[1fr,1fr]">
         {/* Timeline Panel - Scrollable */}

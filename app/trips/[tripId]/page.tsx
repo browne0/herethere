@@ -7,22 +7,9 @@ import { prisma } from '@/lib/db';
 import { TripPageClient } from './TripPageClient';
 import { ParsedItineraryActivity, ParsedTrip } from './types';
 
-// Helper to parse JSON fields from ActivityRecommendation
-function parseActivityRecommendation(activity: any): ActivityRecommendation {
-  return {
-    ...activity,
-    location: JSON.parse(activity.location),
-    images: JSON.parse(activity.images),
-    openingHours: activity.openingHours ? JSON.parse(activity.openingHours) : null,
-    seasonality: JSON.parse(activity.seasonality),
-    tags: JSON.parse(activity.tags),
-  };
-}
-
 function parseItineraryActivity(activity: any): ParsedItineraryActivity {
   return {
     ...activity,
-    recommendation: parseActivityRecommendation(activity.recommendation),
     customizations: activity.customizations ? JSON.parse(activity.customizations) : null,
   };
 }
@@ -47,6 +34,34 @@ async function fetchMuseumsAndGalleries(cityId: string, limit: number = 10) {
       },
     },
     orderBy: [{ rating: 'desc' }, { reviewCount: 'desc' }],
+  });
+}
+
+async function fetchHistoricalSites(cityId: string, limit: number = 10) {
+  return await prisma.activityRecommendation.findMany({
+    where: {
+      cityId,
+      OR: [
+        // Religious sites (churches, temples, etc.)
+        {
+          placeTypes: {
+            hasSome: ['church', 'synagogue', 'mosque', 'hindu_temple'],
+          },
+        },
+        // Other historical sites
+        {
+          placeTypes: {
+            hasSome: [
+              'tourist_attraction',
+              'point_of_interest',
+              'natural_feature',
+              'train_station',
+              'premise',
+            ],
+          },
+        },
+      ],
+    },
   });
 }
 
@@ -85,12 +100,11 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     activities: trip.activities.map(parseItineraryActivity),
   } as ParsedTrip;
 
-  const [iconicLandmarks, museumsAndGalleries] = await Promise.all([
+  const [iconicLandmarks, museumsAndGalleries, historicalSites] = await Promise.all([
     fetchMustSeeLocations(trip.city.id),
     fetchMuseumsAndGalleries(trip.city.id),
+    fetchHistoricalSites(trip.city.id),
   ]);
-
-  console.log(iconicLandmarks);
 
   // Organize recommendations into shelves
   const shelves = [
@@ -103,6 +117,11 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       title: `Museums & Galleries`,
       type: 'museums',
       activities: museumsAndGalleries,
+    },
+    {
+      title: `Historical Sites`,
+      type: 'historical-sites',
+      activities: historicalSites,
     },
   ];
 
