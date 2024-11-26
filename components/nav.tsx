@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 
 import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
 import { useUser } from '@clerk/nextjs';
-import { Menu, X } from 'lucide-react';
+import { Calendar, Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -51,21 +51,21 @@ export function Nav() {
           <nav className="flex items-center space-x-8">
             <SignedIn>
               {/* Authenticated state - show only My Trips and UserButton */}
-              <Link href="/trips">
-                <Button
-                  variant="ghost"
-                  className="hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-300"
-                >
-                  My Trips
-                </Button>
-              </Link>
               <UserButton
                 appearance={{
                   elements: {
                     avatarBox: 'w-8 h-8 hover:scale-110 transition-transform duration-300',
                   },
                 }}
-              />
+              >
+                <UserButton.MenuItems>
+                  <UserButton.Link
+                    label="Trips"
+                    labelIcon={<Calendar className="w-4 h-4" />}
+                    href="/trips"
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
             </SignedIn>
 
             <SignedOut>
