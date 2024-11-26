@@ -22,7 +22,7 @@ export default function SummaryPage() {
         title: 'Preferences Saved!',
         description: 'Your preferences saved successfully.',
       });
-      router.push('/dashboard');
+      router.push('/trips');
     } catch (_error) {
       toast({ title: 'Preferences save failed', description: 'Failed to save preferences' });
     }

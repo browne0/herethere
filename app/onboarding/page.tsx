@@ -7,16 +7,16 @@ import { redirect } from 'next/navigation';
 import { usePreferences } from '@/lib/stores/preferences';
 
 export default function OnboardingPage() {
-  const { onboardingComplete } = usePreferences();
+  const { onboardingCompleted } = usePreferences();
 
   useEffect(() => {
     // Redirect to interests page if onboarding isn't complete
-    if (!onboardingComplete) {
+    if (!onboardingCompleted) {
       redirect('/onboarding/interests');
     } else {
-      redirect('/dashboard');
+      redirect('/trips');
     }
-  }, [onboardingComplete]);
+  }, [onboardingCompleted]);
 
   return null; // Page will redirect
 }

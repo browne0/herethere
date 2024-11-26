@@ -68,7 +68,7 @@ export function FAQ() {
     {
       question: 'Is HereThere available worldwide?',
       answer:
-        'HereThere currently supports major tourist destinations across the globe, with new locations being added regularly. Our service is particularly comprehensive in popular cities, ensuring detailed and accurate recommendations wherever you travel.',
+        'HereThere currently supports only New York City, with plans to add new locations in the near future. Our service is particularly comprehensive in the cities we will operate in, ensuring detailed and accurate recommendations wherever you travel.',
     },
   ];
 

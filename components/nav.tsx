@@ -84,7 +84,7 @@ export function Nav() {
                   ))}
                 </>
               )}
-              {['/sign-in', '/sign-up', '/demo/trip/preferences'].includes(pathname) === false && (
+              {['/sign-in', '/sign-up'].includes(pathname) === false && (
                 <Link href="/sign-up">
                   <Button className="bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm hover:shadow-md transition-all duration-300 transform hover:-translate-y-0.5">
                     Get Started
