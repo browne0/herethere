@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Container } from '@/components/layout/container';
 import { Button } from '@/components/ui/button';
@@ -27,7 +28,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useToast } from '@/hooks/use-toast';
 
 import { DeleteTripDialog } from './DeleteTripDialog';
 
@@ -111,7 +111,6 @@ function TripActions({
 export function TripsList({ initialTrips }: TripsListProps) {
   const [tripToDelete, setTripToDelete] = useState<TripWithActivitiesAndCity | null>(null);
   const [trips, setTrips] = useState(initialTrips);
-  const { toast } = useToast();
   const router = useRouter();
 
   const { upcoming, ongoing, past } = groupTripsByStatus(trips);
@@ -134,18 +133,15 @@ export function TripsList({ initialTrips }: TripsListProps) {
       // Update local state
       setTrips(trips.filter(t => t.id !== tripId));
 
-      toast({
-        title: 'Trip deleted',
+      toast.success('Trip deleted', {
         description: `Successfully deleted your trip to ${result.data.destination}.`,
       });
 
       router.refresh();
     } catch (error) {
       console.error('Error deleting trip:', error);
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: error instanceof Error ? error.message : 'Failed to delete trip',
-        variant: 'destructive',
       });
       throw error;
     }

@@ -2,10 +2,10 @@
 
 import { Check, Mountain, Utensils, Clock, Settings, ArrowRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
 import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 import { usePreferences } from '@/lib/stores/preferences';
 
@@ -18,13 +18,12 @@ export default function SummaryPage() {
     try {
       await savePreferences();
       preferences.setOnboardingCompleted(true);
-      toast({
-        title: 'Preferences Saved!',
-        description: 'Your preferences saved successfully.',
+      toast.success('Preferences Saved!', {
+        description: 'Your preferences have been saved successfully.',
       });
       router.push('/trips');
     } catch (_error) {
-      toast({ title: 'Preferences save failed', description: 'Failed to save preferences' });
+      toast.error('Preferences save failed', { description: 'Failed to save preferences' });
     }
   };
 
@@ -85,12 +84,19 @@ export default function SummaryPage() {
                 </Button>
               </div>
               <div className="pl-7 space-y-1">
-                {section.items.map((item, i) => (
-                  <div key={i} className="flex items-center space-x-2 text-gray-600">
+                {section.items.length > 0 ? (
+                  section.items.map((item, i) => (
+                    <div key={i} className="flex items-center space-x-2 text-gray-600">
+                      <Check className="w-4 h-4" />
+                      <span className="capitalize">{item}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex items-center space-x-2 text-gray-600">
                     <Check className="w-4 h-4" />
-                    <span className="capitalize">{item}</span>
+                    <span className="capitalize">No preferences given</span>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           ))}

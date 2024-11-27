@@ -42,15 +42,16 @@ enum SeasonalAvailability {
 }
 
 model User {
-  id           String   @id
-  email        String   @unique
-  firstName    String?
-  lastName     String?
-  profileImage String?
-  preferences  Json? // For storing user preferences that affect recommendations
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  trips        Trip[]
+  id                  String   @id
+  email               String   @unique
+  firstName           String?
+  lastName            String?
+  profileImage        String?
+  preferences         Json? // For storing user preferences that affect recommendations
+  onboardingCompleted Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  trips               Trip[]
 }
 
 model Trip {

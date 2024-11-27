@@ -1,8 +1,8 @@
 'use client';
 
 import { ActivityRecommendation } from '@prisma/client';
+import { toast } from 'sonner';
 
-import { useToast } from '@/hooks/use-toast';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ActivityShelfComponent } from './ActivityShelf';
@@ -17,7 +17,6 @@ interface RecommendationsViewProps {
 
 export function RecommendationsView({ shelves }: RecommendationsViewProps) {
   const { addActivity, tripId } = useActivitiesStore();
-  const { toast } = useToast();
 
   const handleAddActivity = async (activity: ActivityRecommendation) => {
     try {
@@ -38,16 +37,13 @@ export function RecommendationsView({ shelves }: RecommendationsViewProps) {
 
       addActivity(newActivity);
 
-      toast({
-        title: 'Activity added!',
+      toast.success('Activity added!', {
         description: "We'll schedule this at the best time for your trip.",
       });
     } catch (error) {
       console.error('Error adding activity:', error);
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to add activity. Please try again.',
-        variant: 'destructive',
       });
     }
   };

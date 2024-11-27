@@ -4,7 +4,7 @@ import { Inter } from 'next/font/google';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { GoogleMapsProvider } from '@/components/maps/GoogleMapsProvider';
 import './globals.css';
-import { Toaster } from '@/components/ui/toaster';
+import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -16,7 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <PageLayout>
             <GoogleMapsProvider>{children}</GoogleMapsProvider>
           </PageLayout>
-          <Toaster />
+          <Toaster richColors position="top-center" />
         </body>
       </html>
     </ClerkProvider>

@@ -1,4 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
+import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
 
@@ -7,6 +8,19 @@ import { TripsList } from './components/TripsList';
 export default async function TripsPage() {
   const { userId } = await auth();
   if (!userId) return null;
+
+  const user = await prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      onboardingCompleted: true,
+    },
+  });
+
+  if (!user?.onboardingCompleted) {
+    redirect('/onboarding');
+  }
 
   const trips = await prisma.trip.findMany({
     where: { userId },

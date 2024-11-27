@@ -3,14 +3,10 @@
 import { useEffect, useState } from 'react';
 
 import { ActivityRecommendation } from '@prisma/client';
-import { format } from 'date-fns';
-import { Calendar, ChevronLeft, Trash2 } from 'lucide-react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
-import { toast } from '@/hooks/use-toast';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { cn } from '@/lib/utils';
 
 import { ItineraryView } from './components/ItineraryView';
 import { RecommendationsView } from './components/RecommendationsView';
@@ -30,8 +26,8 @@ interface TripPageClientProps {
 
 export function TripPageClient({ trip, shelves }: TripPageClientProps) {
   const router = useRouter();
-  const { view, setView, initialize } = useTripView();
-  const { setActivities, activities, setTripId } = useActivitiesStore();
+  const { view, initialize } = useTripView();
+  const { setActivities, setTripId } = useActivitiesStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -44,12 +40,6 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
     setTripId(trip.id);
   }, [trip.activities, setActivities, setTripId, trip.id]);
 
-  const recommendedMin =
-    Math.ceil(
-      (new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) /
-        (1000 * 60 * 60 * 24)
-    ) * 4;
-
   const handleDeleteTrip = async (tripId: string) => {
     try {
       const response = await fetch(`/api/trips/${tripId}`, {
@@ -58,17 +48,14 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
 
       if (!response.ok) throw new Error('Failed to delete trip');
 
-      toast({
-        title: 'Trip deleted',
+      toast.success('Trip deleted', {
         description: 'Your trip has been successfully deleted.',
       });
 
       router.push('/trips');
     } catch (_error) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to delete trip. Please try again.',
-        variant: 'destructive',
       });
     }
   };

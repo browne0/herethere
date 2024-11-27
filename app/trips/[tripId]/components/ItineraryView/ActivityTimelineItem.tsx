@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 
 import { format } from 'date-fns';
 import { Navigation, Trash2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import {
@@ -15,7 +16,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { useToast } from '@/hooks/use-toast';
 import { getGoogleMapsDirectionsUrl } from '@/lib/maps/utils';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
@@ -43,7 +43,6 @@ export function ActivityTimelineItem({
 }: ActivityTimelineItemProps) {
   const { recommendation } = activity;
   const { removeActivity, tripId } = useActivitiesStore();
-  const { toast } = useToast();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
@@ -58,16 +57,13 @@ export function ActivityTimelineItem({
       // Update store
       removeActivity(activity.id);
 
-      toast({
-        title: 'Activity removed',
+      toast.success('Activity removed', {
         description: 'The activity has been removed from your itinerary.',
       });
     } catch (error) {
       console.error('Error removing activity:', error);
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to remove activity. Please try again.',
-        variant: 'destructive',
       });
     } finally {
       setIsDeleting(false);

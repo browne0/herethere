@@ -33,7 +33,7 @@ export const Hero = () => {
         {/* Primary CTA Section */}
         <div className="mb-8">
           <h1 className="inline-block text-5xl md:text-6xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-6">
-            Your Personalized Trip,
+            Your Personalized NYC Trip,
             <br />
             Planned in Minutes.
           </h1>

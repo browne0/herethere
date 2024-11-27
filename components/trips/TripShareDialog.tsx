@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-import { Trip } from '@prisma/client';
 import { format } from 'date-fns';
 import { Share2, Mail, MessageCircle, Copy, Loader2, CalendarDays, MapPin } from 'lucide-react';
+import { toast } from 'sonner';
 
+import { ParsedTrip } from '@/app/trips/[tripId]/types';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,10 +19,9 @@ import {
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
-import { useToast } from '@/hooks/use-toast';
 
 interface TripShareDialogProps {
-  trip: Trip;
+  trip: ParsedTrip;
   activityCount: number;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
@@ -34,8 +34,6 @@ export function TripShareDialog({ trip, open, onOpenChange, trigger }: TripShare
   const [isPublic, setIsPublic] = useState(trip.isPublic);
   const [isLoading, setIsLoading] = useState(false);
   const [shareUrl, setShareUrl] = useState('');
-
-  const { toast } = useToast();
 
   const isControlled = open !== undefined;
   const isOpen = isControlled ? open : internalOpen;
@@ -63,17 +61,14 @@ export function TripShareDialog({ trip, open, onOpenChange, trigger }: TripShare
       if (!response.ok) throw new Error('Failed to update sharing status');
 
       setIsPublic(newStatus);
-      toast({
-        title: newStatus ? 'Trip made public' : 'Trip made private',
+      toast.success(newStatus ? 'Trip made public' : 'Trip made private', {
         description: newStatus
           ? 'Anyone with the link can now view this trip'
           : 'The trip is now private',
       });
     } catch (_error) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to update sharing status',
-        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
@@ -83,15 +78,12 @@ export function TripShareDialog({ trip, open, onOpenChange, trigger }: TripShare
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(shareUrl);
-      toast({
-        title: 'Link copied',
+      toast.success('Link copied', {
         description: 'Trip link copied to clipboard',
       });
     } catch (_error) {
-      toast({
-        title: 'Error',
+      toast.error('Error', {
         description: 'Failed to copy link',
-        variant: 'destructive',
       });
     }
   };
@@ -124,7 +116,7 @@ export function TripShareDialog({ trip, open, onOpenChange, trigger }: TripShare
           <h3 className="font-medium text-lg">{trip.title}</h3>
           <div className="flex items-center text-sm text-muted-foreground">
             <MapPin className="h-4 w-4 mr-1" />
-            {trip.destination}
+            {trip.city.name}
           </div>
           <div className="flex items-center text-sm text-muted-foreground">
             <CalendarDays className="h-4 w-4 mr-1" />

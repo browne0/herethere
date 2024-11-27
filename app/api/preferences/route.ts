@@ -42,6 +42,7 @@ export async function PUT(req: Request) {
       },
       data: {
         preferences: preferencesData,
+        onboardingCompleted: true, // Set to true when preferences are saved
         updatedAt: new Date(),
       },
     });
