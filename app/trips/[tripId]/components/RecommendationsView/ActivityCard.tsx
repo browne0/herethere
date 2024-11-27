@@ -97,7 +97,6 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
             <span className="text-gray-600 mx-1">·</span>
             <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
           </div>
-          <span className="text-gray-900 font-medium">{getPriceDisplay(activity.priceLevel)}</span>
         </div>
 
         <h3 className="font-medium text-base leading-tight">{activity.name}</h3>

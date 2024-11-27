@@ -59,7 +59,7 @@ async function testDestinationSync() {
       console.log('Warning: New York not found in Viator destinations');
     }
   } catch (error) {
-    console.error('Error during test:', error);
+    console.error('Error during testno:', error);
   }
 }
 

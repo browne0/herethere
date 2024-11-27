@@ -23,7 +23,7 @@ export interface ViatorDestinationsResponse {
 
 export class ViatorAPI {
   private apiKey: string;
-  private baseUrl = 'https://api.viator.com/partner';
+  private baseUrl = 'https://api.sandbox.viator.com/partner';
 
   constructor() {
     if (!process.env.VIATOR_API_KEY) {
@@ -37,7 +37,8 @@ export class ViatorAPI {
       ...options,
       headers: {
         'exp-api-key': this.apiKey,
-        Accept: 'application/json',
+        'Accept-Language': 'en-US',
+        Accept: 'application/json;version=2.0',
         'Content-Type': 'application/json',
         ...options.headers,
       },
