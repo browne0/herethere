@@ -51,7 +51,7 @@ export const Hero = () => {
         </div>
 
         {/* Popular Destinations */}
-        <div className="mt-12">
+        {/* <div className="mt-12">
           <div className="flex flex-wrap justify-center gap-3">
             {featuredDestinations.map(destination => (
               <div
@@ -65,10 +65,10 @@ export const Hero = () => {
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Social Proof */}
-        <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
+        {/* <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-8 max-w-3xl mx-auto">
           {[
             { value: '50k+', label: 'Trips Planned' },
             { value: '150+', label: 'Cities' },
@@ -82,7 +82,7 @@ export const Hero = () => {
               <div className="text-gray-600 mt-1">{stat.label}</div>
             </div>
           ))}
-        </div>
+        </div> */}
       </div>
     </div>
   );
