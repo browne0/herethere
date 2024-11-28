@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { ActivityRecommendation } from '@prisma/client';
 import { Heart, Loader2, Star, Clock, MapPin } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
@@ -41,7 +42,8 @@ function getPriceDisplay(level: string) {
 export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
-  const { activities } = useActivitiesStore();
+  const { activities, tripId } = useActivitiesStore();
+  const router = useRouter();
   const addedActivityIds = new Set(activities.map(a => a.recommendationId));
   const isAdded = addedActivityIds.has(activity.id);
 
@@ -64,7 +66,10 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   };
 
   return (
-    <div className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col">
+    <div
+      onClick={() => router.push(`/trips/${tripId}/activities/${activity.id}`)}
+      className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col"
+    >
       <div className="relative aspect-[4/3]">
         <img
           src={activity.images.urls[0].url}

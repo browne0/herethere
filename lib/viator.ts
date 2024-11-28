@@ -16,8 +16,90 @@ export interface ViatorDestination {
   };
 }
 
+interface ProductSearchFiltering {
+  destination: string;
+  tags?: number[];
+  flags?: Array<
+    | 'NEW_ON_VIATOR'
+    | 'FREE_CANCELLATION'
+    | 'SKIP_THE_LINE'
+    | 'PRIVATE_TOUR'
+    | 'SPECIAL_OFFER'
+    | 'LIKELY_TO_SELL_OUT'
+  >;
+  lowestPrice?: number;
+  highestPrice?: number;
+  startDate?: string;
+  endDate?: string;
+  includeAutomaticTranslations?: boolean;
+  confirmationType?: 'INSTANT';
+  durationInMinutes?: {
+    from?: number;
+    to?: number;
+  };
+  rating?: {
+    from?: number;
+    to?: number;
+  };
+  attractionId?: number;
+}
+
+interface ProductSearchSorting {
+  sort: 'TRAVELER_RATING' | 'PRICE' | 'POPULARITY' | 'RELEVANCE';
+  order: 'ASCENDING' | 'DESCENDING';
+}
+
+interface ProductSearchPagination {
+  start: number;
+  count: number;
+}
+
+interface ProductSearchParams {
+  filtering: ProductSearchFiltering;
+  sorting?: ProductSearchSorting;
+  pagination?: ProductSearchPagination;
+  currency: string;
+}
+
 export interface ViatorDestinationsResponse {
   destinations: ViatorDestination[];
+  totalCount: number;
+}
+
+export interface ViatorProduct {
+  productCode: string;
+  title: string;
+  description: string;
+  price: {
+    fromPrice: number;
+    currencyCode: string;
+  };
+  duration: {
+    duration: number;
+    unit: string;
+  };
+  bookingInfo: {
+    confirmationType: string;
+    cancellationPolicy?: {
+      description: string;
+      type: string;
+    };
+  };
+  images: {
+    urls: string[];
+  };
+  reviews: {
+    combinedRating: number;
+    totalReviews: number;
+  };
+  inclusions?: string[];
+  exclusions?: string[];
+  highlights?: string[];
+  additionalInfo?: string[];
+}
+
+export interface ViatorSearchProductsResponse {
+  products: ViatorProduct[];
   totalCount: number;
 }
 
@@ -79,10 +161,45 @@ export class ViatorAPI {
     return match || null;
   }
 
-  async searchProducts(params: { destId: string; startDate?: string; endDate?: string }) {
-    return this.request('/search', {
+  async searchProducts(params: {
+    destId: string;
+    startDate?: string;
+    endDate?: string;
+    attractionId?: number;
+    sorting?: ProductSearchSorting;
+    pagination?: ProductSearchPagination;
+  }): Promise<ViatorSearchProductsResponse> {
+    const searchParams: ProductSearchParams = {
+      filtering: {
+        destination: params.destId,
+        startDate: params.startDate,
+        endDate: params.endDate,
+        attractionId: params.attractionId,
+        // Default to showing available products with free cancellation
+        flags: ['FREE_CANCELLATION'],
+        // Default to instant confirmation
+        confirmationType: 'INSTANT',
+        // Only show well-rated products
+        rating: {
+          from: 3,
+          to: 5,
+        },
+        includeAutomaticTranslations: true,
+      },
+      sorting: params.sorting || {
+        sort: 'TRAVELER_RATING',
+        order: 'DESCENDING',
+      },
+      pagination: params.pagination || {
+        start: 1,
+        count: 5,
+      },
+      currency: 'USD',
+    };
+
+    return this.request('/products/search', {
       method: 'POST',
-      body: JSON.stringify(params),
+      body: JSON.stringify(searchParams),
     });
   }
 
