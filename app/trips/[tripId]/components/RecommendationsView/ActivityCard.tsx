@@ -66,10 +66,7 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   };
 
   return (
-    <div
-      onClick={() => router.push(`/trips/${tripId}/activities/${activity.id}`)}
-      className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col"
-    >
+    <div className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col">
       <div className="relative aspect-[4/3]">
         <img
           src={activity.images.urls[0].url}

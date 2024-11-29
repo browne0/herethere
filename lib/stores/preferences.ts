@@ -90,67 +90,60 @@ export interface PreferencesState {
   setCurrentStep: (step: string) => void;
 }
 
-export const usePreferences = create<PreferencesState>()(
-  persist(
-    set => ({
-      // Initial Interest States
-      interests: [],
-      pricePreference: 2,
+export const usePreferences = create<PreferencesState>()(set => ({
+  // Initial Interest States
+  interests: [],
+  pricePreference: 2,
 
-      // Initial Pace States
-      pacePreference: 'balanced',
-      energyLevel: 2,
-      preferredStartTime: 'mid',
+  // Initial Pace States
+  pacePreference: 'balanced',
+  energyLevel: 2,
+  preferredStartTime: 'mid',
 
-      // Initial Dietary States
-      dietaryRestrictions: [],
-      cuisinePreferences: {
-        preferred: [],
-        avoided: [],
-      },
-      mealImportance: {
-        breakfast: true,
-        lunch: true,
-        dinner: true,
-      },
+  // Initial Dietary States
+  dietaryRestrictions: [],
+  cuisinePreferences: {
+    preferred: [],
+    avoided: [],
+  },
+  mealImportance: {
+    breakfast: true,
+    lunch: true,
+    dinner: true,
+  },
 
-      // Initial Requirement States
-      transportPreferences: ['walking', 'public-transit'],
+  // Initial Requirement States
+  transportPreferences: ['walking', 'public-transit'],
 
-      // Initial Time Preference States
-      bestTimeOfDay: ['morning', 'afternoon'],
-      prefersIndoor: ['afternoon'],
-      prefersOutdoor: ['morning'],
-      mealTimes: {},
+  // Initial Time Preference States
+  bestTimeOfDay: ['morning', 'afternoon'],
+  prefersIndoor: ['afternoon'],
+  prefersOutdoor: ['morning'],
+  mealTimes: {},
 
-      // Initial Onboarding State
-      onboardingCompleted: false,
-      currentStep: 'interests',
+  // Initial Onboarding State
+  onboardingCompleted: false,
+  currentStep: 'interests',
 
-      // Setters
-      setInterests: interests => set({ interests }),
-      setPricePreference: pricePreference => set({ pricePreference }),
+  // Setters
+  setInterests: interests => set({ interests }),
+  setPricePreference: pricePreference => set({ pricePreference }),
 
-      setPacePreference: pacePreference => set({ pacePreference }),
-      setEnergyLevel: energyLevel => set({ energyLevel }),
-      setPreferredStartTime: preferredStartTime => set({ preferredStartTime }),
+  setPacePreference: pacePreference => set({ pacePreference }),
+  setEnergyLevel: energyLevel => set({ energyLevel }),
+  setPreferredStartTime: preferredStartTime => set({ preferredStartTime }),
 
-      setDietaryRestrictions: dietaryRestrictions => set({ dietaryRestrictions }),
-      setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
-      setMealImportance: mealImportance => set({ mealImportance }),
+  setDietaryRestrictions: dietaryRestrictions => set({ dietaryRestrictions }),
+  setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
+  setMealImportance: mealImportance => set({ mealImportance }),
 
-      setTransportPreferences: transportPreferences => set({ transportPreferences }),
+  setTransportPreferences: transportPreferences => set({ transportPreferences }),
 
-      setBestTimeOfDay: bestTimeOfDay => set({ bestTimeOfDay }),
-      setPrefersIndoor: prefersIndoor => set({ prefersIndoor }),
-      setPrefersOutdoor: prefersOutdoor => set({ prefersOutdoor }),
-      setMealTimes: mealTimes => set({ mealTimes }),
+  setBestTimeOfDay: bestTimeOfDay => set({ bestTimeOfDay }),
+  setPrefersIndoor: prefersIndoor => set({ prefersIndoor }),
+  setPrefersOutdoor: prefersOutdoor => set({ prefersOutdoor }),
+  setMealTimes: mealTimes => set({ mealTimes }),
 
-      setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
-      setCurrentStep: currentStep => set({ currentStep }),
-    }),
-    {
-      name: 'user-preferences',
-    }
-  )
-);
+  setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
+  setCurrentStep: currentStep => set({ currentStep }),
+}));
