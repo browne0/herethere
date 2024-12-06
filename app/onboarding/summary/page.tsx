@@ -1,29 +1,26 @@
 'use client';
 
-import { Check, Mountain, Utensils, Clock, Settings, ArrowRight } from 'lucide-react';
+import { Check, Mountain, Utensils, Settings, Users } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { usePreferencesSync } from '@/hooks/usePreferencesSync';
 import { usePreferences } from '@/lib/stores/preferences';
 
 export default function SummaryPage() {
   const router = useRouter();
   const preferences = usePreferences();
-  const { savePreferences } = usePreferencesSync();
 
-  const handleComplete = async () => {
-    try {
-      await savePreferences();
-      preferences.setOnboardingCompleted(true);
-      toast.success('Preferences Saved!', {
-        description: 'Your preferences have been saved successfully.',
-      });
-      router.push('/trips');
-    } catch (_error) {
-      toast.error('Preferences save failed', { description: 'Failed to save preferences' });
+  const getCrowdPreferenceLabel = (pref: string) => {
+    switch (pref) {
+      case 'popular':
+        return 'Popular attractions';
+      case 'hidden':
+        return 'Hidden gems and local spots';
+      case 'mixed':
+        return 'Mix of popular spots and hidden gems';
+      default:
+        return 'No preference set';
     }
   };
 
@@ -53,13 +50,10 @@ export default function SummaryPage() {
       edit: () => router.push('/onboarding/dietary'),
     },
     {
-      title: 'Activity Timing',
-      icon: <Clock className="w-5 h-5" />,
-      items: [
-        ...preferences.bestTimeOfDay.map(t => `Best time: ${t}`),
-        ...preferences.prefersOutdoor.map(t => `Outdoors in ${t}`),
-      ],
-      edit: () => router.push('/onboarding/time'),
+      title: 'Sightseeing Style',
+      icon: <Users className="w-5 h-5" />,
+      items: [getCrowdPreferenceLabel(preferences.crowdPreference)],
+      edit: () => router.push('/onboarding/crowd-preference'),
     },
   ];
 
@@ -100,13 +94,6 @@ export default function SummaryPage() {
               </div>
             </div>
           ))}
-        </div>
-
-        <div className="mt-8 flex justify-end">
-          <Button onClick={handleComplete} className="flex items-center space-x-2">
-            <span>Complete Setup</span>
-            <ArrowRight className="w-4 h-4" />
-          </Button>
         </div>
       </Card>
     </>

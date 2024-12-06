@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "ngrok": "ngrok http 3000 --log=stdout",
+    "ngrok": "ngrok http --domain=frequently-fitting-redfish.ngrok-free.app 3000 --log=stdout",
     "dev:tunnel": "concurrently -n \"next,ngrok\" -c \"blue,yellow\" \"npm run dev\" \"npm run ngrok\"",
     "build": "next build",
     "start": "next start",
@@ -21,6 +21,8 @@
     "sync-users:prod": "dotenv -e .env.production -- tsx scripts/sync-clerk-users.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.705.0",
+    "@aws-sdk/s3-request-presigner": "^3.705.0",
     "@clerk/nextjs": "^6.0.2",
     "@googlemaps/google-maps-services-js": "^3.4.0",
     "@googlemaps/js-api-loader": "^1.16.8",
@@ -61,6 +63,7 @@
     "react-dom": "^18",
     "react-hook-form": "^7.53.1",
     "shadcn-ui": "^0.9.2",
+    "sharp": "^0.33.5",
     "sonner": "^1.7.0",
     "svix": "^1.37.0",
     "tailwind-merge": "^2.5.4",

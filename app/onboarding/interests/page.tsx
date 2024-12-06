@@ -1,9 +1,7 @@
 'use client';
 
 import { Mountain, Palette, Music, Camera, Book, Utensils } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { InterestType, usePreferences } from '@/lib/stores/preferences';
 
@@ -17,14 +15,7 @@ const INTERESTS: Array<{ icon: React.ReactNode; label: string; value: InterestTy
 ];
 
 export default function InterestsPage() {
-  const router = useRouter();
   const { interests, setInterests } = usePreferences();
-
-  const handleNext = () => {
-    // Optional: Add analytics
-    // track('completed_interests', { interests });
-    router.push('/onboarding/pace');
-  };
 
   return (
     <>
@@ -59,12 +50,6 @@ export default function InterestsPage() {
               </div>
             </button>
           ))}
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button onClick={handleNext} disabled={interests.length === 0}>
-            Continue
-          </Button>
         </div>
       </Card>
     </>

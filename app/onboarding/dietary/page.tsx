@@ -1,14 +1,13 @@
 'use client';
 
 import { Utensils, Coffee } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
 
 // Type your constant arrays
-const DIETARY_RESTRICTIONS: Array<{ label: string; value: DietaryRestriction }> = [
+const DIETARY_RESTRICTIONS: Array<{ label: string; value: DietaryRestriction | null }> = [
+  { label: 'No dietary restrictions', value: null },
   { label: 'Vegetarian', value: 'vegetarian' },
   { label: 'Vegan', value: 'vegan' },
   { label: 'Gluten-Free', value: 'gluten-free' },
@@ -28,7 +27,6 @@ const CUISINE_PREFERENCES: Array<{ label: string; value: Cuisine }> = [
 const MEAL_KEYS = ['breakfast', 'lunch', 'dinner'] as const;
 
 export default function DietaryPage() {
-  const router = useRouter();
   const {
     dietaryRestrictions,
     setDietaryRestrictions,
@@ -55,18 +53,26 @@ export default function DietaryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {DIETARY_RESTRICTIONS.map(restriction => (
                 <button
-                  key={restriction.value}
+                  key={restriction.value ?? 'none'}
                   onClick={() => {
-                    setDietaryRestrictions(
-                      dietaryRestrictions.includes(restriction.value)
-                        ? dietaryRestrictions.filter(r => r !== restriction.value)
-                        : [...dietaryRestrictions, restriction.value]
-                    );
+                    if (restriction.value === null) {
+                      setDietaryRestrictions([]);
+                    } else {
+                      setDietaryRestrictions(
+                        dietaryRestrictions.includes(restriction.value)
+                          ? dietaryRestrictions.filter(r => r !== restriction.value)
+                          : [...dietaryRestrictions, restriction.value]
+                      );
+                    }
                   }}
                   className={`p-3 rounded-lg border transition-all ${
-                    dietaryRestrictions.includes(restriction.value)
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
+                    restriction.value === null
+                      ? dietaryRestrictions.length === 0
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
+                      : dietaryRestrictions.includes(restriction.value)
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 hover:border-gray-300'
                   }`}
                 >
                   {restriction.label}
@@ -128,10 +134,6 @@ export default function DietaryPage() {
               ))}
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button onClick={() => router.push('/onboarding/requirements')}>Continue</Button>
         </div>
       </Card>
     </>

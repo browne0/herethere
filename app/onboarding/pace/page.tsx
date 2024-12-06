@@ -1,9 +1,7 @@
 'use client';
 
 import { Bike, Sun, Moon } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { StartTime, usePreferences } from '@/lib/stores/preferences';
 
@@ -50,14 +48,8 @@ const START_TIMES = [
 ];
 
 export default function PacePage() {
-  const router = useRouter();
   const { energyLevel, setEnergyLevel, preferredStartTime, setPreferredStartTime } =
     usePreferences();
-
-  const handleNext = () => {
-    // Optional: Add analytics
-    router.push('/onboarding/dietary');
-  };
 
   return (
     <>
@@ -113,12 +105,6 @@ export default function PacePage() {
               </button>
             ))}
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button onClick={handleNext} disabled={!energyLevel || !preferredStartTime}>
-            Continue
-          </Button>
         </div>
       </Card>
     </>

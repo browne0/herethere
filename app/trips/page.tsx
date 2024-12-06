@@ -14,6 +14,7 @@ export default async function TripsPage() {
       id: userId,
     },
     select: {
+      id: true,
       onboardingCompleted: true,
     },
   });

@@ -1,9 +1,9 @@
 import { useState } from 'react';
 
 import { ActivityRecommendation } from '@prisma/client';
-import { Heart, Loader2, Star, Clock, MapPin } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { Heart, Loader2, Star, MapPin } from 'lucide-react';
 
+import { CachedImage } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
@@ -11,6 +11,10 @@ import { formatNumberIntl } from '@/lib/utils';
 interface ActivityCardProps {
   activity: ActivityRecommendation;
   onAdd: (activity: ActivityRecommendation) => Promise<void>;
+}
+
+interface ActivityImages {
+  urls: string[];
 }
 
 function getDurationDisplay(minutes: number): string {
@@ -22,30 +26,17 @@ function getDurationDisplay(minutes: number): string {
     : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
-function getPriceDisplay(level: string) {
-  switch (level) {
-    case 'FREE':
-      return 'Free';
-    case 'LOW':
-      return '$';
-    case 'MODERATE':
-      return '$$';
-    case 'HIGH':
-      return '$$$';
-    case 'VERY_HIGH':
-      return '$$$$';
-    default:
-      return '';
-  }
-}
-
 export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
-  const { activities, tripId } = useActivitiesStore();
-  const router = useRouter();
+  const { activities } = useActivitiesStore();
   const addedActivityIds = new Set(activities.map(a => a.recommendationId));
   const isAdded = addedActivityIds.has(activity.id);
+
+  // Parse the images JSON to get the photo reference
+  const images = activity.images as unknown as ActivityImages;
+
+  const photoReference = images.urls[0]; // Assuming first image is the main one
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -68,8 +59,10 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   return (
     <div className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col">
       <div className="relative aspect-[4/3]">
-        <img
-          src={activity.images.urls[0].url}
+        <CachedImage
+          photoReference={photoReference}
+          width={400}
+          height={300}
           alt={activity.name}
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -106,7 +99,9 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
         <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-1.5 text-sm text-gray-600">
             <MapPin className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{activity.location.neighborhood}</span>
+            <span className="truncate">
+              {(activity.location as { neighborhood: string }).neighborhood}
+            </span>
           </div>
         </div>
 

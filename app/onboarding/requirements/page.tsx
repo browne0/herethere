@@ -1,9 +1,7 @@
 'use client';
 
 import { User2, Bus, Car } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
-import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { TransportMode, usePreferences } from '@/lib/stores/preferences';
 
@@ -15,7 +13,6 @@ const TRANSPORT_PREFERENCES: Array<{ icon: React.ReactNode; label: string; value
   ];
 
 export default function RequirementsPage() {
-  const router = useRouter();
   const { transportPreferences, setTransportPreferences } = usePreferences();
 
   return (
@@ -53,10 +50,6 @@ export default function RequirementsPage() {
               ))}
             </div>
           </div>
-        </div>
-
-        <div className="mt-6 flex justify-end">
-          <Button onClick={() => router.push('/onboarding/time')}>Continue</Button>
         </div>
       </Card>
     </>

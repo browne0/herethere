@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 export type InterestType =
   | 'outdoors'
@@ -10,7 +9,6 @@ export type InterestType =
   | 'history';
 export type PricePreference = 1 | 2 | 3; // 1 = Budget, 2 = Moderate, 3 = Luxury
 export type StartTime = 'early' | 'mid' | 'late';
-export type TimeOfDay = 'morning' | 'afternoon' | 'evening';
 export type TransportMode = 'walking' | 'public-transit' | 'taxi' | 'driving';
 export type Cuisine =
   | 'italian'
@@ -23,6 +21,7 @@ export type Cuisine =
   | 'mediterranean'
   | 'american';
 export type DietaryRestriction = 'vegetarian' | 'vegan' | 'halal' | 'kosher' | 'gluten-free';
+export type CrowdPreference = 'popular' | 'hidden' | 'mixed';
 
 export interface PreferencesState {
   // Interest Preferences
@@ -49,19 +48,11 @@ export interface PreferencesState {
   // Requirements
   transportPreferences: TransportMode[];
 
-  // Time Preferences
-  bestTimeOfDay: TimeOfDay[];
-  prefersIndoor: TimeOfDay[];
-  prefersOutdoor: TimeOfDay[];
-  mealTimes: {
-    breakfast?: 'early' | 'late';
-    lunch?: 'early' | 'late';
-    dinner?: 'early' | 'late';
-  };
-
   // Onboarding State
   onboardingCompleted: boolean;
   currentStep: string;
+
+  crowdPreference: CrowdPreference;
 
   // Setters
   setInterests: (interests: InterestType[]) => void;
@@ -74,17 +65,9 @@ export interface PreferencesState {
   setDietaryRestrictions: (restrictions: DietaryRestriction[]) => void;
   setCuisinePreferences: (prefs: { preferred: Cuisine[]; avoided: Cuisine[] }) => void;
   setMealImportance: (prefs: { breakfast: boolean; lunch: boolean; dinner: boolean }) => void;
+  setCrowdPreference: (preference: CrowdPreference) => void;
 
   setTransportPreferences: (modes: TransportMode[]) => void;
-
-  setBestTimeOfDay: (times: TimeOfDay[]) => void;
-  setPrefersIndoor: (times: TimeOfDay[]) => void;
-  setPrefersOutdoor: (times: TimeOfDay[]) => void;
-  setMealTimes: (times: {
-    breakfast?: 'early' | 'late';
-    lunch?: 'early' | 'late';
-    dinner?: 'early' | 'late';
-  }) => void;
 
   setOnboardingCompleted: (completed: boolean) => void;
   setCurrentStep: (step: string) => void;
@@ -107,13 +90,15 @@ export const usePreferences = create<PreferencesState>()(set => ({
     avoided: [],
   },
   mealImportance: {
-    breakfast: true,
+    breakfast: false,
     lunch: true,
     dinner: true,
   },
 
+  crowdPreference: 'hidden',
+
   // Initial Requirement States
-  transportPreferences: ['walking', 'public-transit'],
+  transportPreferences: ['walking', 'taxi'],
 
   // Initial Time Preference States
   bestTimeOfDay: ['morning', 'afternoon'],
@@ -137,12 +122,9 @@ export const usePreferences = create<PreferencesState>()(set => ({
   setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
   setMealImportance: mealImportance => set({ mealImportance }),
 
-  setTransportPreferences: transportPreferences => set({ transportPreferences }),
+  setCrowdPreference: crowdPreference => set({ crowdPreference }),
 
-  setBestTimeOfDay: bestTimeOfDay => set({ bestTimeOfDay }),
-  setPrefersIndoor: prefersIndoor => set({ prefersIndoor }),
-  setPrefersOutdoor: prefersOutdoor => set({ prefersOutdoor }),
-  setMealTimes: mealTimes => set({ mealTimes }),
+  setTransportPreferences: transportPreferences => set({ transportPreferences }),
 
   setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
   setCurrentStep: currentStep => set({ currentStep }),
