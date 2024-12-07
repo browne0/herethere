@@ -50,7 +50,7 @@ export default function SummaryPage() {
       edit: () => router.push('/onboarding/dietary'),
     },
     {
-      title: 'Sightseeing Style',
+      title: 'Sightseeing Preferences',
       icon: <Users className="w-5 h-5" />,
       items: [getCrowdPreferenceLabel(preferences.crowdPreference)],
       edit: () => router.push('/onboarding/crowd-preference'),

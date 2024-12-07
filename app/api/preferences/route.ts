@@ -31,9 +31,7 @@ export async function PUT(req: Request) {
         dinner: preferences.mealImportance?.dinner || false,
       },
       transportPreferences: preferences.transportPreferences || [],
-      bestTimeOfDay: preferences.bestTimeOfDay || [],
-      prefersIndoor: preferences.prefersIndoor || [],
-      prefersOutdoor: preferences.prefersOutdoor || [],
+      crowdPreference: preferences.crowdPreference || 'hidden',
     };
 
     const updatedUser = await prisma.user.update({

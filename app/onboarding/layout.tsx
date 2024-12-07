@@ -55,6 +55,7 @@ export default function OnboardingLayout({ children }: LayoutProps) {
           cuisinePreferences: preferences.cuisinePreferences,
           mealImportance: preferences.mealImportance,
           transportPreferences: preferences.transportPreferences,
+          crowdPreference: preferences.crowdPreference,
         }),
       });
 
@@ -63,7 +64,7 @@ export default function OnboardingLayout({ children }: LayoutProps) {
       }
 
       toast.success('Preferences saved successfully');
-      router.push('/dashboard');
+      router.push('/trips');
     } catch (error) {
       console.error('Error saving preferences:', error);
       toast.error('Failed to save preferences');
