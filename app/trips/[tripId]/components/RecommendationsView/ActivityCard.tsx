@@ -1,8 +1,6 @@
 import { useState } from 'react';
-
 import { ActivityRecommendation } from '@prisma/client';
 import { Heart, Loader2, Star, MapPin } from 'lucide-react';
-
 import { CachedImage } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
@@ -14,7 +12,7 @@ interface ActivityCardProps {
 }
 
 interface ActivityImages {
-  urls: string[];
+  urls: Array<{ url: string }>;
 }
 
 function getDurationDisplay(minutes: number): string {
@@ -35,8 +33,11 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
 
   // Parse the images JSON to get the photo reference
   const images = activity.images as unknown as ActivityImages;
-
-  const photoReference = images.urls[0]; // Assuming first image is the main one
+  const photoUrl = images?.urls?.[0]?.url;
+  // Safely extract photo reference
+  const photoReference = photoUrl
+    ? new URL(photoUrl).searchParams.get('photo_reference') || ''
+    : '';
 
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -57,82 +58,93 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   };
 
   return (
-    <div className="relative flex-shrink-0 w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex flex-col">
-      <div className="relative aspect-[4/3]">
-        <CachedImage
-          photoReference={photoReference}
-          width={400}
-          height={300}
-          alt={activity.name}
-          className="absolute inset-0 w-full h-full object-cover"
-        />
-        {activity.isMustSee && (
-          <div className="absolute top-3 left-3">
-            <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
-              Must See
-            </Badge>
-          </div>
-        )}
-        <button
-          onClick={handleFavorite}
-          className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors"
-        >
-          <Heart
-            className={`w-5 h-5 ${isFavorited ? 'fill-current text-red-500' : 'text-gray-600'}`}
-          />
-        </button>
-      </div>
+    <div className="w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex-shrink-0">
+      {/* Fixed height container for consistent card sizing */}
+      <div className="h-80 flex flex-col">
+        {/* Image container with fixed aspect ratio */}
+        <div className="relative w-full h-40">
+          {photoReference ? (
+            <CachedImage
+              photoReference={photoReference}
+              width={256}
+              height={160}
+              alt={activity.name}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
+              <MapPin className="w-8 h-8 text-gray-400" />
+            </div>
+          )}
+          {activity.isMustSee && (
+            <div className="absolute top-3 left-3">
+              <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
+                Must See
+              </Badge>
+            </div>
+          )}
+          <button
+            onClick={handleFavorite}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors"
+          >
+            <Heart
+              className={`w-5 h-5 ${isFavorited ? 'fill-current text-red-500' : 'text-gray-600'}`}
+            />
+          </button>
+        </div>
 
-      <div className="p-4 flex flex-col gap-2">
-        <div className="flex items-center justify-between text-sm">
-          <div className="flex items-center gap-1">
+        {/* Content container */}
+        <div className="flex flex-col flex-grow p-3">
+          <div className="flex items-center gap-1 text-sm mb-2">
             <Star className="w-4 h-4 text-yellow-500" />
             <span className="font-medium">{activity.rating?.toFixed(1)}</span>
             <span className="text-gray-600">({formatNumberIntl(activity.reviewCount)})</span>
             <span className="text-gray-600 mx-1">·</span>
             <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
           </div>
-        </div>
 
-        <h3 className="font-medium text-base leading-tight">{activity.name}</h3>
+          <h3 className="font-medium text-base leading-tight mb-2 line-clamp-2">{activity.name}</h3>
 
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-1.5 text-sm text-gray-600">
+          <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">
-              {(activity.location as { neighborhood: string }).neighborhood}
+              {(activity.location as { neighborhood: string })?.neighborhood ||
+                'Location unavailable'}
             </span>
           </div>
-        </div>
 
-        <button
-          onClick={handleAdd}
-          disabled={isLoading || isAdded}
-          className={`
-            mt-2 w-full py-2 px-4 rounded-lg
-            font-medium text-sm
-            transition-all duration-200
-            flex items-center justify-center gap-2
-            ${
-              isAdded
-                ? 'bg-green-50 text-green-600 border border-green-200 cursor-default'
-                : isLoading
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-gray-900 text-white hover:bg-gray-800'
-            }
-          `}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Adding...
-            </>
-          ) : isAdded ? (
-            'Added to trip'
-          ) : (
-            'Add to trip'
-          )}
-        </button>
+          {/* Push button to bottom */}
+          <div className="flex-grow" />
+
+          <button
+            onClick={handleAdd}
+            disabled={isLoading || isAdded}
+            className={`
+              w-full py-2 px-4 rounded-lg
+              font-medium text-sm
+              transition-all duration-200
+              flex items-center justify-center gap-2
+              ${
+                isAdded
+                  ? 'bg-green-50 text-green-600 border border-green-200 cursor-default'
+                  : isLoading
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gray-900 text-white hover:bg-gray-800'
+              }
+            `}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Adding...
+              </>
+            ) : isAdded ? (
+              'Added to trip'
+            ) : (
+              'Add to trip'
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );

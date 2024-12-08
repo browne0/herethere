@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
+import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -24,7 +25,30 @@ export default function OnboardingLayout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = pathname.split('/').pop() || '';
-  const preferences = usePreferences();
+  const { interests, pacePreference, preferredStartTime, setAllPreferences, ...preferences } =
+    usePreferences();
+
+  // Load existing preferences when component mounts
+  useEffect(() => {
+    const loadExistingPreferences = async () => {
+      try {
+        const response = await fetch('/api/preferences');
+        if (!response.ok) throw new Error('Failed to fetch preferences');
+
+        const existingPreferences = await response.json();
+
+        // Only set preferences if they exist and have some data
+        if (existingPreferences && Object.keys(existingPreferences).length > 0) {
+          setAllPreferences(existingPreferences);
+        }
+      } catch (error) {
+        console.error('Error loading existing preferences:', error);
+        // Silent fail as this is a background operation
+      }
+    };
+
+    loadExistingPreferences();
+  }, [setAllPreferences]);
 
   const currentStepIndex = STEPS.indexOf(currentStep as (typeof STEPS)[number]);
   const progress = currentStepIndex >= 0 ? ((currentStepIndex + 1) / STEPS.length) * 100 : 0;
@@ -47,10 +71,10 @@ export default function OnboardingLayout({ children }: LayoutProps) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          interests: preferences.interests,
+          interests,
           pricePreference: preferences.pricePreference,
           energyLevel: preferences.energyLevel,
-          preferredStartTime: preferences.preferredStartTime,
+          preferredStartTime,
           dietaryRestrictions: preferences.dietaryRestrictions,
           cuisinePreferences: preferences.cuisinePreferences,
           mealImportance: preferences.mealImportance,
@@ -82,11 +106,11 @@ export default function OnboardingLayout({ children }: LayoutProps) {
   const isNextDisabled = () => {
     switch (currentStep) {
       case 'interests':
-        return preferences.interests.length === 0;
+        return interests.length === 0;
       case 'pace':
-        return !preferences.pacePreference;
-      case 'crowd-preferences':
-        return !preferences.preferredStartTime;
+        return !pacePreference;
+      case 'crowd-preference':
+        return !preferredStartTime;
       default:
         return false;
     }

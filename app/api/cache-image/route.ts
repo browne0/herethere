@@ -1,7 +1,6 @@
 // app/api/cache-image/route.ts
-import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
-import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
+import { S3Client, PutObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 
 // Initialize S3 client
 const s3Client = new S3Client({
@@ -12,7 +11,7 @@ const s3Client = new S3Client({
   },
 });
 
-// Helper to check if image already exists in S3
+// Helper to check if image exists in S3
 async function checkImageExists(key: string): Promise<boolean> {
   try {
     await s3Client.send(
@@ -22,28 +21,29 @@ async function checkImageExists(key: string): Promise<boolean> {
       })
     );
     return true;
-  } catch (_error) {
+  } catch (error) {
     return false;
   }
 }
 
+// Helper to generate image key
+function generateImageKey(photoReference: string, width: number, height: number): string {
+  // Create a clean filename from the photo reference
+  const cleanReference = photoReference.replace(/[^a-zA-Z0-9]/g, '-');
+  return `places/${cleanReference}-${width}x${height}.jpg`;
+}
+
 export async function POST(request: Request) {
   try {
-    // Optional: Check authentication
-    const { userId } = await auth();
-    if (!userId) {
-      return new NextResponse('Unauthorized', { status: 401 });
-    }
-
     // Parse request body
-    const { photoReference, width = 400, height = 300, quality = 80 } = await request.json();
+    const { photoReference, width = 800, height = 600 } = await request.json();
 
     if (!photoReference) {
       return NextResponse.json({ error: 'Photo reference is required' }, { status: 400 });
     }
 
-    // Generate consistent key for the image
-    const imageKey = `place-${photoReference}-${width}x${height}.jpg`;
+    // Generate the image key
+    const imageKey = generateImageKey(photoReference, width, height);
 
     // Check if image already exists
     const exists = await checkImageExists(imageKey);
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
     }
 
     // Fetch image from Google Places API
-    const googleUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${width}&photoreference=${photoReference}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`;
+    const googleUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${width}&photo_reference=${photoReference}&key=${process.env.GOOGLE_MAPS_API_KEY}`;
 
     const imageResponse = await fetch(googleUrl);
     if (!imageResponse.ok) {
@@ -78,7 +78,6 @@ export async function POST(request: Request) {
           'photo-reference': photoReference,
           'original-width': width.toString(),
           'original-height': height.toString(),
-          quality: quality.toString(),
         },
       })
     );
@@ -98,28 +97,5 @@ export async function POST(request: Request) {
       },
       { status: 500 }
     );
-  }
-}
-
-// Optional: Add HEAD endpoint to check if image is cached
-export async function HEAD(request: Request) {
-  try {
-    const { searchParams } = new URL(request.url);
-    const photoReference = searchParams.get('ref');
-    const width = searchParams.get('w') || '400';
-    const height = searchParams.get('h') || '300';
-
-    if (!photoReference) {
-      return new NextResponse(null, { status: 400 });
-    }
-
-    const imageKey = `place-${photoReference}-${width}x${height}.jpg`;
-    const exists = await checkImageExists(imageKey);
-
-    return new NextResponse(null, {
-      status: exists ? 200 : 404,
-    });
-  } catch (_error) {
-    return new NextResponse(null, { status: 500 });
   }
 }

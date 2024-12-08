@@ -199,36 +199,6 @@ export function TripsList({ initialTrips }: TripsListProps) {
             </Card>
           </Link>
 
-          {/* Next Trip Card */}
-          <Link href={upcoming[0]?.id ? `/trips/${upcoming[0].id}` : '/trips/new'}>
-            <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
-              <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                <div className="bg-green-50 p-2 sm:p-3 rounded-lg shrink-0">
-                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm sm:text-base">Next Trip</h3>
-                  {upcoming[0] ? (
-                    <>
-                      <p className="text-lg sm:text-2xl font-bold truncate">
-                        {upcoming[0].city.name}
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        {formatTripDates(upcoming[0].startDate, upcoming[0].endDate, 'short')}
-                      </p>
-                      <p className="text-xs sm:text-sm text-green-600 mt-1">Continue planning →</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-base sm:text-xl text-muted-foreground">None planned</p>
-                      <p className="text-xs sm:text-sm text-green-600">Start planning now →</p>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-
           {/* Your Adventures Card */}
           <Link href={past.length > 0 ? '/trips?filter=past' : '#'}>
             <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
@@ -250,11 +220,11 @@ export function TripsList({ initialTrips }: TripsListProps) {
 
         <div className="max-w-7xl mx-auto px-4 space-y-8">
           {/* Active & Upcoming Section */}
-          {ongoing.length > 0 || upcoming.slice(1).length > 0 ? (
+          {ongoing.length > 0 || upcoming.length > 0 ? (
             <section>
-              <h2 className="text-lg font-semibold mb-4">Active & Upcoming</h2>
+              <h2 className="text-lg font-semibold mb-4">Upcoming</h2>
               <div className="space-y-4">
-                {[...ongoing, ...upcoming.slice(1)].map(trip => (
+                {[...upcoming].map(trip => (
                   <Card
                     key={trip.id}
                     className="group overflow-hidden hover:shadow-lg transition-all mb-8"

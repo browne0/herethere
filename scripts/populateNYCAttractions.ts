@@ -73,15 +73,6 @@ const CITY_SIZES: Record<'MAJOR' | 'MEDIUM' | 'SMALL', CityConfig> = {
   },
 };
 
-interface SearchArea {
-  name: string;
-  location: {
-    lat: number;
-    lng: number;
-  };
-  radius: number;
-}
-
 const QUALITY_THRESHOLDS = {
   MIN_RATING: 4.3,
   MIN_REVIEWS: 1000,

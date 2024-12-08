@@ -19,23 +19,16 @@ interface TripFormStore {
   reset: () => void;
 }
 
-export const useTripFormStore = create<TripFormStore>()(
-  persist(
-    set => ({
-      city: null,
-      dates: null,
-      budget: null,
-      activities: [],
-      customInterests: null,
-      setCity: city => set({ city }),
-      setDates: dates => set({ dates }),
-      setBudget: budget => set({ budget }),
-      setActivities: activities => set({ activities }),
-      setCustomInterests: customInterests => set({ customInterests }),
-      reset: () => set({ city: null, dates: null, budget: null, activities: [] }),
-    }),
-    {
-      name: 'trip-creation-store',
-    }
-  )
-);
+export const useTripFormStore = create<TripFormStore>()(set => ({
+  city: null,
+  dates: null,
+  budget: null,
+  activities: [],
+  customInterests: null,
+  setCity: city => set({ city }),
+  setDates: dates => set({ dates }),
+  setBudget: budget => set({ budget }),
+  setActivities: activities => set({ activities }),
+  setCustomInterests: customInterests => set({ customInterests }),
+  reset: () => set({ city: null, dates: null, budget: null, activities: [] }),
+}));

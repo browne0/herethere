@@ -71,6 +71,7 @@ export interface PreferencesState {
 
   setOnboardingCompleted: (completed: boolean) => void;
   setCurrentStep: (step: string) => void;
+  setAllPreferences: (preferences: Partial<PreferencesState>) => void;
 }
 
 export const usePreferences = create<PreferencesState>()(set => ({
@@ -128,4 +129,18 @@ export const usePreferences = create<PreferencesState>()(set => ({
 
   setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
   setCurrentStep: currentStep => set({ currentStep }),
+  setAllPreferences: (preferences: Partial<PreferencesState>) =>
+    set(state => ({
+      ...state,
+      interests: preferences.interests ?? state.interests,
+      pricePreference: preferences.pricePreference ?? state.pricePreference,
+      pacePreference: preferences.pacePreference ?? state.pacePreference,
+      energyLevel: preferences.energyLevel ?? state.energyLevel,
+      preferredStartTime: preferences.preferredStartTime ?? state.preferredStartTime,
+      dietaryRestrictions: preferences.dietaryRestrictions ?? state.dietaryRestrictions,
+      cuisinePreferences: preferences.cuisinePreferences ?? state.cuisinePreferences,
+      mealImportance: preferences.mealImportance ?? state.mealImportance,
+      crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
+      transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
+    })),
 }));
