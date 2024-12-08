@@ -15,7 +15,13 @@ import {
   City,
 } from '@prisma/client';
 import dotenv from 'dotenv';
-import { PREDEFINED_CITY_AREAS } from './constants';
+import {
+  PARK_TYPES,
+  PLACE_TYPES,
+  PlaceCategory,
+  PREDEFINED_CITY_AREAS,
+  THRESHOLDS,
+} from './constants';
 
 dotenv.config({ path: '.env.local' });
 
@@ -36,120 +42,6 @@ interface CityConfig {
   minReviews: number;
   areas?: SearchArea[];
 }
-
-// Quality thresholds for different place types
-const THRESHOLDS = {
-  MUSEUM: {
-    MIN_RATING: 4.2,
-    MIN_REVIEWS: 750,
-    EXCEPTIONAL_RATING: 4.6,
-    EXCEPTIONAL_REVIEWS: 3000,
-  },
-  HISTORIC: {
-    RELIGIOUS: {
-      MIN_RATING: 4.0,
-      MIN_REVIEWS: 500,
-    },
-    STANDARD: {
-      MIN_RATING: 4.3,
-      MIN_REVIEWS: 1000,
-    },
-  },
-  ATTRACTION: {
-    MIN_RATING: 4.3,
-    MIN_REVIEWS: 1000,
-    EXCEPTIONAL_RATING: 4.7,
-    EXCEPTIONAL_REVIEWS: 5000,
-  },
-};
-
-// Place type configurations
-const PLACE_TYPES = {
-  PRIMARY: new Set([
-    'tourist_attraction',
-    'museum',
-    'art_gallery',
-    'aquarium',
-    'amusement_park',
-    'park',
-    'church',
-    'place_of_worship',
-    'zoo',
-    'landmark',
-  ] as const),
-
-  HISTORIC_INDICATORS: {
-    TIME_PERIODS: new Set([
-      'century',
-      'built in',
-      'opened in',
-      'founded in',
-      'established in',
-      'dated',
-      'ancient',
-      'historic',
-      'historical',
-      'heritage',
-    ]),
-    ARCHITECTURAL: new Set([
-      'gothic',
-      'victorian',
-      'colonial',
-      'classical',
-      'renaissance',
-      'baroque',
-      'monument',
-      'memorial',
-      'landmark',
-      'ruins',
-    ]),
-    CULTURAL: new Set([
-      'national monument',
-      'national historic',
-      'preserved',
-      'restoration',
-      'traditional',
-      'original',
-    ]),
-  },
-
-  BLACKLIST: new Set([
-    'restaurant',
-    'food',
-    'store',
-    'shopping_mall',
-    'clothing_store',
-    'furniture_store',
-    'grocery_store',
-    'supermarket',
-    'cafe',
-    'bakery',
-    'bar',
-    'night_club',
-    'lodging',
-    'hotel',
-    'gym',
-    'health',
-    'beauty_salon',
-    'spa',
-    'pharmacy',
-    'doctor',
-    'dentist',
-    'bank',
-    'finance',
-    'real_estate_agency',
-    'insurance_agency',
-    'car_dealer',
-    'car_rental',
-    'car_repair',
-    'car_wash',
-    'gas_station',
-    'parking',
-    'subway_station',
-    'train_station',
-    'transit_station',
-  ]),
-};
 
 //  city size and configuration
 function getCityConfig(city: City): CityConfig {
@@ -237,14 +129,14 @@ function checkHistoricalIndicators(text: string): boolean {
   );
 }
 
-function validatePlace(place: Place, type: 'MUSEUM' | 'HISTORIC' | 'ATTRACTION'): boolean {
+function validatePlace(place: Place, type: PlaceCategory): boolean {
   if (!place?.name || !place?.geometry?.location || !place.photos?.length) {
     return false;
   }
 
   const thresholds = THRESHOLDS[type];
 
-  if (type === 'HISTORIC') {
+  if (type === PlaceCategory.HISTORIC) {
     const isReligious = place.types!.some(t =>
       ['church', 'synagogue', 'mosque', 'hindu_temple'].includes(t)
     );
@@ -264,6 +156,32 @@ function validatePlace(place: Place, type: 'MUSEUM' | 'HISTORIC' | 'ATTRACTION')
     return true;
   }
 
+  if (type === PlaceCategory.PARK) {
+    // Must have 'park' in types
+    if (!place.types?.includes(AddressType.park)) {
+      return false;
+    }
+
+    const placeName = place.name.toLowerCase();
+    const description = place.editorial_summary?.overview?.toLowerCase() || '';
+    const combinedText = `${placeName} ${description}`;
+
+    // Check if it's a botanical garden/arboretum
+    const isBotanical = Array.from(PARK_TYPES.BOTANICAL).some(term => combinedText.includes(term));
+
+    // Check if it's a significant urban park
+    const isUrbanPark = Array.from(PARK_TYPES.URBAN).some(term => combinedText.includes(term));
+
+    const criteria = isBotanical ? THRESHOLDS.PARK.BOTANICAL : THRESHOLDS.PARK.URBAN;
+
+    // Only accept parks that meet our type criteria and quality thresholds
+    return (
+      (isBotanical || isUrbanPark) &&
+      place.rating! >= criteria.MIN_RATING &&
+      place.user_ratings_total! >= criteria.MIN_REVIEWS
+    );
+  }
+
   if ('MIN_RATING' in thresholds && 'MIN_REVIEWS' in thresholds) {
     return (
       place.rating! >= thresholds.MIN_RATING && place.user_ratings_total! >= thresholds.MIN_REVIEWS
@@ -273,100 +191,167 @@ function validatePlace(place: Place, type: 'MUSEUM' | 'HISTORIC' | 'ATTRACTION')
   return false;
 }
 
+// Helper function to determine place type
+const determinePlaceType = (place: Place): PlaceCategory => {
+  if (place.types!.includes(AddressType.museum) || place.types!.includes(AddressType.art_gallery)) {
+    return PlaceCategory.MUSEUM;
+  } else if (place.types!.includes(AddressType.park)) {
+    const placeName = place.name!.toLowerCase();
+    const description = place.editorial_summary?.overview?.toLowerCase() || '';
+    const combinedText = `${placeName} ${description}`;
+
+    const isBotanical = Array.from(PARK_TYPES.BOTANICAL).some(term => combinedText.includes(term));
+    const isUrbanPark = Array.from(PARK_TYPES.URBAN).some(term => combinedText.includes(term));
+
+    // Only categorize as PARK if it's a botanical garden or significant urban park
+    if (isBotanical || isUrbanPark) {
+      return PlaceCategory.PARK;
+    }
+  }
+
+  if (checkHistoricalIndicators(place.name + ' ' + (place.editorial_summary?.overview || ''))) {
+    return PlaceCategory.HISTORIC;
+  }
+
+  return PlaceCategory.ATTRACTION;
+};
+
 // Process and store place data
-async function processPlace(
-  place: Place,
-  city: City,
-  type: 'MUSEUM' | 'HISTORIC' | 'ATTRACTION'
-): Promise<void> {
-  const isPrimaryAttraction = place.types!.some(t => PLACE_TYPES.PRIMARY.has(t));
+async function processPlace(place: Place, city: City, type: PlaceCategory): Promise<void> {
+  const isPrimaryAttraction = place.types!.some(t => PLACE_TYPES.PRIMARY.has(t as any));
   const hasBlacklistedType = place.types!.some(t => PLACE_TYPES.BLACKLIST.has(t));
 
   if (hasBlacklistedType && !isPrimaryAttraction) {
     return;
   }
 
-  const thresholds = THRESHOLDS[type];
-  if ('EXCEPTIONAL_RATING' in thresholds && 'MIN_RATING' in thresholds) {
-    const ratingTier: RatingTier =
+  let ratingTier: RatingTier = 'AVERAGE';
+  let reviewCountTier: ReviewCountTier = 'MODERATE';
+
+  if (type === PlaceCategory.PARK) {
+    const placeName = place.name!.toLowerCase();
+    const description = place.editorial_summary?.overview?.toLowerCase() || '';
+    const combinedText = `${placeName} ${description}`;
+
+    const isBotanical = Array.from(PARK_TYPES.BOTANICAL).some(term => combinedText.includes(term));
+
+    const thresholds = isBotanical ? THRESHOLDS.PARK.BOTANICAL : THRESHOLDS.PARK.URBAN;
+
+    ratingTier =
       place.rating! >= thresholds.EXCEPTIONAL_RATING
         ? 'EXCEPTIONAL'
         : place.rating! >= thresholds.MIN_RATING
           ? 'HIGH'
           : 'AVERAGE';
 
-    const reviewCountTier: ReviewCountTier =
-      place.user_ratings_total! >= 5000
+    reviewCountTier =
+      place.user_ratings_total! >= thresholds.EXCEPTIONAL_REVIEWS
         ? 'VERY_HIGH'
-        : place.user_ratings_total! >= 1000
+        : place.user_ratings_total! >= thresholds.MIN_REVIEWS
           ? 'HIGH'
           : 'MODERATE';
+  } else {
+    const thresholds = THRESHOLDS[type];
+    if ('EXCEPTIONAL_RATING' in thresholds && 'MIN_RATING' in thresholds) {
+      ratingTier =
+        place.rating! >= thresholds.EXCEPTIONAL_RATING
+          ? 'EXCEPTIONAL'
+          : place.rating! >= thresholds.MIN_RATING
+            ? 'HIGH'
+            : 'AVERAGE';
 
-    const activityData: Prisma.ActivityRecommendationCreateInput = {
-      name: place.name!,
-      description:
-        place.editorial_summary?.overview ||
-        `Visit ${place.name}, a notable destination in ${city.name}.`,
-      city: { connect: { id: city.id } },
-
-      rating: place.rating!,
-      ratingTier,
-      reviewCount: place.user_ratings_total!,
-      reviewCountTier,
-
-      isMustSee: ratingTier === 'EXCEPTIONAL' && reviewCountTier === 'VERY_HIGH',
-      isTouristAttraction: place.types!.includes(AddressType.tourist_attraction),
-
-      placeTypes: place.types!.filter(t => PLACE_TYPES.PRIMARY.has(t)),
-      googleTypes: place.types,
-
-      indoorOutdoor: determineIndoorOutdoor(place.types!),
-      duration: determineDuration(place, type),
-      priceLevel: determinePriceLevel(place),
-
-      location: {
-        latitude: place.geometry!.location.lat,
-        longitude: place.geometry!.location.lng,
-        address: place.formatted_address,
-        placeId: place.place_id,
-      },
-
-      images: {
-        urls:
-          place.photos?.map(photo => ({
-            url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photo.photo_reference}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
-          })) || [],
-      },
-
-      openingHours: (place.opening_hours as any) || null,
-      availableDays: place.opening_hours?.periods?.map(p => p.open.day) || [],
-
-      googlePlaceId: place.place_id,
-      lastSyncedAt: new Date(),
-    };
-
-    await prisma.activityRecommendation.upsert({
-      where: { googlePlaceId: place.place_id },
-      create: activityData,
-      update: {
-        rating: activityData.rating,
-        ratingTier: activityData.ratingTier,
-        reviewCount: activityData.reviewCount,
-        reviewCountTier: activityData.reviewCountTier,
-        isMustSee: activityData.isMustSee,
-        openingHours: activityData.openingHours,
-        lastSyncedAt: activityData.lastSyncedAt,
-      },
-    });
+      reviewCountTier =
+        place.user_ratings_total! >= 5000
+          ? 'VERY_HIGH'
+          : place.user_ratings_total! >= 1000
+            ? 'HIGH'
+            : 'MODERATE';
+    }
   }
+
+  const activityData: Prisma.ActivityRecommendationCreateInput = {
+    name: place.name!,
+    description:
+      place.editorial_summary?.overview ||
+      `Visit ${place.name}, a notable destination in ${city.name}.`,
+    city: { connect: { id: city.id } },
+
+    rating: place.rating!,
+    ratingTier,
+    reviewCount: place.user_ratings_total!,
+    reviewCountTier,
+
+    isMustSee: ratingTier === 'EXCEPTIONAL' && reviewCountTier === 'VERY_HIGH',
+    isTouristAttraction: place.types!.includes(AddressType.tourist_attraction),
+
+    placeTypes: place.types!.filter(t => PLACE_TYPES.PRIMARY.has(t as any)),
+    googleTypes: place.types,
+
+    indoorOutdoor: determineIndoorOutdoor(
+      place.types!,
+      place.name!,
+      place.editorial_summary?.overview
+    ),
+    duration: determineDuration(place, type),
+    priceLevel: determinePriceLevel(place),
+
+    location: {
+      latitude: place.geometry!.location.lat,
+      longitude: place.geometry!.location.lng,
+      address: place.formatted_address,
+      placeId: place.place_id,
+    },
+
+    images: {
+      urls:
+        place.photos?.map(photo => ({
+          url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${photo.photo_reference}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`,
+        })) || [],
+    },
+
+    openingHours: (place.opening_hours as any) || null,
+    availableDays: place.opening_hours?.periods?.map(p => p.open.day) || [],
+
+    googlePlaceId: place.place_id,
+    lastSyncedAt: new Date(),
+  };
+
+  await prisma.activityRecommendation.upsert({
+    where: { googlePlaceId: place.place_id },
+    create: activityData,
+    update: {
+      rating: activityData.rating,
+      ratingTier: activityData.ratingTier,
+      reviewCount: activityData.reviewCount,
+      reviewCountTier: activityData.reviewCountTier,
+      isMustSee: activityData.isMustSee,
+      openingHours: activityData.openingHours,
+      lastSyncedAt: activityData.lastSyncedAt,
+    },
+  });
 }
 
 // Helper functions
-function determineIndoorOutdoor(types: string[]): IndoorOutdoor {
+function determineIndoorOutdoor(
+  types: string[],
+  name: string,
+  description?: string
+): IndoorOutdoor {
+  const combinedText = `${name.toLowerCase()} ${description?.toLowerCase() || ''}`;
+
   const isIndoor = types.some(t => ['museum', 'art_gallery', 'aquarium'].includes(t));
   const isOutdoor = types.some(t =>
     ['park', 'zoo', 'amusement_park', 'natural_feature'].includes(t)
   );
+
+  // Check if it's a botanical garden with potential indoor areas
+  const hasPossibleIndoorAreas =
+    Array.from(PARK_TYPES.BOTANICAL).some(term => combinedText.includes(term)) ||
+    combinedText.includes('conservatory');
+
+  if (hasPossibleIndoorAreas && isOutdoor) {
+    return 'BOTH';
+  }
 
   return isIndoor && isOutdoor ? 'BOTH' : isIndoor ? 'INDOOR' : 'OUTDOOR';
 }
@@ -383,10 +368,24 @@ function determinePriceLevel(place: Place): PriceLevel {
   return place.price_level !== undefined ? priceLevelMapping[place.price_level] : 'FREE';
 }
 
-function determineDuration(place: Place, type: string): number {
-  if (type === 'MUSEUM') return 120;
+function determineDuration(place: Place, type: PlaceCategory): number {
+  if (type === PlaceCategory.MUSEUM) return 120;
+  if (type === PlaceCategory.PARK) {
+    const placeName = place.name!.toLowerCase();
+    const description = place.editorial_summary?.overview?.toLowerCase() || '';
+    const combinedText = `${placeName} ${description}`;
+
+    // Botanical gardens and large urban parks typically take longer to explore
+    const isBotanical = Array.from(PARK_TYPES.BOTANICAL).some(term => combinedText.includes(term));
+    const isLargeUrbanPark =
+      placeName.includes('central park') ||
+      placeName.includes('prospect park') ||
+      placeName.includes('golden gate park');
+
+    return isBotanical || isLargeUrbanPark ? 180 : 90;
+  }
   if (
-    type === 'HISTORIC' &&
+    type === PlaceCategory.HISTORIC &&
     place.types!.some(t => ['church', 'synagogue', 'mosque', 'hindu_temple'].includes(t))
   ) {
     return 45;
@@ -406,7 +405,6 @@ async function populateCityData(cityId: string) {
 
   console.log(`Starting comprehensive data sync for ${city.name}...`);
 
-  // Get existing places once at the start
   const existingPlaces = await prisma.activityRecommendation.findMany({
     where: { cityId },
     select: { googlePlaceId: true, lastSyncedAt: true },
@@ -421,22 +419,23 @@ async function populateCityData(cityId: string) {
     added: 0,
     skipped: 0,
     errors: 0,
-    byType: {} as Record<string, number>,
+    byType: {} as Record<PlaceCategory, number>,
     byArea: {} as Record<string, number>,
+    parkSubtypes: {
+      botanical: 0,
+      urban: 0,
+    },
   };
 
-  // Helper function to process a place
   const processPlaceResult = async (place: Place, area: SearchArea): Promise<void> => {
     stats.processed++;
     const placeId = place.place_id!;
 
-    // Skip if already processed in this run
     if (processedPlaceIds.has(placeId)) {
       return;
     }
     processedPlaceIds.add(placeId);
 
-    // Check if place needs updating (older than 30 days)
     const lastSynced = existingPlaceMap.get(placeId);
     if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
       stats.skipped++;
@@ -465,22 +464,32 @@ async function populateCityData(cityId: string) {
 
       const placeDetails = { ...details.data.result, place_id: placeId };
 
-      // Determine place type once
       const placeType = determinePlaceType(placeDetails);
 
-      // Validate and process place
       if (validatePlace(placeDetails, placeType)) {
         await processPlace(placeDetails, city, placeType);
         stats.added++;
         stats.byType[placeType] = (stats.byType[placeType] || 0) + 1;
         stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
+
+        // Track park subtypes
+        if (placeType === PlaceCategory.PARK) {
+          const name = placeDetails.name!.toLowerCase();
+          const description = placeDetails.editorial_summary?.overview?.toLowerCase() || '';
+          const combinedText = `${name} ${description}`;
+
+          const isBotanical = Array.from(PARK_TYPES.BOTANICAL).some(term =>
+            combinedText.includes(term)
+          );
+          stats.parkSubtypes[isBotanical ? 'botanical' : 'urban']++;
+        }
+
         console.log(`✅ Processed: ${placeDetails.name} (${placeType})`);
       } else {
         stats.skipped++;
         console.log(`Skipped: ${placeDetails.name} - didn't meet ${placeType} criteria`);
       }
 
-      // Respect API rate limits
       await new Promise(resolve => setTimeout(resolve, 200));
     } catch (error) {
       console.error(`Error processing place:`, error);
@@ -488,21 +497,7 @@ async function populateCityData(cityId: string) {
     }
   };
 
-  // Helper function to determine place type
-  const determinePlaceType = (place: Place): 'MUSEUM' | 'HISTORIC' | 'ATTRACTION' => {
-    if (
-      place.types!.includes(AddressType.museum) ||
-      place.types!.includes(AddressType.art_gallery)
-    ) {
-      return 'MUSEUM';
-    } else if (
-      checkHistoricalIndicators(place.name + ' ' + (place.editorial_summary?.overview || ''))
-    ) {
-      return 'HISTORIC';
-    }
-    return 'ATTRACTION';
-  };
-
+  // Main processing loop remains the same...
   for (const area of searchAreas) {
     console.log(`\nSearching in ${area.name}...`);
     stats.byArea[area.name] = 0;
@@ -519,12 +514,10 @@ async function populateCityData(cityId: string) {
           },
         });
 
-        // Process initial results
         for (const place of response.data.results) {
           await processPlaceResult(place, area);
         }
 
-        // Handle pagination
         let nextPageToken = response.data.next_page_token;
         while (nextPageToken) {
           await new Promise(resolve => setTimeout(resolve, 2000));
@@ -541,7 +534,6 @@ async function populateCityData(cityId: string) {
               },
             });
 
-            // Process paginated results
             for (const place of nextResponse.data.results) {
               await processPlaceResult(place, area);
             }
@@ -574,6 +566,12 @@ async function populateCityData(cityId: string) {
     .forEach(([type, count]) => {
       console.log(`${type}: ${count}`);
     });
+
+  if (stats.byType[PlaceCategory.PARK] > 0) {
+    console.log('\nPark Subtypes:');
+    console.log(`Botanical Gardens/Arboretums: ${stats.parkSubtypes.botanical}`);
+    console.log(`Urban Parks: ${stats.parkSubtypes.urban}`);
+  }
 
   console.log('\nBy Area:');
   Object.entries(stats.byArea)

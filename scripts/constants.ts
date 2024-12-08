@@ -7,6 +7,13 @@ interface SearchArea {
   radius: number;
 }
 
+export enum PlaceCategory {
+  MUSEUM = 'MUSEUM',
+  HISTORIC = 'HISTORIC',
+  ATTRACTION = 'ATTRACTION',
+  PARK = 'PARK',
+}
+
 export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
   'New York': [
     {
@@ -96,4 +103,152 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
     },
   ],
   // Add more cities as needed
+};
+
+export const PARK_TYPES = {
+  BOTANICAL: new Set([
+    'botanical',
+    'botanic',
+    'arboretum',
+    'conservatory',
+    'japanese garden',
+    'chinese garden',
+  ]),
+  URBAN: new Set([
+    'park',
+    'commons',
+    'square',
+    'plaza',
+    'promenade',
+    'riverfront park',
+    'lakefront park',
+  ]),
+};
+
+// Place type configurations
+export const PLACE_TYPES = {
+  PRIMARY: new Set([
+    'tourist_attraction',
+    'museum',
+    'art_gallery',
+    'aquarium',
+    'amusement_park',
+    'park',
+    'church',
+    'place_of_worship',
+    'zoo',
+    'landmark',
+  ] as const),
+
+  HISTORIC_INDICATORS: {
+    TIME_PERIODS: new Set([
+      'century',
+      'built in',
+      'opened in',
+      'founded in',
+      'established in',
+      'dated',
+      'ancient',
+      'historic',
+      'historical',
+      'heritage',
+    ]),
+    ARCHITECTURAL: new Set([
+      'gothic',
+      'victorian',
+      'colonial',
+      'classical',
+      'renaissance',
+      'baroque',
+      'monument',
+      'memorial',
+      'landmark',
+      'ruins',
+    ]),
+    CULTURAL: new Set([
+      'national monument',
+      'national historic',
+      'preserved',
+      'restoration',
+      'traditional',
+      'original',
+    ]),
+  },
+
+  BLACKLIST: new Set([
+    'restaurant',
+    'food',
+    'store',
+    'shopping_mall',
+    'clothing_store',
+    'furniture_store',
+    'grocery_store',
+    'supermarket',
+    'cafe',
+    'bakery',
+    'bar',
+    'night_club',
+    'lodging',
+    'hotel',
+    'gym',
+    'health',
+    'beauty_salon',
+    'spa',
+    'pharmacy',
+    'doctor',
+    'dentist',
+    'bank',
+    'finance',
+    'real_estate_agency',
+    'insurance_agency',
+    'car_dealer',
+    'car_rental',
+    'car_repair',
+    'car_wash',
+    'gas_station',
+    'parking',
+    'subway_station',
+    'train_station',
+    'transit_station',
+  ]),
+};
+
+// Quality thresholds for different place types
+export const THRESHOLDS = {
+  [PlaceCategory.MUSEUM]: {
+    MIN_RATING: 4.2,
+    MIN_REVIEWS: 750,
+    EXCEPTIONAL_RATING: 4.6,
+    EXCEPTIONAL_REVIEWS: 3000,
+  },
+  [PlaceCategory.HISTORIC]: {
+    RELIGIOUS: {
+      MIN_RATING: 4.0,
+      MIN_REVIEWS: 500,
+    },
+    STANDARD: {
+      MIN_RATING: 4.3,
+      MIN_REVIEWS: 1000,
+    },
+  },
+  [PlaceCategory.ATTRACTION]: {
+    MIN_RATING: 4.3,
+    MIN_REVIEWS: 1000,
+    EXCEPTIONAL_RATING: 4.7,
+    EXCEPTIONAL_REVIEWS: 5000,
+  },
+  [PlaceCategory.PARK]: {
+    BOTANICAL: {
+      MIN_RATING: 4.2,
+      MIN_REVIEWS: 750,
+      EXCEPTIONAL_RATING: 4.6,
+      EXCEPTIONAL_REVIEWS: 3000,
+    },
+    URBAN: {
+      MIN_RATING: 4.0,
+      MIN_REVIEWS: 500,
+      EXCEPTIONAL_RATING: 4.5,
+      EXCEPTIONAL_REVIEWS: 2000,
+    },
+  },
 };
