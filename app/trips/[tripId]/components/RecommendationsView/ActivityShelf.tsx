@@ -1,39 +1,34 @@
-'use client';
-import { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 
 import { ActivityRecommendation } from '@prisma/client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useInView } from 'react-intersection-observer';
 
 import { ActivityCard } from './ActivityCard';
 
-interface ActivityShelfProps {
-  title: string;
-  activities: ActivityRecommendation[];
-  onAddActivity: (activity: ActivityRecommendation) => Promise<void>;
-}
-
-function NavButton({
-  direction,
-  onClick,
-  disabled = false,
-}: {
-  direction: 'left' | 'right';
-  onClick: () => void;
-  disabled?: boolean;
-}) {
-  return (
+// Memoized navigation button
+const NavButton = React.memo(
+  ({
+    direction,
+    onClick,
+    disabled = false,
+  }: {
+    direction: 'left' | 'right';
+    onClick: () => void;
+    disabled?: boolean;
+  }) => (
     <button
       onClick={onClick}
       disabled={disabled}
       className={`
-        p-2 rounded-full border border-gray-300
-        ${
-          disabled
-            ? 'text-gray-300 cursor-not-allowed'
-            : 'text-gray-600 hover:border-gray-400 hover:bg-gray-50'
-        }
-        transition-colors duration-200
-      `}
+      p-2 rounded-full border border-gray-300
+      ${
+        disabled
+          ? 'text-gray-300 cursor-not-allowed'
+          : 'text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+      }
+      transition-colors duration-200
+    `}
       aria-label={`Scroll ${direction}`}
     >
       {direction === 'left' ? (
@@ -42,57 +37,105 @@ function NavButton({
         <ChevronRight className="w-4 h-4" />
       )}
     </button>
-  );
+  )
+);
+
+NavButton.displayName = 'NavButton';
+
+// Separate virtualized card component
+const VirtualizedCardWrapper = React.memo(
+  ({
+    activity,
+    onAdd,
+  }: {
+    activity: ActivityRecommendation;
+    onAdd: (activity: ActivityRecommendation) => Promise<void>;
+  }) => {
+    const { ref, inView } = useInView({
+      threshold: 0,
+      triggerOnce: true,
+    });
+
+    return (
+      <div ref={ref} className="flex-shrink-0">
+        {inView ? (
+          <ActivityCard activity={activity} onAdd={onAdd} />
+        ) : (
+          <div className="w-72 h-80 bg-gray-100 animate-pulse rounded-xl flex-shrink-0" />
+        )}
+      </div>
+    );
+  }
+);
+
+VirtualizedCardWrapper.displayName = 'VirtualizedCardWrapper';
+
+interface ActivityShelfProps {
+  title: string;
+  activities: ActivityRecommendation[];
+  onAddActivity: (activity: ActivityRecommendation) => Promise<void>;
 }
 
-export function ActivityShelfComponent({ title, activities, onAddActivity }: ActivityShelfProps) {
+export function ActivityShelf({ title, activities, onAddActivity }: ActivityShelfProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState({
     canScrollLeft: false,
     canScrollRight: false,
   });
 
-  const updateScrollButtons = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+  // Throttled scroll handler with RAF
+  const handleScroll = useCallback(() => {
+    if (!scrollContainerRef.current) return;
 
-    const hasOverflow = container.scrollWidth > container.clientWidth;
-    const isAtStart = container.scrollLeft <= 0;
-    const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
-
-    setScrollPosition({
-      canScrollLeft: hasOverflow && !isAtStart,
-      canScrollRight: hasOverflow && !isAtEnd,
-    });
-  }, []);
-
-  const scroll = useCallback(
-    (direction: 'left' | 'right') => {
+    requestAnimationFrame(() => {
       const container = scrollContainerRef.current;
       if (!container) return;
 
-      const cardWidth = 288; // 272px card + 16px gap
-      const scrollAmount = direction === 'left' ? -cardWidth * 2 : cardWidth * 2;
+      const hasOverflow = container.scrollWidth > container.clientWidth;
+      const isAtStart = container.scrollLeft <= 0;
+      const isAtEnd = container.scrollLeft + container.clientWidth >= container.scrollWidth - 1;
 
-      container.scrollBy({
-        left: scrollAmount,
-        behavior: 'smooth',
+      setScrollPosition({
+        canScrollLeft: hasOverflow && !isAtStart,
+        canScrollRight: hasOverflow && !isAtEnd,
       });
+    });
+  }, []);
 
-      // Update button states after scrolling
-      setTimeout(updateScrollButtons, 300); // After scroll animation
-    },
-    [updateScrollButtons]
-  );
+  // Optimized scroll function using container width
+  const scroll = useCallback((direction: 'left' | 'right') => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const cardWidth = 288; // 272px card width + 16px gap
+    const visibleCards = Math.floor(container.clientWidth / cardWidth);
+    const scrollAmount =
+      direction === 'left'
+        ? -(cardWidth * Math.max(1, visibleCards - 1))
+        : cardWidth * Math.max(1, visibleCards - 1);
+
+    container.scrollBy({
+      left: scrollAmount,
+      behavior: 'smooth',
+    });
+  }, []);
 
   // Update scroll buttons on mount and content changes
   useEffect(() => {
-    updateScrollButtons();
-    window.addEventListener('resize', updateScrollButtons);
-    return () => window.removeEventListener('resize', updateScrollButtons);
-  }, [updateScrollButtons]);
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
-  if (!activities.length) return null;
+    const resizeObserver = new ResizeObserver(() => {
+      requestAnimationFrame(handleScroll);
+    });
+
+    resizeObserver.observe(container);
+    handleScroll();
+
+    return () => resizeObserver.disconnect();
+  }, [handleScroll]);
+
+  if (!activities?.length) return null;
 
   return (
     <div className="relative">
@@ -114,18 +157,20 @@ export function ActivityShelfComponent({ title, activities, onAddActivity }: Act
 
       <div
         ref={scrollContainerRef}
-        className="flex gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-4"
+        className="flex gap-4 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4"
         style={{
           scrollbarWidth: 'none',
           msOverflowStyle: 'none',
           WebkitOverflowScrolling: 'touch',
         }}
-        onScroll={updateScrollButtons}
+        onScroll={handleScroll}
       >
         {activities.map(activity => (
-          <ActivityCard key={activity.id} activity={activity} onAdd={onAddActivity} />
+          <VirtualizedCardWrapper key={activity.id} activity={activity} onAdd={onAddActivity} />
         ))}
       </div>
     </div>
   );
 }
+
+export default React.memo(ActivityShelf);

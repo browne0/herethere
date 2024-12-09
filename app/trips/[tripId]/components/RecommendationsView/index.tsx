@@ -5,7 +5,7 @@ import { toast } from 'sonner';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { ActivityShelfComponent } from './ActivityShelf';
+import ActivityShelfComponent from './ActivityShelf';
 
 interface RecommendationsViewProps {
   shelves: {
