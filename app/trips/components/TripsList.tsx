@@ -220,11 +220,11 @@ export function TripsList({ initialTrips }: TripsListProps) {
 
         <div className="max-w-7xl mx-auto px-4 space-y-8">
           {/* Active & Upcoming Section */}
-          {ongoing.length > 0 || upcoming.length > 0 ? (
+          {upcoming.length > 0 ? (
             <section>
               <h2 className="text-lg font-semibold mb-4">Upcoming</h2>
               <div className="space-y-4">
-                {[...upcoming].map(trip => (
+                {upcoming.map(trip => (
                   <Card
                     key={trip.id}
                     className="group overflow-hidden hover:shadow-lg transition-all mb-8"

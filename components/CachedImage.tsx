@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+
 import Image from 'next/image';
 
 interface CachedImageProps {
@@ -62,10 +63,8 @@ export const CachedImage: React.FC<CachedImageProps> = ({
         setImageUrl(data.url);
       } catch (err) {
         console.error('Error caching image:', err);
-        // Fallback to direct Google URL if caching fails
-        setImageUrl(
-          `https://maps.googleapis.com/maps/api/place/photo?maxwidth=${width}&photo_reference=${photoReference}&key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}`
-        );
+        // Fallback to placeholder if caching fails
+        setImageUrl(`https://placehold.it/400x300`);
       }
     };
 

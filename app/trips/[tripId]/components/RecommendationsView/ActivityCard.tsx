@@ -1,6 +1,8 @@
 import { useState } from 'react';
+
 import { ActivityRecommendation } from '@prisma/client';
 import { Heart, Loader2, Star, MapPin } from 'lucide-react';
+
 import { CachedImage } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
