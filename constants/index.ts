@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
+import { City } from '@prisma/client';
+
 interface SearchArea {
   name: string;
   location: {
@@ -12,6 +16,39 @@ export enum PlaceCategory {
   HISTORIC = 'HISTORIC',
   ATTRACTION = 'ATTRACTION',
   PARK = 'PARK',
+  NIGHTLIFE = 'NIGHTLIFE',
+  BEACH = 'BEACH',
+  SHOPPING = 'SHOPPING',
+  RESTAURANT = 'RESTAURANT',
+}
+
+export type HistoricThresholds = {
+  RELIGIOUS: { MIN_RATING: number; MIN_REVIEWS: number };
+  STANDARD: { MIN_RATING: number; MIN_REVIEWS: number };
+};
+
+export type StandardThresholds = {
+  MIN_RATING: number;
+  MIN_REVIEWS: number;
+  EXCEPTIONAL_RATING: number;
+  EXCEPTIONAL_REVIEWS: number;
+};
+
+export function isHistoricThresholds(thresholds: any): thresholds is HistoricThresholds {
+  return 'RELIGIOUS' in thresholds && 'STANDARD' in thresholds;
+}
+
+export const COASTAL_CITIES = new Set([
+  'cancun-MX', // Caribbean Sea beaches
+  'punta cana-DO', // Caribbean Sea beaches
+  'new york-US', // Atlantic Ocean beaches/harbors
+  'miami-US', // Atlantic Ocean & Caribbean beaches
+  'tokyo-JP', // Tokyo Bay & Pacific Ocean beaches
+]);
+
+export function isCityCoastal(city: City): boolean {
+  const cityKey = `${city.name.toLowerCase()}-${city.countryCode}`;
+  return COASTAL_CITIES.has(cityKey);
 }
 
 export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
@@ -138,7 +175,45 @@ export const PLACE_TYPES = {
     'place_of_worship',
     'zoo',
     'landmark',
+    'night_club',
+    'bar',
+    'casino',
+    'shopping_mall',
+    'department_store',
+    'restaurant',
   ] as const),
+
+  SHOPPING: {
+    PRIMARY: new Set(['shopping_mall', 'department_store', 'market']),
+    KEYWORDS: new Set([
+      'mall',
+      'outlet',
+      'shopping center',
+      'plaza',
+      'galleria',
+      'marketplace',
+      'bazaar',
+      'shopping district',
+    ]),
+  },
+
+  BEACH_SEARCH: new Set(['natural_feature', 'point_of_interest']),
+
+  BEACH_INDICATORS: {
+    NAMES: new Set([
+      'beach',
+      'strand',
+      'seashore',
+      'shore',
+      'bay',
+      'cove',
+      'harbor',
+      'pier',
+      'boardwalk',
+      'waterfront',
+    ]),
+    NATURAL_FEATURES: new Set(['sand', 'shoreline', 'coastal', 'ocean', 'sea', 'maritime']),
+  },
 
   HISTORIC_INDICATORS: {
     TIME_PERIODS: new Set([
@@ -174,20 +249,18 @@ export const PLACE_TYPES = {
       'original',
     ]),
   },
+  NIGHTLIFE: {
+    PRIMARY: new Set(['night_club', 'bar', 'casino']),
+  },
 
   BLACKLIST: new Set([
-    'restaurant',
     'food',
     'store',
-    'shopping_mall',
-    'clothing_store',
     'furniture_store',
     'grocery_store',
     'supermarket',
     'cafe',
     'bakery',
-    'bar',
-    'night_club',
     'lodging',
     'hotel',
     'gym',
@@ -249,6 +322,46 @@ export const THRESHOLDS = {
       MIN_REVIEWS: 500,
       EXCEPTIONAL_RATING: 4.5,
       EXCEPTIONAL_REVIEWS: 2000,
+    },
+  },
+  [PlaceCategory.NIGHTLIFE]: {
+    MIN_RATING: 4.0,
+    MIN_REVIEWS: 500,
+    EXCEPTIONAL_RATING: 4.5,
+    EXCEPTIONAL_REVIEWS: 2000,
+  },
+  [PlaceCategory.BEACH]: {
+    MIN_RATING: 4.0,
+    MIN_REVIEWS: 500,
+    EXCEPTIONAL_RATING: 4.5,
+    EXCEPTIONAL_REVIEWS: 2000,
+  },
+  [PlaceCategory.SHOPPING]: {
+    MALL: {
+      MIN_RATING: 4.0,
+      MIN_REVIEWS: 1000,
+      EXCEPTIONAL_RATING: 4.5,
+      EXCEPTIONAL_REVIEWS: 3000,
+    },
+    MARKET: {
+      MIN_RATING: 4.0,
+      MIN_REVIEWS: 500,
+      EXCEPTIONAL_RATING: 4.5,
+      EXCEPTIONAL_REVIEWS: 2000,
+    },
+  },
+  [PlaceCategory.RESTAURANT]: {
+    STANDARD: {
+      MIN_RATING: 4.2,
+      MIN_REVIEWS: 500,
+      EXCEPTIONAL_RATING: 4.5,
+      EXCEPTIONAL_REVIEWS: 2000,
+    },
+    UPSCALE: {
+      MIN_RATING: 4.4,
+      MIN_REVIEWS: 300,
+      EXCEPTIONAL_RATING: 4.6,
+      EXCEPTIONAL_REVIEWS: 1500,
     },
   },
 };

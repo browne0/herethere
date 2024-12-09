@@ -98,7 +98,7 @@ model ActivityRecommendation {
 
   // Location and media
   location Json // { latitude: number, longitude: number, address: string, placeId: string, neighborhood: string }
-  images   Json // { urls: string[] }
+  images   Json // { urls: Array<{url: string, cdnUrl: string}> }
 
   // Operating hours
   openingHours  Json? // { periods: { open: { day: number, time: string }, close: { day: number, time: string } }[] }

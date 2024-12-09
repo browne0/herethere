@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ActivityRecommendation } from '@prisma/client';
 import { Heart, Loader2, Star, MapPin } from 'lucide-react';
 
-import { CachedImage } from '@/components/CachedImage';
+import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
@@ -67,11 +67,10 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
         <div className="relative w-full h-40">
           {photoReference ? (
             <CachedImage
-              photoReference={photoReference}
-              width={256}
-              height={160}
+              images={activity.images as unknown as { urls: ImageUrl[] }}
               alt={activity.name}
               className="absolute inset-0 w-full h-full object-cover"
+              priority
             />
           ) : (
             <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">

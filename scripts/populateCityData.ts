@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import {
   AddressType,
   Client as GoogleMapsClient,
@@ -11,17 +13,19 @@ import {
   ReviewCountTier,
   PriceLevel,
   IndoorOutdoor,
-  SeasonalAvailability,
   City,
 } from '@prisma/client';
 import dotenv from 'dotenv';
+
 import {
+  isCityCoastal,
+  isHistoricThresholds,
   PARK_TYPES,
   PLACE_TYPES,
   PlaceCategory,
   PREDEFINED_CITY_AREAS,
   THRESHOLDS,
-} from './constants';
+} from '../constants';
 
 dotenv.config({ path: '.env.local' });
 
@@ -104,6 +108,24 @@ function generateSearchAreas(city: City): SearchArea[] {
 }
 
 // Validation functions
+
+function checkShoppingIndicators(place: Place): boolean {
+  const nameAndDescription = [
+    place.name?.toLowerCase() || '',
+    place.editorial_summary?.overview?.toLowerCase() || '',
+  ].join(' ');
+
+  // Check if it's a primary shopping type
+  const isPrimaryShoppingType = place.types!.some(t => PLACE_TYPES.SHOPPING.PRIMARY.has(t));
+
+  // Check for shopping keywords in name/description
+  const hasShoppingKeyword = Array.from(PLACE_TYPES.SHOPPING.KEYWORDS).some(term =>
+    nameAndDescription.includes(term)
+  );
+
+  return isPrimaryShoppingType || hasShoppingKeyword;
+}
+
 function checkHistoricalIndicators(text: string): boolean {
   const lowerText = text.toLowerCase();
 
@@ -129,59 +151,124 @@ function checkHistoricalIndicators(text: string): boolean {
   );
 }
 
+function isUpscaleRestaurant(place: Place): boolean {
+  const nameAndDescription = [
+    place.name?.toLowerCase() || '',
+    place.editorial_summary?.overview?.toLowerCase() || '',
+  ].join(' ');
+
+  // Keywords that suggest upscale dining
+  const upscaleIndicators = new Set([
+    'michelin',
+    'fine dining',
+    'upscale',
+    'gourmet',
+    'haute cuisine',
+    'chef',
+    'luxury',
+    'elegant',
+    'sophisticated',
+  ]);
+
+  const hasUpscaleIndicator = Array.from(upscaleIndicators).some(term =>
+    nameAndDescription.includes(term)
+  );
+
+  // Consider price level 3 or 4 as upscale
+  const isExpensive = place.price_level !== undefined && place.price_level >= 3;
+
+  return hasUpscaleIndicator || isExpensive;
+}
+
+function checkBeachIndicators(place: Place): boolean {
+  const nameAndDescription = [
+    place.name?.toLowerCase() || '',
+    place.editorial_summary?.overview?.toLowerCase() || '',
+  ].join(' ');
+
+  const hasBeachName = Array.from(PLACE_TYPES.BEACH_INDICATORS.NAMES).some(term =>
+    nameAndDescription.includes(term)
+  );
+
+  const hasNaturalFeature = Array.from(PLACE_TYPES.BEACH_INDICATORS.NATURAL_FEATURES).some(term =>
+    nameAndDescription.includes(term)
+  );
+
+  const isNaturalFeature = place.types!.includes(AddressType.natural_feature);
+
+  return hasBeachName || (isNaturalFeature && hasNaturalFeature);
+}
+
 function validatePlace(place: Place, type: PlaceCategory): boolean {
   if (!place?.name || !place?.geometry?.location || !place.photos?.length) {
     return false;
   }
 
+  if (type === PlaceCategory.RESTAURANT) {
+    const isUpscale = isUpscaleRestaurant(place);
+    const thresholds = isUpscale ? THRESHOLDS.RESTAURANT.UPSCALE : THRESHOLDS.RESTAURANT.STANDARD;
+
+    return (
+      place.rating! >= thresholds.MIN_RATING && place.user_ratings_total! >= thresholds.MIN_REVIEWS
+    );
+  }
+
   const thresholds = THRESHOLDS[type];
 
+  // Handle HISTORIC separately since it has a different structure
   if (type === PlaceCategory.HISTORIC) {
+    const thresholds = THRESHOLDS[type];
+    if (!isHistoricThresholds(thresholds)) {
+      return false;
+    }
+
     const isReligious = place.types!.some(t =>
       ['church', 'synagogue', 'mosque', 'hindu_temple'].includes(t)
     );
 
-    if ('RELIGIOUS' in thresholds && 'STANDARD' in thresholds) {
-      const criteria = isReligious ? thresholds.RELIGIOUS : thresholds.STANDARD;
+    const criteria = isReligious ? thresholds.RELIGIOUS : thresholds.STANDARD;
 
-      if (place.rating! < criteria.MIN_RATING || place.user_ratings_total! < criteria.MIN_REVIEWS) {
-        return false;
-      }
+    if (place.rating! < criteria.MIN_RATING || place.user_ratings_total! < criteria.MIN_REVIEWS) {
+      return false;
+    }
 
-      if (!isReligious) {
-        const textToCheck = [place.name, place.editorial_summary?.overview || ''].join(' ');
-        return checkHistoricalIndicators(textToCheck);
-      }
+    if (!isReligious) {
+      const textToCheck = [place.name, place.editorial_summary?.overview || ''].join(' ');
+      return checkHistoricalIndicators(textToCheck);
     }
     return true;
   }
 
-  if (type === PlaceCategory.PARK) {
-    // Must have 'park' in types
-    if (!place.types?.includes(AddressType.park)) {
+  // Handle NIGHTLIFE
+  if (type === PlaceCategory.NIGHTLIFE) {
+    const isPrimaryNightlife = place.types!.some(t => PLACE_TYPES.NIGHTLIFE.PRIMARY.has(t as any));
+
+    const isLateNightVenue = place.opening_hours?.periods?.some(
+      p => parseInt(p.close?.time || '0000') >= 2200
+    );
+
+    if (!isPrimaryNightlife && !isLateNightVenue) {
       return false;
     }
 
-    const placeName = place.name.toLowerCase();
-    const description = place.editorial_summary?.overview?.toLowerCase() || '';
-    const combinedText = `${placeName} ${description}`;
-
-    // Check if it's a botanical garden/arboretum
-    const isBotanical = Array.from(PARK_TYPES.BOTANICAL).some(term => combinedText.includes(term));
-
-    // Check if it's a significant urban park
-    const isUrbanPark = Array.from(PARK_TYPES.URBAN).some(term => combinedText.includes(term));
-
-    const criteria = isBotanical ? THRESHOLDS.PARK.BOTANICAL : THRESHOLDS.PARK.URBAN;
-
-    // Only accept parks that meet our type criteria and quality thresholds
     return (
-      (isBotanical || isUrbanPark) &&
-      place.rating! >= criteria.MIN_RATING &&
-      place.user_ratings_total! >= criteria.MIN_REVIEWS
+      place.rating! >= (thresholds as typeof THRESHOLDS.NIGHTLIFE).MIN_RATING &&
+      place.user_ratings_total! >= (thresholds as typeof THRESHOLDS.NIGHTLIFE).MIN_REVIEWS
     );
   }
 
+  if (type === PlaceCategory.SHOPPING) {
+    const isMall =
+      place.types!.includes(AddressType.shopping_mall) ||
+      place.types!.includes(AddressType.department_store);
+    const thresholds = isMall ? THRESHOLDS.SHOPPING.MALL : THRESHOLDS.SHOPPING.MARKET;
+
+    return (
+      place.rating! >= thresholds.MIN_RATING && place.user_ratings_total! >= thresholds.MIN_REVIEWS
+    );
+  }
+
+  // For all other types (MUSEUM, ATTRACTION, PARK) that have direct MIN_RATING/MIN_REVIEWS
   if ('MIN_RATING' in thresholds && 'MIN_REVIEWS' in thresholds) {
     return (
       place.rating! >= thresholds.MIN_RATING && place.user_ratings_total! >= thresholds.MIN_REVIEWS
@@ -193,6 +280,28 @@ function validatePlace(place: Place, type: PlaceCategory): boolean {
 
 // Helper function to determine place type
 const determinePlaceType = (place: Place): PlaceCategory => {
+  if (place.types!.includes(AddressType.restaurant)) {
+    return PlaceCategory.RESTAURANT;
+  }
+
+  if (checkBeachIndicators(place)) {
+    return PlaceCategory.BEACH;
+  }
+
+  if (checkShoppingIndicators(place)) {
+    return PlaceCategory.SHOPPING;
+  }
+
+  if (
+    place.types!.some(
+      t =>
+        PLACE_TYPES.NIGHTLIFE.PRIMARY.has(t as any) &&
+        place.opening_hours?.periods?.some(p => parseInt(p.close?.time || '0000') >= 2200)
+    )
+  ) {
+    return PlaceCategory.NIGHTLIFE;
+  }
+
   if (place.types!.includes(AddressType.museum) || place.types!.includes(AddressType.art_gallery)) {
     return PlaceCategory.MUSEUM;
   } else if (place.types!.includes(AddressType.park)) {
@@ -217,7 +326,12 @@ const determinePlaceType = (place: Place): PlaceCategory => {
 };
 
 // Process and store place data
-async function processPlace(place: Place, city: City, type: PlaceCategory): Promise<void> {
+async function processPlace(
+  place: Place,
+  city: City,
+  type: PlaceCategory,
+  area: SearchArea
+): Promise<void> {
   const isPrimaryAttraction = place.types!.some(t => PLACE_TYPES.PRIMARY.has(t as any));
   const hasBlacklistedType = place.types!.some(t => PLACE_TYPES.BLACKLIST.has(t));
 
@@ -300,6 +414,7 @@ async function processPlace(place: Place, city: City, type: PlaceCategory): Prom
       longitude: place.geometry!.location.lng,
       address: place.formatted_address,
       placeId: place.place_id,
+      neighborhood: area.name,
     },
 
     images: {
@@ -333,13 +448,33 @@ async function processPlace(place: Place, city: City, type: PlaceCategory): Prom
 
 // Helper functions
 function determineIndoorOutdoor(
-  types: string[],
+  types: AddressType[],
   name: string,
   description?: string
 ): IndoorOutdoor {
+  if (checkBeachIndicators({ types, name, editorial_summary: { overview: description } })) {
+    return 'OUTDOOR';
+  }
+
+  const isIndoorShopping = types.some(t => ['shopping_mall', 'department_store'].includes(t));
+
+  if (isIndoorShopping) return 'INDOOR';
+
+  // Check if it's an outdoor market or bazaar
+  const nameAndDesc = `${name.toLowerCase()} ${description?.toLowerCase() || ''}`;
+  if (
+    nameAndDesc.includes('street') ||
+    nameAndDesc.includes('outdoor') ||
+    nameAndDesc.includes('flea')
+  ) {
+    return 'OUTDOOR';
+  }
+
   const combinedText = `${name.toLowerCase()} ${description?.toLowerCase() || ''}`;
 
-  const isIndoor = types.some(t => ['museum', 'art_gallery', 'aquarium'].includes(t));
+  const isIndoor = types.some(t =>
+    ['museum', 'art_gallery', 'aquarium', 'night_club', 'bar', 'casino'].includes(t)
+  );
   const isOutdoor = types.some(t =>
     ['park', 'zoo', 'amusement_park', 'natural_feature'].includes(t)
   );
@@ -369,7 +504,23 @@ function determinePriceLevel(place: Place): PriceLevel {
 }
 
 function determineDuration(place: Place, type: PlaceCategory): number {
+  if (type === PlaceCategory.RESTAURANT) {
+    const isUpscale = isUpscaleRestaurant(place);
+    return isUpscale ? 120 : 90; // 2 hours for upscale, 1.5 hours for standard
+  }
+  if (type === PlaceCategory.BEACH) {
+    return 180; // 3 hours default for beaches
+  }
   if (type === PlaceCategory.MUSEUM) return 120;
+  if (type === PlaceCategory.SHOPPING) {
+    if (
+      place.types!.includes(AddressType.shopping_mall) ||
+      place.types!.includes(AddressType.department_store)
+    ) {
+      return 180; // 3 hours for malls & department stores
+    }
+    return 90; // 1.5 hours for markets and other shopping venues
+  }
   if (type === PlaceCategory.PARK) {
     const placeName = place.name!.toLowerCase();
     const description = place.editorial_summary?.overview?.toLowerCase() || '';
@@ -383,6 +534,10 @@ function determineDuration(place: Place, type: PlaceCategory): number {
       placeName.includes('golden gate park');
 
     return isBotanical || isLargeUrbanPark ? 180 : 90;
+  }
+  if (type === PlaceCategory.NIGHTLIFE) {
+    if (place.types!.includes(AddressType.casino)) return 240;
+    return 120; // default for other nightlife venues
   }
   if (
     type === PlaceCategory.HISTORIC &&
@@ -425,6 +580,19 @@ async function populateCityData(cityId: string) {
       botanical: 0,
       urban: 0,
     },
+    beachSubtypes: {
+      beaches: 0,
+      waterfront: 0,
+    },
+    shoppingSubtypes: {
+      malls: 0,
+      markets: 0,
+      departments: 0,
+    },
+    restaurantSubtypes: {
+      upscale: 0,
+      standard: 0,
+    },
   };
 
   const processPlaceResult = async (place: Place, area: SearchArea): Promise<void> => {
@@ -463,16 +631,23 @@ async function populateCityData(cityId: string) {
       });
 
       const placeDetails = { ...details.data.result, place_id: placeId };
-
       const placeType = determinePlaceType(placeDetails);
 
       if (validatePlace(placeDetails, placeType)) {
-        await processPlace(placeDetails, city, placeType);
+        await processPlace(placeDetails, city, placeType, area);
         stats.added++;
         stats.byType[placeType] = (stats.byType[placeType] || 0) + 1;
         stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
 
-        // Track park subtypes
+        // Track subtypes
+        if (placeType === PlaceCategory.RESTAURANT) {
+          if (isUpscaleRestaurant(placeDetails)) {
+            stats.restaurantSubtypes.upscale++;
+          } else {
+            stats.restaurantSubtypes.standard++;
+          }
+        }
+
         if (placeType === PlaceCategory.PARK) {
           const name = placeDetails.name!.toLowerCase();
           const description = placeDetails.editorial_summary?.overview?.toLowerCase() || '';
@@ -482,9 +657,21 @@ async function populateCityData(cityId: string) {
             combinedText.includes(term)
           );
           stats.parkSubtypes[isBotanical ? 'botanical' : 'urban']++;
+        } else if (placeType === PlaceCategory.BEACH) {
+          const name = placeDetails.name!.toLowerCase();
+          const isBeach = name.includes('beach') || name.includes('strand');
+          stats.beachSubtypes[isBeach ? 'beaches' : 'waterfront']++;
         }
 
         console.log(`✅ Processed: ${placeDetails.name} (${placeType})`);
+      } else if (placeType === PlaceCategory.SHOPPING) {
+        if (placeDetails.types!.includes(AddressType.shopping_mall)) {
+          stats.shoppingSubtypes.malls++;
+        } else if (placeDetails.types!.includes(AddressType.department_store)) {
+          stats.shoppingSubtypes.departments++;
+        } else {
+          stats.shoppingSubtypes.markets++;
+        }
       } else {
         stats.skipped++;
         console.log(`Skipped: ${placeDetails.name} - didn't meet ${placeType} criteria`);
@@ -497,11 +684,12 @@ async function populateCityData(cityId: string) {
     }
   };
 
-  // Main processing loop remains the same...
+  // Main processing loop
   for (const area of searchAreas) {
     console.log(`\nSearching in ${area.name}...`);
     stats.byArea[area.name] = 0;
 
+    // Process regular place types
     for (const placeType of PLACE_TYPES.PRIMARY) {
       try {
         const response = await googleMapsClient.placesNearby({
@@ -521,33 +709,85 @@ async function populateCityData(cityId: string) {
         let nextPageToken = response.data.next_page_token;
         while (nextPageToken) {
           await new Promise(resolve => setTimeout(resolve, 2000));
+          const nextResponse = await googleMapsClient.placesNearby({
+            params: {
+              key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+              location: area.location,
+              radius: area.radius,
+              type: placeType as AddressType,
+              pagetoken: nextPageToken,
+              rankby: PlacesNearbyRanking.prominence,
+            },
+          });
 
-          try {
-            const nextResponse = await googleMapsClient.placesNearby({
+          for (const place of nextResponse.data.results) {
+            await processPlaceResult(place, area);
+          }
+
+          nextPageToken = nextResponse.data.next_page_token;
+        }
+      } catch (error) {
+        console.error(`Error fetching ${placeType} places:`, error);
+        stats.errors++;
+      }
+    }
+
+    // Process beaches if city is coastal
+    if (isCityCoastal(city)) {
+      console.log(`\nSearching for beaches and waterfront locations in ${area.name}...`);
+
+      for (const placeType of PLACE_TYPES.BEACH_SEARCH) {
+        try {
+          const beachQueries = [
+            { keyword: 'beach' },
+            { keyword: 'waterfront' },
+            { keyword: 'pier' },
+            { keyword: 'boardwalk' },
+            { keyword: 'harbor' },
+          ];
+
+          for (const query of beachQueries) {
+            const response = await googleMapsClient.placesNearby({
               params: {
                 key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
                 location: area.location,
                 radius: area.radius,
                 type: placeType as AddressType,
-                pagetoken: nextPageToken,
+                keyword: query.keyword,
                 rankby: PlacesNearbyRanking.prominence,
               },
             });
 
-            for (const place of nextResponse.data.results) {
+            for (const place of response.data.results) {
               await processPlaceResult(place, area);
             }
 
-            nextPageToken = nextResponse.data.next_page_token;
-          } catch (error) {
-            console.error(`Error fetching next page:`, error);
-            stats.errors++;
-            break;
+            let nextPageToken = response.data.next_page_token;
+            while (nextPageToken) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
+              const nextResponse = await googleMapsClient.placesNearby({
+                params: {
+                  key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+                  location: area.location,
+                  radius: area.radius,
+                  type: placeType as AddressType,
+                  keyword: query.keyword,
+                  pagetoken: nextPageToken,
+                  rankby: PlacesNearbyRanking.prominence,
+                },
+              });
+
+              for (const place of nextResponse.data.results) {
+                await processPlaceResult(place, area);
+              }
+
+              nextPageToken = nextResponse.data.next_page_token;
+            }
           }
+        } catch (error) {
+          console.error(`Error fetching beach/waterfront places:`, error);
+          stats.errors++;
         }
-      } catch (error) {
-        console.error(`Error fetching ${placeType} places:`, error);
-        stats.errors++;
       }
     }
   }
@@ -573,6 +813,25 @@ async function populateCityData(cityId: string) {
     console.log(`Urban Parks: ${stats.parkSubtypes.urban}`);
   }
 
+  if (stats.byType[PlaceCategory.BEACH] > 0) {
+    console.log('\nBeach/Waterfront Subtypes:');
+    console.log(`Beaches: ${stats.beachSubtypes.beaches}`);
+    console.log(`Waterfront Locations: ${stats.beachSubtypes.waterfront}`);
+  }
+
+  if (stats.byType[PlaceCategory.SHOPPING] > 0) {
+    console.log('\nShopping Subtypes:');
+    console.log(`Shopping Malls: ${stats.shoppingSubtypes.malls}`);
+    console.log(`Department Stores: ${stats.shoppingSubtypes.departments}`);
+    console.log(`Markets: ${stats.shoppingSubtypes.markets}`);
+  }
+
+  if (stats.byType[PlaceCategory.RESTAURANT] > 0) {
+    console.log('\nRestaurant Subtypes:');
+    console.log(`Upscale Restaurants: ${stats.restaurantSubtypes.upscale}`);
+    console.log(`Standard Restaurants: ${stats.restaurantSubtypes.standard}`);
+  }
+
   console.log('\nBy Area:');
   Object.entries(stats.byArea)
     .sort(([, a], [, b]) => b - a)
@@ -594,7 +853,7 @@ async function main() {
     );
 
     // Track API calls
-    let apiCalls = {
+    const apiCalls = {
       placesNearby: 0,
       placeDetails: 0,
       total: 0,
