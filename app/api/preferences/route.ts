@@ -1,77 +1,49 @@
 import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-import { prisma } from '@/lib/db';
+import { preferencesService } from '@/app/api/services/preferences';
 import { PreferencesState } from '@/lib/stores/preferences';
 
 export async function PUT(req: Request) {
   try {
     const { userId } = await auth();
-
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
     const preferences: Partial<PreferencesState> = await req.json();
 
-    // Remove any function properties from the preferences object
-    const preferencesData = {
-      interests: preferences.interests || [],
-      pricePreference: preferences.pricePreference || 2,
-      energyLevel: preferences.energyLevel || 2,
-      preferredStartTime: preferences.preferredStartTime || 'mid',
-      dietaryRestrictions: preferences.dietaryRestrictions || [],
-      cuisinePreferences: {
-        preferred: preferences.cuisinePreferences?.preferred || [],
-        avoided: preferences.cuisinePreferences?.avoided || [],
-      },
-      mealImportance: {
-        breakfast: preferences.mealImportance?.breakfast || false,
-        lunch: preferences.mealImportance?.lunch || false,
-        dinner: preferences.mealImportance?.dinner || false,
-      },
-      transportPreferences: preferences.transportPreferences || [],
-      crowdPreference: preferences.crowdPreference || 'hidden',
-    };
+    if (!preferences || Object.keys(preferences).length === 0) {
+      return NextResponse.json({ error: 'No preferences provided' }, { status: 400 });
+    }
 
-    const updatedUser = await prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        preferences: preferencesData,
-        onboardingCompleted: true, // Set to true when preferences are saved
-        updatedAt: new Date(),
-      },
-    });
+    const updatedUser = await preferencesService.updatePreferences(userId, preferences);
 
     return NextResponse.json(updatedUser);
   } catch (error) {
     console.error('[PREFERENCES_PUT]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }
 
 export async function GET(_req: Request) {
   try {
     const { userId } = await auth();
-
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-      select: {
-        preferences: true,
-      },
-    });
+    const preferences = await preferencesService.getPreferences(userId);
 
-    return NextResponse.json(user?.preferences || {});
+    return NextResponse.json(preferences);
   } catch (error) {
     console.error('[PREFERENCES_GET]', error);
-    return new NextResponse('Internal Error', { status: 500 });
+    if (error instanceof Error) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
   }
 }

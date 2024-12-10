@@ -1,8 +1,13 @@
 import { OpeningHours } from '@googlemaps/google-maps-services-js';
-import { ActivityRecommendation } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { addMinutes } from 'date-fns';
 
 import { isOpenAtTime } from '@/lib/maps/utils';
+
+// Use Prisma's generated types for better type safety
+type ActivityWithRecommendation = Prisma.ItineraryActivityGetPayload<{
+  include: { recommendation: true };
+}>;
 
 interface DayBalance {
   activityCount: number;
@@ -12,19 +17,6 @@ interface DayBalance {
   intensity: number;
 }
 
-export interface ItineraryActivity {
-  id: string;
-  tripId: string;
-  recommendationId: string;
-  recommendation: ActivityRecommendation;
-  startTime: Date;
-  endTime: Date;
-  notes?: string;
-  status: string;
-  transitTimeFromPrevious?: number;
-  customizations?: Record<string, unknown>;
-}
-
 interface TimeBlock {
   start: Date;
   end: Date;
@@ -32,13 +24,13 @@ interface TimeBlock {
   required: boolean;
 }
 
-// Constants
+// Constants aligned with your schema
 const MEAL_WINDOWS = {
   breakfast: {
     start: 9,
     end: 10.5,
     duration: 90,
-    required: false, // Optional meal slot
+    required: false,
   },
   lunch: {
     start: 12,
@@ -52,15 +44,22 @@ const MEAL_WINDOWS = {
     duration: 120,
     required: true,
   },
-};
+} as const;
 
+// Updated intensity weights based on your place types
 const INTENSITY_WEIGHTS: Record<string, number> = {
-  hiking: 90,
-  sightseeing: 60,
+  historic_site: 60,
   museum: 40,
+  art_gallery: 40,
   restaurant: 20,
-  relaxation: 10,
-};
+  shopping_mall: 50,
+  beach: 70,
+  night_club: 80,
+  entertainment: 60,
+  monument: 40,
+  landmark: 50,
+  market: 60,
+} as const;
 
 function isSameDay(date1: Date, date2: Date): boolean {
   return (
@@ -70,18 +69,15 @@ function isSameDay(date1: Date, date2: Date): boolean {
   );
 }
 
-// Helper function to get all meal blocks for a day
-function getReservedMealBlocks(activities: ItineraryActivity[], date: Date): TimeBlock[] {
+function getReservedMealBlocks(activities: ActivityWithRecommendation[], date: Date): TimeBlock[] {
   const blocks: TimeBlock[] = [];
   const dayActivities = activities.filter(activity =>
     isSameDay(new Date(activity.startTime), date)
   );
 
-  // Check each meal window
   Object.entries(MEAL_WINDOWS).forEach(([mealType, window]) => {
-    const hasMeal = hasMealScheduled(dayActivities, mealType as 'breakfast' | 'lunch' | 'dinner');
+    const hasMeal = hasMealScheduled(dayActivities, mealType as keyof typeof MEAL_WINDOWS);
 
-    // For breakfast, also check if there's any activity scheduled
     if (mealType === 'breakfast') {
       const hasActivityDuringBreakfast = dayActivities.some(activity => {
         const activityHour = new Date(activity.startTime).getHours();
@@ -90,7 +86,6 @@ function getReservedMealBlocks(activities: ItineraryActivity[], date: Date): Tim
       if (hasActivityDuringBreakfast) return;
     }
 
-    // Only add block if no meal scheduled and (if breakfast, no activity scheduled)
     if (!hasMeal && (window.required || mealType === 'breakfast')) {
       const blockStart = new Date(date);
       blockStart.setHours(window.start, 0, 0, 0);
@@ -109,7 +104,7 @@ function getReservedMealBlocks(activities: ItineraryActivity[], date: Date): Tim
   return blocks;
 }
 
-function getDayBalance(activities: ItineraryActivity[], date: Date): DayBalance {
+function getDayBalance(activities: ActivityWithRecommendation[], date: Date): DayBalance {
   const dayActivities = activities.filter(activity =>
     isSameDay(new Date(activity.startTime), date)
   );
@@ -124,23 +119,29 @@ function getDayBalance(activities: ItineraryActivity[], date: Date): DayBalance 
 }
 
 function hasMealScheduled(
-  activities: ItineraryActivity[],
-  type: 'breakfast' | 'lunch' | 'dinner'
+  activities: ActivityWithRecommendation[],
+  type: keyof typeof MEAL_WINDOWS
 ): boolean {
   const window = MEAL_WINDOWS[type];
   return activities.some(activity => {
     const time = new Date(activity.startTime).getHours();
     return (
-      activity.recommendation.type === 'restaurant' && time >= window.start && time <= window.end
+      activity.recommendation.placeTypes.includes('restaurant') &&
+      time >= window.start &&
+      time <= window.end
     );
   });
 }
 
-function calculateDayIntensity(activities: ItineraryActivity[]): number {
+function calculateDayIntensity(activities: ActivityWithRecommendation[]): number {
   if (activities.length === 0) return 0;
 
   const totalIntensity = activities.reduce((sum, activity) => {
-    return sum + (INTENSITY_WEIGHTS[activity.recommendation.type] || 50);
+    // Find the highest intensity among the place types
+    const maxIntensity = Math.max(
+      ...activity.recommendation.placeTypes.map(type => INTENSITY_WEIGHTS[type] || 50)
+    );
+    return sum + maxIntensity;
   }, 0);
 
   return Math.round(totalIntensity / activities.length);
@@ -149,7 +150,7 @@ function calculateDayIntensity(activities: ItineraryActivity[]): number {
 export function scoreTimeSlot(
   slot: Date,
   transitTime: number,
-  dayActivities: ItineraryActivity[],
+  dayActivities: ActivityWithRecommendation[],
   isRestaurant: boolean
 ): number {
   let score = 100;
@@ -168,11 +169,8 @@ export function scoreTimeSlot(
       window => hour >= window.start && hour <= window.end
     );
     if (!inMealWindow) score -= 30;
-  } else {
-    // If it's during breakfast time, small penalty for non-restaurant activities
-    if (hour >= MEAL_WINDOWS.breakfast.start && hour < MEAL_WINDOWS.breakfast.end) {
-      score -= 10; // Small penalty for using breakfast slot
-    }
+  } else if (hour >= MEAL_WINDOWS.breakfast.start && hour < MEAL_WINDOWS.breakfast.end) {
+    score -= 10;
   }
 
   // Day balance factors
@@ -189,14 +187,12 @@ function conflictsWithMeals(requiredMealBlocks: TimeBlock[], start: Date, end: D
     const blockEnd = block.end.getTime();
     const slotStart = start.getTime();
     const slotEnd = end.getTime();
-
-    // Check if any part of the activity overlaps with meal block
     return slotStart < blockEnd && slotEnd > blockStart;
   });
 }
 
 export function findAvailableSlots(
-  activities: ItineraryActivity[],
+  activities: ActivityWithRecommendation[],
   date: Date,
   duration: number,
   openingHours: OpeningHours,
@@ -208,10 +204,10 @@ export function findAvailableSlots(
 
   const slots: Date[] = [];
 
-  // For restaurants, only return meal time slots
+  // Restaurant-specific logic
   if (isRestaurant) {
     Object.entries(MEAL_WINDOWS).forEach(([mealType, window]) => {
-      if (!hasMealScheduled(dayActivities, mealType as 'breakfast' | 'lunch' | 'dinner')) {
+      if (!hasMealScheduled(dayActivities, mealType as keyof typeof MEAL_WINDOWS)) {
         const mealSlot = new Date(date);
         mealSlot.setHours(window.start, 0, 0, 0);
 
@@ -231,7 +227,7 @@ export function findAvailableSlots(
     return slots;
   }
 
-  // For regular activities, first get all reserved blocks
+  // Regular activity logic remains the same but with updated types
   const reservedBlocks = getReservedMealBlocks(activities, date);
   const requiredMealBlocks = reservedBlocks.filter(block => block.required);
   const breakfastBlock = reservedBlocks.find(block => !block.required);
@@ -337,6 +333,8 @@ export function findAvailableSlots(
       slots.push(breakfastStart);
     }
   }
+
+  return slots;
 
   return slots;
 }
