@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import {
   restaurantRecommendationService,
   RestaurantScoringParams,
+  TripBudget,
 } from '@/app/api/services/recommendations/restaurants';
 import { PricePreference } from '@/lib/stores/preferences';
 
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
       transportPreferences: JSON.parse(searchParams.get('transportPreferences') || '[]'),
       crowdPreference:
         (searchParams.get('crowdPreference') as 'popular' | 'hidden' | 'mixed') || 'mixed',
-      budget: searchParams.get('budget') || 'moderate',
+      budget: (searchParams.get('budget') || 'moderate') as TripBudget,
       startTime: searchParams.get('startTime') || undefined,
       currentLocation: searchParams.get('currentLocation')
         ? JSON.parse(searchParams.get('currentLocation')!)
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
       scoringParams
     );
 
-    return NextResponse.json({ restaurants });
+    return NextResponse.json(restaurants);
   } catch (error) {
     console.error('[RESTAURANT_RECOMMENDATIONS_GET]', error);
     return NextResponse.json({ error: 'Failed to fetch recommendations' }, { status: 500 });

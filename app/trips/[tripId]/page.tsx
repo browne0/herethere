@@ -1,23 +1,22 @@
+// app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
+import { restaurantRecommendationService } from '@/app/api/services/recommendations/restaurants';
 import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
-import { ParsedTrip } from './types';
-import { fetchRestaurantRecommendations } from './utils';
 
 export default async function TripPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
-  const { tripId } = params;
-
+  const { tripId } = await params;
   if (!userId) {
     redirect('/sign-in');
   }
 
-  const [trip, userPreferences] = await Promise.all([
-    // Get trip data
-    prisma.trip.findUnique({
+  // Get both trip and user data
+  const [trip, user] = await Promise.all([
+    prisma.trip.findFirst({
       where: {
         id: tripId,
         userId,
@@ -27,17 +26,15 @@ export default async function TripPage({ params }: { params: { tripId: string } 
           include: {
             recommendation: true,
           },
-          orderBy: {
-            startTime: 'asc',
-          },
         },
         city: true,
       },
     }),
-    // Get user preferences
     prisma.user.findUnique({
       where: { id: userId },
-      select: { preferences: true },
+      select: {
+        preferences: true,
+      },
     }),
   ]);
 
@@ -45,14 +42,30 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     redirect('/trips');
   }
 
-  // Fetch recommendations with preferences
-  const restaurantShelf = await fetchRestaurantRecommendations({
-    cityId: trip.city.id,
-    userPreferences: userPreferences?.preferences || {},
-    budget: trip.preferences.budget,
-  });
+  // Get restaurant recommendations directly using the service
+  const restaurantRecommendations = await restaurantRecommendationService.getRecommendations(
+    trip.city.id,
+    {
+      pricePreference: user?.preferences?.pricePreference,
+      dietaryRestrictions: user?.preferences?.dietaryRestrictions,
+      cuisinePreferences: user?.preferences?.cuisinePreferences,
+      mealImportance: user?.preferences?.mealImportance,
+      transportPreferences: user?.preferences?.transportPreferences,
+      crowdPreference: user?.preferences?.crowdPreference,
+      budget: trip.preferences?.budget,
+    }
+  );
+
+  console.log(restaurantRecommendations);
+
+  // Format recommendations into a shelf
+  const restaurantShelf = {
+    type: 'restaurants',
+    title: 'Recommended Restaurants',
+    activities: restaurantRecommendations,
+  };
 
   const shelves = [restaurantShelf];
 
-  return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;
+  return <TripPageClient trip={trip} shelves={shelves} />;
 }

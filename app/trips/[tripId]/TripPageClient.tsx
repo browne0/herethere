@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 
-import { ActivityRecommendation } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -11,17 +10,13 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { ItineraryView } from './components/ItineraryView';
 import { RecommendationsView } from './components/RecommendationsView';
 import { useTripView } from './hooks/useTripView';
-import { ParsedTrip } from './types';
+import { ActivityShelfType, ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
 import TripHeader from './components/TripHeader';
 
 interface TripPageClientProps {
   trip: ParsedTrip;
-  shelves: {
-    title: string;
-    type: string;
-    activities: ActivityRecommendation[];
-  }[];
+  shelves: ActivityShelfType[];
 }
 
 export function TripPageClient({ trip, shelves }: TripPageClientProps) {

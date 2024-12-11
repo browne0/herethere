@@ -14,7 +14,7 @@ interface ActivityCardProps {
 }
 
 interface ActivityImages {
-  urls: Array<{ url: string }>;
+  urls: Array<{ url: string; cdnUrl: string }>;
 }
 
 function getDurationDisplay(minutes: number): string {
@@ -33,14 +33,12 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   const addedActivityIds = new Set(activities.map(a => a.recommendationId));
   const isAdded = addedActivityIds.has(activity.id);
 
+  console.log(activity);
+
   // Parse the images JSON to get the photo reference
   const images = activity.images as unknown as ActivityImages;
-  const photoUrl = images?.urls?.[0]?.url;
+  const photoUrl = images?.urls[0].cdnUrl || images?.urls?.[0]?.url;
   // Safely extract photo reference
-  const photoReference = photoUrl
-    ? new URL(photoUrl).searchParams.get('photo_reference') || ''
-    : '';
-
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
     if (isAdded || isLoading) return;
@@ -65,7 +63,7 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
       <div className="h-80 flex flex-col">
         {/* Image container with fixed aspect ratio */}
         <div className="relative w-full h-40">
-          {photoReference ? (
+          {photoUrl ? (
             <CachedImage
               images={activity.images as unknown as { urls: ImageUrl[] }}
               alt={activity.name}
