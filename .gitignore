@@ -44,3 +44,6 @@ next-env.d.ts
 node_modules/.prisma/
 *.db
 *.db-journalprisma/migrations/
+
+# logs
+/logs/*

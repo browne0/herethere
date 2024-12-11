@@ -22,14 +22,6 @@ enum ReviewCountTier {
   LOW
 }
 
-enum PriceLevel {
-  FREE
-  LOW
-  MODERATE
-  HIGH
-  VERY_HIGH
-}
-
 enum IndoorOutdoor {
   INDOOR
   OUTDOOR
@@ -39,6 +31,21 @@ enum IndoorOutdoor {
 enum SeasonalAvailability {
   ALL_YEAR
   SEASONAL
+}
+
+enum BusinessStatus {
+  OPERATIONAL
+  CLOSED_TEMPORARILY
+  CLOSED_PERMANENTLY
+}
+
+enum PriceLevel {
+  PRICE_LEVEL_UNSPECIFIED
+  PRICE_LEVEL_FREE
+  PRICE_LEVEL_INEXPENSIVE
+  PRICE_LEVEL_MODERATE
+  PRICE_LEVEL_EXPENSIVE
+  PRICE_LEVEL_VERY_EXPENSIVE
 }
 
 model User {
@@ -101,8 +108,34 @@ model ActivityRecommendation {
   images   Json // { urls: Array<{url: string, cdnUrl: string}> }
 
   // Operating hours
-  openingHours  Json? // { periods: { open: { day: number, time: string }, close: { day: number, time: string } }[] }
+  // {
+  //   periods: {
+  //     open: { day: number, hour: number, minute: number },
+  //     close: { day: number, hour: number, minute: number }
+  //   }[],
+  //   weekdayDescriptions: string[]
+  // }
+  openingHours Json?
+
   availableDays Int[] // [0,1,2,3,4,5,6] for days of week
+
+  businessStatus BusinessStatus @default(OPERATIONAL)
+  primaryType    String? // Direct from Places API primaryTypeDisplayName
+
+  features Json?
+  // {
+  // wheelchair   Boolean?
+  // dineIn      Boolean?
+  // takeout     Boolean?
+  // delivery    Boolean?
+  // parking     Json? 
+  // {
+  //   freeParkingLot  Boolean?
+  //   paidParkingLot  Boolean?
+  //   streetParking   Boolean?
+  //   valetParking    Boolean?
+  // }
+  // }
 
   // External IDs and metadata
   googlePlaceId String?  @unique // For updating from Google Places
