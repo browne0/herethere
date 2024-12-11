@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
-import { useEffect } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';

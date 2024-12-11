@@ -53,10 +53,12 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       transportPreferences: user?.preferences?.transportPreferences,
       crowdPreference: user?.preferences?.crowdPreference,
       budget: trip.preferences?.budget,
+      currentLocation: {
+        lat: trip.city.latitude,
+        lng: trip.city.longitude,
+      },
     }
   );
-
-  console.log(restaurantRecommendations);
 
   // Format recommendations into a shelf
   const restaurantShelf = {

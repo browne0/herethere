@@ -1,7 +1,7 @@
-// app/api/services/recommendations/restaurants.ts
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 import _ from 'lodash';
 
+import { CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { PricePreference } from '@/lib/stores/preferences';
 
@@ -17,18 +17,12 @@ export interface RestaurantScoringParams {
   mealImportance: Record<string, number>;
   transportPreferences: string[];
   crowdPreference: 'popular' | 'hidden' | 'mixed';
-  budget: TripBudget; // Add specific type
+  budget: TripBudget;
   startTime?: string;
   currentLocation?: {
     lat: number;
     lng: number;
   };
-}
-
-interface PriceTiers {
-  budget: PriceLevel[];
-  moderate: PriceLevel[];
-  luxury: PriceLevel[];
 }
 
 interface Location {
@@ -41,76 +35,111 @@ interface Location {
 
 export const restaurantRecommendationService = {
   async getRecommendations(cityId: string, params: RestaurantScoringParams) {
-    // 1. Base Query - Get all operational restaurants
+    console.log(params);
+    // 1. Get initial set of restaurants
     const restaurants = await prisma.activityRecommendation.findMany({
       where: {
         cityId,
         businessStatus: 'OPERATIONAL',
-        placeTypes: {
-          hasSome: ['restaurant', 'cafe', 'meal_takeaway'],
+        primaryType: {
+          in: CategoryMapping.RESTAURANT.includedTypes,
         },
       },
-      orderBy: [{ ratingTier: 'desc' }, { reviewCountTier: 'desc' }],
-      take: 50, // Get a larger initial set for scoring
+      take: 50, // Get larger initial set for scoring
     });
 
-    // 2. Score and filter restaurants
-    const scored = restaurants.map(restaurant => {
-      let score = 0;
+    // 2. Score restaurants
+    const scored = restaurants.map(restaurant => ({
+      ...restaurant,
+      score: this.calculateScore(restaurant, params),
+    }));
 
-      // Quality Score (0-40 points)
-      score += this.calculateQualityScore(restaurant);
-
-      // Price Match Score (0-30 points)
-      score += this.calculatePriceScore(restaurant, params);
-
-      // Relevance Score (0-30 points)
-      score += this.calculateRelevanceScore(restaurant, params);
-
-      return {
-        ...restaurant,
-        score,
-      };
-    });
-
-    // 3. Sort by score and take top 20
-    return _.orderBy(scored, ['score'], ['desc'])
-      .slice(0, 20)
+    // 3. Sort by score and filter out low scores
+    const recommendations = scored
+      .filter(r => r.score > 0) // Remove any that failed hard requirements
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 20) // Take top 20
       .map(({ score, ...restaurant }) => restaurant);
+
+    return recommendations;
+  },
+
+  calculateScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
+    // Calculate weights based on user preferences
+    const weights = this.calculateWeights(params);
+
+    // Calculate individual scores
+    const qualityScore = this.calculateQualityScore(restaurant);
+    const priceScore = this.calculatePriceScore(restaurant, params);
+    const matchScore = this.calculateMatchScore(restaurant, params);
+
+    // Combine scores using weights
+    return qualityScore * weights.quality + priceScore * weights.price + matchScore * weights.match;
+  },
+
+  calculateWeights(params: RestaurantScoringParams) {
+    const weights = {
+      quality: 0.4,
+      price: 0.3,
+      match: 0.3,
+    };
+
+    // Adjust weights based on crowd preference
+    if (params.crowdPreference === 'popular') {
+      weights.quality += 0.1;
+      weights.match -= 0.1;
+    } else if (params.crowdPreference === 'hidden') {
+      weights.quality -= 0.1;
+      weights.match += 0.1;
+    }
+
+    // Adjust for dietary restrictions
+    if (params.dietaryRestrictions.length > 0) {
+      weights.match += 0.1;
+      weights.quality -= 0.1;
+    }
+
+    // Adjust for budget sensitivity
+    if (params.budget === 'budget') {
+      weights.price += 0.1;
+      weights.quality -= 0.1;
+    }
+
+    return weights;
   },
 
   calculateQualityScore(restaurant: ActivityRecommendation): number {
     let score = 0;
 
-    // Rating Quality (0-25)
+    // Rating Quality (0-0.6)
     switch (restaurant.ratingTier) {
       case 'EXCEPTIONAL':
-        score += 25;
+        score += 0.6;
         break;
       case 'HIGH':
-        score += 20;
+        score += 0.45;
         break;
       case 'AVERAGE':
-        score += 15;
+        score += 0.3;
         break;
       case 'LOW':
-        score += 5;
+        score += 0.15;
         break;
     }
 
-    // Review Volume (0-15)
+    // Review Volume (0-0.4)
     switch (restaurant.reviewCountTier) {
       case 'VERY_HIGH':
-        score += 15;
+        score += 0.4;
         break;
       case 'HIGH':
-        score += 12;
+        score += 0.3;
         break;
       case 'MODERATE':
-        score += 8;
+        score += 0.2;
         break;
       case 'LOW':
-        score += 4;
+        score += 0.1;
         break;
     }
 
@@ -118,18 +147,18 @@ export const restaurantRecommendationService = {
   },
 
   calculatePriceScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
-    const budgetMap: PriceTiers = {
-      budget: ['PRICE_LEVEL_FREE', 'PRICE_LEVEL_INEXPENSIVE'] as PriceLevel[],
-      moderate: ['PRICE_LEVEL_MODERATE'] as PriceLevel[],
-      luxury: ['PRICE_LEVEL_EXPENSIVE', 'PRICE_LEVEL_VERY_EXPENSIVE'] as PriceLevel[],
+    const budgetMap: Record<TripBudget, PriceLevel[]> = {
+      budget: ['PRICE_LEVEL_FREE', 'PRICE_LEVEL_INEXPENSIVE'],
+      moderate: ['PRICE_LEVEL_MODERATE'],
+      luxury: ['PRICE_LEVEL_EXPENSIVE', 'PRICE_LEVEL_VERY_EXPENSIVE'],
     };
 
-    // Direct budget match (0-20)
-    let score = budgetMap[params.budget].includes(restaurant.priceLevel) ? 20 : 0;
+    // Direct budget match (0-0.6)
+    let score = budgetMap[params.budget].includes(restaurant.priceLevel) ? 0.6 : 0;
 
-    // Price preference alignment (0-10)
+    // Price preference alignment (0-0.4)
     const priceMap: Record<PriceLevel, number> = {
-      PRICE_LEVEL_UNSPECIFIED: 3, // Default to moderate
+      PRICE_LEVEL_UNSPECIFIED: 3,
       PRICE_LEVEL_FREE: 1,
       PRICE_LEVEL_INEXPENSIVE: 2,
       PRICE_LEVEL_MODERATE: 3,
@@ -138,54 +167,116 @@ export const restaurantRecommendationService = {
     };
 
     const priceDiff = Math.abs(priceMap[restaurant.priceLevel] - params.pricePreference);
-    score += Math.max(0, 10 - priceDiff * 3);
+    score += Math.max(0, 0.4 - priceDiff * 0.1);
 
     return score;
   },
 
-  calculateRelevanceScore(
-    restaurant: ActivityRecommendation,
-    params: RestaurantScoringParams
+  calculateMatchScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
+    let score = 0;
+    const types = restaurant.googleTypes || [];
+
+    // Dietary restrictions are highest priority (50% if no location, 40% if location provided)
+    const dietaryScore = this.calculateDietaryScore(types, params.dietaryRestrictions);
+    if (dietaryScore === 0 && params.dietaryRestrictions.length > 0) {
+      return 0; // Immediate disqualification if dietary needs aren't met
+    }
+    const dietaryWeight = params.currentLocation ? 0.4 : 0.5;
+    score += dietaryScore * dietaryWeight;
+
+    // Cuisine preferences (50% if no location, 30% if location provided)
+    const cuisineScore = this.calculateCuisineScore(
+      types,
+      params.cuisinePreferences,
+      params.crowdPreference
+    );
+    const cuisineWeight = params.currentLocation ? 0.3 : 0.5;
+    score += cuisineScore * cuisineWeight;
+
+    // Location score only if both location and restaurant.location are provided
+    if (params.currentLocation && restaurant.location) {
+      const locationScore = this.calculateLocationScore(
+        restaurant.location as unknown as Location,
+        params.currentLocation,
+        params.transportPreferences
+      );
+      score += locationScore * 0.3; // 30% of match score
+    }
+
+    return score;
+  },
+
+  calculateDietaryScore(types: string[], restrictions: string[]): number {
+    if (restrictions.length === 0) return 1;
+
+    const matches = restrictions.every(restriction => {
+      switch (restriction) {
+        case 'vegetarian':
+          return types.some(t => t.includes('vegetarian'));
+        case 'vegan':
+          return types.some(t => t.includes('vegan'));
+        default:
+          return true;
+      }
+    });
+
+    return matches ? 1 : 0;
+  },
+
+  calculateCuisineScore(
+    types: string[],
+    preferences: { preferred: string[]; avoided: string[] },
+    crowdPreference: 'popular' | 'hidden' | 'mixed'
   ): number {
     let score = 0;
+    const cuisineTypes = types.filter(t => t.includes('cuisine'));
 
-    // Cuisine preference matching (0-15)
-    const types = restaurant.googleTypes || [];
-    const cuisineTypes = types.filter(type => type.includes('cuisine'));
+    // Handle no cuisine types
+    if (cuisineTypes.length === 0) return 0.5; // Neutral score
 
-    if (cuisineTypes.length > 0) {
-      const matchesPreferred = params.cuisinePreferences.preferred.some(cuisine =>
-        cuisineTypes.some(type => type.includes(cuisine))
-      );
-      const matchesAvoided = params.cuisinePreferences.avoided.some(cuisine =>
-        cuisineTypes.some(type => type.includes(cuisine))
-      );
-
-      if (matchesPreferred) score += 15;
-      if (matchesAvoided) score -= 30; // Strong negative signal
+    // Check for avoided cuisines first
+    if (preferences.avoided.some(avoided => cuisineTypes.some(t => t.includes(avoided)))) {
+      return 0;
     }
 
-    // Dietary restrictions (0-15)
-    if (params.dietaryRestrictions.includes('vegetarian')) {
-      if (types.includes('vegetarian_restaurant')) score += 15;
-    }
-    if (params.dietaryRestrictions.includes('vegan')) {
-      if (types.includes('vegan_restaurant')) score += 15;
+    // Calculate preferred cuisine matches
+    const preferredMatches = preferences.preferred.filter(preferred =>
+      cuisineTypes.some(t => t.includes(preferred))
+    ).length;
+
+    if (preferredMatches > 0) {
+      score = preferredMatches / preferences.preferred.length;
+
+      // Adjust based on crowd preference
+      if (crowdPreference === 'hidden') {
+        score *= 0.8; // Slightly lower score for popular choices
+      }
     }
 
-    // Location score if provided
-    if (params.currentLocation && restaurant.location) {
-      const location = restaurant.location as unknown as Location;
-      const distance = this.calculateDistance(
-        params.currentLocation.lat,
-        params.currentLocation.lng,
-        location.latitude,
-        location.longitude
-      );
-      score += Math.min(15, Math.max(0, 15 - (distance / 500) * 15));
+    return score;
+  },
+
+  calculateLocationScore(
+    restaurantLocation: Location,
+    currentLocation: { lat: number; lng: number },
+    transportPreferences: string[]
+  ): number {
+    const distance = this.calculateDistance(
+      currentLocation.lat,
+      currentLocation.lng,
+      restaurantLocation.latitude,
+      restaurantLocation.longitude
+    );
+
+    // Adjust acceptable distance based on transport preferences
+    let maxDistance = 500; // Default 500m for walking
+    if (transportPreferences.includes('public_transit')) {
+      maxDistance = 2000; // 2km for public transit
+    } else if (transportPreferences.includes('driving')) {
+      maxDistance = 5000; // 5km for driving
     }
 
-    return Math.max(0, score); // Ensure non-negative
+    return Math.max(0, 1 - distance / maxDistance);
   },
 
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

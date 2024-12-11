@@ -1,5 +1,3 @@
-import { existsSync, mkdirSync, writeFileSync } from 'fs';
-
 import { HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { PlacesClient, protos } from '@googlemaps/places';
 import {
@@ -15,6 +13,7 @@ import {
 import axios from 'axios';
 import dotenv from 'dotenv';
 
+import { Logger } from './logger';
 // Import constants (category mapping etc.)
 import { CategoryMapping, PlaceCategory, isCityCoastal, PREDEFINED_CITY_AREAS } from '../constants';
 
@@ -420,12 +419,13 @@ async function processPlace(
   place: protos.google.maps.places.v1.IPlace,
   city: City,
   category: PlaceCategory,
-  area: SearchArea
+  area: SearchArea,
+  logger: Logger
 ): Promise<void> {
-  console.log(`Processing ${place.displayName!.text} (${category})`);
+  logger.progress(`Processing ${place.displayName!.text} (${category})`);
   try {
     // Process photos
-    console.log(`Fetching ${Math.min(place.photos?.length || 0, 5)} photos...`);
+    logger.info(`Fetching ${Math.min(place.photos?.length || 0, 5)} photos...`);
     const imageUrls = await fetchAndUploadPhotos(place.photos || [], place.id!);
 
     const activityData: Prisma.ActivityRecommendationCreateInput = {
@@ -500,9 +500,9 @@ async function processPlace(
         lastSyncedAt: activityData.lastSyncedAt,
       },
     });
-    console.log(`✅ Successfully processed ${place.displayName!.text}`);
+    logger.success(`✅ Successfully processed ${place.displayName!.text}`);
   } catch (error) {
-    console.error(`Error processing place ${place.displayName!.text}:`, error);
+    logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
     throw error;
   }
 }
@@ -510,7 +510,8 @@ async function processPlace(
 async function searchNearbyPlaces(
   area: SearchArea,
   config: (typeof CategoryMapping)[keyof typeof CategoryMapping],
-  stats: SyncStats
+  stats: SyncStats,
+  logger: Logger
 ): Promise<protos.google.maps.places.v1.IPlace[]> {
   const fieldMask = [
     // Basic fields
@@ -569,7 +570,7 @@ async function searchNearbyPlaces(
 
     return response[0].places!;
   } catch (error) {
-    console.error('Error in searchNearby:', error);
+    logger.error('Error in searchNearby:', error as Error);
     return [];
   }
 }
@@ -579,24 +580,25 @@ async function processCityArea(
   city: City,
   existingPlaceMap: Map<string, Date>,
   processedPlaceIds: Set<string>,
-  stats: SyncStats
+  stats: SyncStats,
+  logger: Logger
 ): Promise<void> {
-  console.log(`\nProcessing area: ${area.name}`);
+  logger.info(`\nProcessing area: ${area.name}`);
   stats.byArea[area.name] = 0;
 
   // Process each category
   for (const [category, config] of Object.entries(CategoryMapping)) {
-    console.log(`\n🔍 Searching for ${category} in ${area.name}...`);
+    logger.progress(`\n🔍 Searching for ${category} in ${area.name}...`);
 
-    const places = await searchNearbyPlaces(area, config, stats);
-    console.log(`Found ${places.length} ${category} places`);
+    const places = await searchNearbyPlaces(area, config, stats, logger);
+    logger.info(`Found ${places.length} ${category} places`);
 
     for (const place of places) {
       stats.processed++;
 
       // Skip logic
       if (processedPlaceIds.has(place.id!)) {
-        console.log(`⏭️  Skipping already processed: ${place.displayName!.text}`);
+        logger.skip(`Skipping already processed: ${place.displayName!.text}`);
         stats.skipped++;
         continue;
       }
@@ -604,7 +606,7 @@ async function processCityArea(
 
       const lastSynced = existingPlaceMap.get(place.id!);
       if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-        console.log(`⏭️  Skipping recently synced: ${place.displayName!.text}`);
+        logger.skip(`Skipping recently synced: ${place.displayName!.text}`);
         stats.skipped++;
         continue;
       }
@@ -616,7 +618,7 @@ async function processCityArea(
           continue;
         }
 
-        await processPlace(place, city, placeCategory, area);
+        await processPlace(place, city, placeCategory, area, logger);
         stats.added++;
         stats.byType[placeCategory] = (stats.byType[placeCategory] || 0) + 1;
         stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
@@ -626,7 +628,7 @@ async function processCityArea(
 
         await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting
       } catch (error) {
-        console.error(`Error processing place ${place.displayName!.text}:`, error);
+        logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
         stats.errors++;
       }
     }
@@ -634,14 +636,14 @@ async function processCityArea(
 
   // Special handling for coastal cities
   if (isCityCoastal(city)) {
-    await processCoastalFeatures(area, city, existingPlaceMap, processedPlaceIds, stats);
+    await processCoastalFeatures(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
   }
 
-  console.log(`\n📊 Area Stats for ${area.name}:`);
-  console.log(`  Processed: ${stats.processed}`);
-  console.log(`  Added: ${stats.added}`);
-  console.log(`  Skipped: ${stats.skipped}`);
-  console.log(`  Errors: ${stats.errors}`);
+  logger.info(`\n📊 Area Stats for ${area.name}:`);
+  logger.info(`  Processed: ${stats.processed}`);
+  logger.info(`  Added: ${stats.added}`);
+  logger.info(`  Skipped: ${stats.skipped}`);
+  logger.info(`  Errors: ${stats.errors}`);
 }
 
 function updateSubtypeStats(
@@ -685,9 +687,10 @@ async function processCoastalFeatures(
   city: City,
   existingPlaceMap: Map<string, Date>,
   processedPlaceIds: Set<string>,
-  stats: SyncStats
+  stats: SyncStats,
+  logger: Logger
 ): Promise<void> {
-  console.log(`\nSearching for coastal features in ${area.name}...`);
+  logger.info(`\nSearching for coastal features in ${area.name}...`);
 
   const places = await searchNearbyPlaces(
     area,
@@ -696,7 +699,8 @@ async function processCoastalFeatures(
       excludedTypes: [],
       requiresValidation: true,
     },
-    stats
+    stats,
+    logger
   );
 
   for (const place of places) {
@@ -716,7 +720,7 @@ async function processCoastalFeatures(
       }
 
       try {
-        await processPlace(place, city, PlaceCategory.BEACH, area);
+        await processPlace(place, city, PlaceCategory.BEACH, area, logger);
         stats.added++;
         stats.byType[PlaceCategory.BEACH] = (stats.byType[PlaceCategory.BEACH] || 0) + 1;
         stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
@@ -727,7 +731,10 @@ async function processCoastalFeatures(
 
         await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting
       } catch (error) {
-        console.error(`Error processing coastal feature ${place.displayName!.text}:`, error);
+        logger.error(
+          `Error processing coastal feature ${place.displayName!.text}:`,
+          error as Error
+        );
         stats.errors++;
       }
     }
@@ -800,89 +807,38 @@ function generateSearchAreas(city: City): SearchArea[] {
   return areas;
 }
 
-function writeStatsToFile(stats: SyncStats, filename: string) {
-  const logsFolder = './logs';
-  if (!existsSync(logsFolder)) {
-    mkdirSync(logsFolder);
-  }
-
-  const filePath = `${logsFolder}/${filename}`;
-
-  const messages = [
-    '\nSync completed!',
-    'Statistics:',
-    `Total processed: ${stats.processed}`,
-    `Added/Updated: ${stats.added}`,
-    `Skipped: ${stats.skipped}`,
-    `Errors: ${stats.errors}`,
-    `Image Upload Errors: ${stats.imageErrors}`,
-    '\nAPI Calls:',
-    `Search Nearby: ${stats.apiCalls.searchNearby}`,
-    `Place Details: ${stats.apiCalls.placeDetails}`,
-    '\nBy Type:',
-    ...Object.entries(stats.byType)
-      .sort(([, a], [, b]) => b - a)
-      .map(([type, count]) => `${type}: ${count}`),
-    '\nBy Area:',
-    ...Object.entries(stats.byArea)
-      .sort(([, a], [, b]) => b - a)
-      .map(([area, count]) => `${area}: ${count}`),
-  ];
-
-  if (stats.byType[PlaceCategory.RESTAURANT] > 0) {
-    messages.push(
-      '\nRestaurant Types:',
-      `Upscale: ${stats.restaurantSubtypes.upscale}`,
-      `Standard: ${stats.restaurantSubtypes.standard}`,
-      '\nCuisine Types:',
-      ...Object.entries(stats.restaurantSubtypes.byType)
-        .sort(([, a], [, b]) => b - a)
-        .map(([cuisine, count]) => `${cuisine}: ${count}`)
-    );
-  }
-
-  // Write to file
-  writeFileSync(filePath, messages.join('\n'), 'utf8');
-
-  // Also log to console
-  messages.forEach(message => console.log(message));
-}
-
-async function populateCityData(cityId: string) {
+async function populateCityData(cityId: string, logger: Logger) {
   const stats = initializeStats();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `sync-stats-${cityId}-${timestamp}.txt`;
 
   try {
     const city = await prisma.city.findUnique({ where: { id: cityId } });
     if (!city) throw new Error(`City with ID ${cityId} not found`);
 
-    console.log(`Starting comprehensive data sync for ${city.name}...`);
+    logger.info(`Starting comprehensive data sync for ${city.name}...`);
 
     // Get existing places for skip logic
-    console.log('\nFetching existing places...');
+    logger.info('\nFetching existing places...');
     const existingPlaces = await prisma.activityRecommendation.findMany({
       where: { cityId },
       select: { googlePlaceId: true, lastSyncedAt: true },
     });
-    console.log(`Found ${existingPlaces.length} existing places`);
+    logger.info(`Found ${existingPlaces.length} existing places`);
 
     const existingPlaceMap = new Map(existingPlaces.map(p => [p.googlePlaceId!, p.lastSyncedAt]));
     const processedPlaceIds = new Set<string>();
 
     // Process each area
-    console.log('\nGenerating search areas...');
     const searchAreas = generateSearchAreas(city);
-    console.log(`Generated ${searchAreas.length} search areas`);
+    logger.info(`Generated ${searchAreas.length} search areas`);
 
     for (const area of searchAreas) {
-      await processCityArea(area, city, existingPlaceMap, processedPlaceIds, stats);
+      await processCityArea(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
     }
 
-    console.log('\n✨ Sync completed!');
-    writeStatsToFile(stats, filename);
+    logger.success('\n✨ Sync completed!');
+    logger.stats(stats);
   } catch (error) {
-    console.error('❌ Error in populateCityData:', error);
+    logger.error('❌ Error in populateCityData:', error as Error);
     throw error;
   } finally {
     await prisma.$disconnect();
@@ -896,9 +852,23 @@ async function main() {
     throw new Error('Please provide a city ID as an argument');
   }
 
-  console.log('Starting sync...');
-  console.log(`API Key status: ${process.env.GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing'}`);
-  console.log(
+  const timestamp = new Date()
+    .toLocaleString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+    .replace(/[:,]/g, '')
+    .replace(/ /g, '-');
+  const filename = `sync-stats-${cityId}-${timestamp}.txt`;
+  const logger = new Logger(filename);
+
+  logger.info('Starting sync...');
+  logger.info(`API Key status: ${process.env.GOOGLE_MAPS_API_KEY ? 'Present' : 'Missing'}`);
+  logger.info(
     `AWS Configuration status: ${
       process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY && process.env.AWS_REGION
         ? 'Present'
@@ -907,9 +877,9 @@ async function main() {
   );
 
   try {
-    await populateCityData(cityId);
+    await populateCityData(cityId, logger);
   } catch (error) {
-    console.error('Fatal error:', error);
+    logger.error('Fatal error:', error as Error);
     process.exit(1);
   }
 }

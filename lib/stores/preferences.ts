@@ -11,16 +11,34 @@ export type PricePreference = 1 | 2 | 3; // 1 = Budget, 2 = Moderate, 3 = Luxury
 export type StartTime = 'early' | 'mid' | 'late';
 export type TransportMode = 'walking' | 'public-transit' | 'taxi' | 'driving';
 export type Cuisine =
+  | 'afghani'
+  | 'african'
+  | 'american'
+  | 'asian'
+  | 'brazilian'
+  | 'chinese'
+  | 'french'
+  | 'greek'
+  | 'indian'
   | 'italian'
   | 'japanese'
-  | 'chinese'
-  | 'indian'
-  | 'french'
+  | 'korean'
+  | 'lebanese'
   | 'mexican'
+  | 'middle_eastern'
+  | 'seafood'
+  | 'spanish'
+  | 'steak'
   | 'thai'
-  | 'mediterranean'
-  | 'american';
-export type DietaryRestriction = 'vegetarian' | 'vegan' | 'halal' | 'kosher' | 'gluten-free';
+  | 'turkish'
+  | 'vietnamese';
+export type DietaryRestriction =
+  | 'vegetarian'
+  | 'vegan'
+  | 'halal'
+  | 'kosher'
+  | 'gluten-free'
+  | 'none';
 export type CrowdPreference = 'popular' | 'hidden' | 'mixed';
 
 export interface PreferencesState {

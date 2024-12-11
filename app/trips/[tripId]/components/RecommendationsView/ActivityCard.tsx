@@ -33,8 +33,6 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   const addedActivityIds = new Set(activities.map(a => a.recommendationId));
   const isAdded = addedActivityIds.has(activity.id);
 
-  console.log(activity);
-
   // Parse the images JSON to get the photo reference
   const images = activity.images as unknown as ActivityImages;
   const photoUrl = images?.urls[0].cdnUrl || images?.urls?.[0]?.url;

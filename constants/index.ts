@@ -65,7 +65,7 @@ export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
   },
 
   [PlaceCategory.PARK]: {
-    includedTypes: ['park', 'botanical_garden', 'garden', 'national_park', 'state_park', 'plaza'],
+    includedTypes: ['park', 'botanical_garden', 'garden', 'national_park', 'state_park'],
     excludedTypes: [],
     requiresValidation: true,
   },
@@ -92,8 +92,8 @@ export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
   },
 
   [PlaceCategory.SHOPPING]: {
-    includedTypes: ['shopping_mall', 'market', 'department_store', 'plaza'],
-    excludedTypes: ['convenience_store'],
+    includedTypes: ['shopping_mall', 'department_store', 'plaza'],
+    excludedTypes: ['convenience_store', 'grocery_store', 'food_store', 'supermarket'],
     requiresValidation: false,
   },
 
@@ -122,7 +122,7 @@ export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
       'vietnamese_restaurant',
       'fine_dining_restaurant',
     ],
-    excludedTypes: ['fast_food_restaurant', 'cafeteria'],
+    excludedTypes: ['fast_food_restaurant', 'cafeteria', 'grocery_store'],
     requiresValidation: true,
   },
 };
@@ -151,44 +151,100 @@ export function isCityCoastal(city: City): boolean {
 // Predefined search areas for major cities
 export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
   'New York': [
+    // Midtown
     {
-      name: 'Midtown Manhattan',
-      location: { latitude: 40.7549, longitude: -73.984 },
-      radius: 2000,
+      name: 'Times Square',
+      location: { latitude: 40.758, longitude: -73.9855 },
+      radius: 1000,
     },
     {
-      name: 'Lower Manhattan',
-      location: { latitude: 40.7128, longitude: -74.006 },
-      radius: 2000,
+      name: 'Midtown East',
+      location: { latitude: 40.7587, longitude: -73.9787 },
+      radius: 1000,
     },
+    {
+      name: 'Koreatown',
+      location: { latitude: 40.7464, longitude: -73.9857 },
+      radius: 1000,
+    },
+
+    // Central Park Areas
+    {
+      name: 'Central Park South',
+      location: { latitude: 40.7651, longitude: -73.9767 },
+      radius: 1200,
+    },
+    {
+      name: 'Central Park North',
+      location: { latitude: 40.7852, longitude: -73.9683 },
+      radius: 1200,
+    },
+
+    // Upper East/West
     {
       name: 'Upper East Side',
-      location: { latitude: 40.7736, longitude: -73.9566 },
-      radius: 2000,
+      location: { latitude: 40.7789, longitude: -73.9622 },
+      radius: 1500,
     },
     {
       name: 'Upper West Side',
-      location: { latitude: 40.787, longitude: -73.9754 },
-      radius: 2000,
+      location: { latitude: 40.7825, longitude: -73.9754 },
+      radius: 1500,
     },
-    {
-      name: 'Harlem',
-      location: { latitude: 40.8116, longitude: -73.9465 },
-      radius: 2000,
-    },
+
+    // Downtown
     {
       name: 'Greenwich Village',
-      location: { latitude: 40.7336, longitude: -74.0027 },
-      radius: 1500,
+      location: { latitude: 40.732, longitude: -73.9977 },
+      radius: 1200,
     },
     {
       name: 'SoHo',
-      location: { latitude: 40.7243, longitude: -74.0018 },
-      radius: 1500,
+      location: { latitude: 40.7225, longitude: -73.9982 },
+      radius: 1200,
     },
     {
       name: 'Financial District',
-      location: { latitude: 40.7075, longitude: -74.0113 },
+      location: { latitude: 40.7115, longitude: -74.012 },
+      radius: 1500,
+    },
+    {
+      name: 'Chelsea',
+      location: { latitude: 40.7466, longitude: -74.0009 },
+      radius: 1200,
+    },
+    {
+      name: 'East Village',
+      location: { latitude: 40.7265, longitude: -73.9815 },
+      radius: 1000,
+    },
+    {
+      name: 'Chinatown',
+      location: { latitude: 40.7156, longitude: -73.995 },
+      radius: 1200,
+    },
+
+    // Brooklyn
+    {
+      name: 'Williamsburg',
+      location: { latitude: 40.7081, longitude: -73.9571 },
+      radius: 1500,
+    },
+    {
+      name: 'DUMBO',
+      location: { latitude: 40.7032, longitude: -73.9892 },
+      radius: 1000,
+    },
+    {
+      name: 'Brooklyn Heights',
+      location: { latitude: 40.696, longitude: -73.9949 },
+      radius: 1000,
+    },
+
+    // Queens
+    {
+      name: 'Long Island City',
+      location: { latitude: 40.7505, longitude: -73.9246 },
       radius: 1500,
     },
   ],
