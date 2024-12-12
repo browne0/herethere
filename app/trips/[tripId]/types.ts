@@ -20,6 +20,7 @@ export interface ParsedItineraryActivity extends Omit<ItineraryActivity, 'custom
 
 export interface ActivityShelfType {
   title: string;
+  description: string;
   type: string;
   activities: ActivityRecommendation[];
 }

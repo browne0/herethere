@@ -60,12 +60,11 @@ export function RecommendationsView({ shelves }: RecommendationsViewProps) {
           </p>
         </div>
       </div>
-      <div className="space-y-12">
+      <div className="space-y-8">
         {shelves.map(shelf => (
           <ActivityShelfComponent
             key={shelf.type}
-            title={shelf.title}
-            activities={shelf.activities}
+            shelf={shelf}
             onAddActivity={handleAddActivity}
           />
         ))}

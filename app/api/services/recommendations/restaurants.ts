@@ -7,12 +7,11 @@ import {
   NON_VEGETARIAN_RESTAURANTS,
 } from '@/constants';
 import { prisma } from '@/lib/db';
-import { Cuisine, PricePreference } from '@/lib/stores/preferences';
+import { Cuisine } from '@/lib/stores/preferences';
 
 export type TripBudget = 'budget' | 'moderate' | 'luxury';
 
 export interface RestaurantScoringParams {
-  pricePreference: PricePreference;
   dietaryRestrictions: string[];
   cuisinePreferences: {
     preferred: Cuisine[];
@@ -190,10 +189,12 @@ export const restaurantRecommendationService = {
       luxury: ['PRICE_LEVEL_EXPENSIVE', 'PRICE_LEVEL_VERY_EXPENSIVE'],
     };
 
-    // Direct budget match (0-0.6)
-    let score = budgetMap[params.budget].includes(restaurant.priceLevel) ? 0.6 : 0;
+    // Perfect budget match
+    if (budgetMap[params.budget].includes(restaurant.priceLevel)) {
+      return 1.0;
+    }
 
-    // Price preference alignment (0-0.4)
+    // Score based on how far from target budget level
     const priceMap: Record<PriceLevel, number> = {
       PRICE_LEVEL_UNSPECIFIED: 3,
       PRICE_LEVEL_FREE: 1,
@@ -203,10 +204,14 @@ export const restaurantRecommendationService = {
       PRICE_LEVEL_VERY_EXPENSIVE: 5,
     };
 
-    const priceDiff = Math.abs(priceMap[restaurant.priceLevel] - params.pricePreference);
-    score += Math.max(0, 0.4 - priceDiff * 0.1);
+    const budgetValues = {
+      budget: 1.5, // average of free and inexpensive
+      moderate: 3,
+      luxury: 4.5, // average of expensive and very expensive
+    };
 
-    return score;
+    const priceDiff = Math.abs(priceMap[restaurant.priceLevel] - budgetValues[params.budget]);
+    return Math.max(0, 1 - priceDiff * 0.25); // Decrease score by 0.25 for each level difference
   },
 
   calculateMatchScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {

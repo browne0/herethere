@@ -1,165 +1,64 @@
 'use client';
-
-import React, { useState } from 'react';
-
-import { Utensils, Coffee, Check, ChevronsUpDown } from 'lucide-react';
-
-import { Button } from '@/components/ui/button';
+import React, { useCallback, useState, useEffect } from 'react';
+import { Utensils, Coffee } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerTrigger,
-} from '@/components/ui/drawer';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
-import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
+import {
+  Cuisine,
+  DietaryRestriction,
+  MealImportance,
+  usePreferences,
+} from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import ResponsiveMultiSelect from './ResponsiveMultiSelect';
 
-interface Option<T> {
-  label: string;
-  value: T;
-}
+// SSR-safe media query hook
+const useSSRMediaQuery = (query: string): boolean => {
+  const [matches, setMatches] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-interface MultiSelectProps<T> {
-  options: Option<T>[];
-  selected: T[];
-  onChange: (selected: T[]) => void;
-  placeholder: string;
-  title: string;
-  searchPlaceholder?: string;
-  type?: 'default' | 'dietary';
-}
+  useEffect(() => {
+    setMounted(true);
+    const mediaQuery = window.matchMedia(query);
+    setMatches(mediaQuery.matches);
 
-// Responsive MultiSelect component that uses Drawer on mobile and Popover on desktop
-const ResponsiveMultiSelect = <T extends string>({
-  options,
-  selected,
-  onChange,
-  placeholder,
-  title,
-  searchPlaceholder = 'Search...',
-  type = 'default',
-}: MultiSelectProps<T>) => {
-  const [open, setOpen] = useState(false);
-  const isDesktop = useMediaQuery('(min-width: 768px)');
+    const listener = (e: MediaQueryListEvent) => {
+      setMatches(e.matches);
+    };
 
-  const handleSelect = (value: T) => {
-    if (type === 'dietary' && value === 'none') {
-      // If "no dietary restrictions" is selected
-      if (selected.includes('none' as T)) {
-        // If it's already selected, clear it
-        onChange([]);
-      } else {
-        // If it's not selected, clear others and select it
-        onChange(['none' as T]);
-      }
-    } else if (type === 'dietary') {
-      // If selecting any other restriction, remove 'none' if it exists
-      const newSelected = selected.includes(value)
-        ? selected.filter(item => item !== value)
-        : [...selected.filter(item => item !== 'none'), value];
-      onChange(newSelected);
-    } else {
-      // Default behavior for non-dietary selections
-      onChange(
-        selected.includes(value) ? selected.filter(item => item !== value) : [...selected, value]
-      );
-    }
-  };
+    mediaQuery.addEventListener('change', listener);
+    return () => mediaQuery.removeEventListener('change', listener);
+  }, [query]);
 
-  const SelectionList = ({ onSelect }: { onSelect: (value: T) => void }) => (
-    <Command>
-      <CommandInput
-        placeholder={searchPlaceholder}
-        className="border-transparent focus:border-transparent focus:ring-0"
-      />
-      <CommandList>
-        <CommandEmpty>No results found.</CommandEmpty>
-        <CommandGroup>
-          {options.map(option => (
-            <CommandItem
-              key={option.value}
-              value={option.value}
-              onSelect={() => {
-                onSelect(option.value);
-                if (isDesktop) setOpen(true);
-              }}
-            >
-              <div
-                className={cn(
-                  'mr-2 h-4 w-4 border rounded flex items-center justify-center',
-                  selected.includes(option.value)
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : ''
-                )}
-              >
-                {selected.includes(option.value) && <Check className="h-3 w-3" />}
-              </div>
-              <span>{option.label}</span>
-            </CommandItem>
-          ))}
-        </CommandGroup>
-      </CommandList>
-    </Command>
-  );
-
-  if (isDesktop) {
-    return (
-      <div className="flex items-center space-x-4 mt-4">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-[275px] justify-between">
-              <span className="truncate">
-                {selected.length > 0 ? `${selected.length} selected` : placeholder}
-              </span>
-              <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="p-0 w-[275px]" align="start">
-            <SelectionList onSelect={handleSelect} />
-          </PopoverContent>
-        </Popover>
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col space-y-2">
-      <p className="text-sm text-muted-foreground">{title}</p>
-      <Drawer open={open} onOpenChange={setOpen}>
-        <DrawerTrigger asChild>
-          <Button variant="outline" size="sm" className="w-full justify-between">
-            <span className="truncate">
-              {selected.length > 0 ? `${selected.length} selected` : placeholder}
-            </span>
-            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-          </Button>
-        </DrawerTrigger>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>{title}</DrawerTitle>
-            <DrawerDescription>{placeholder}</DrawerDescription>
-          </DrawerHeader>
-          <SelectionList onSelect={handleSelect} />
-        </DrawerContent>
-      </Drawer>
-    </div>
-  );
+  return mounted ? matches : false;
 };
+
+// Memoized meal button component
+const MealButton = React.memo(
+  ({
+    meal,
+    isImportant,
+    onClick,
+  }: {
+    meal: MealType;
+    isImportant: boolean;
+    onClick: () => void;
+  }) => (
+    <button
+      onClick={onClick}
+      className={cn(
+        'p-3 rounded-lg border transition-all flex items-center gap-2 justify-center',
+        isImportant ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'
+      )}
+    >
+      {meal === 'breakfast' ? <Coffee className="w-4 h-4" /> : <Utensils className="w-4 h-4" />}
+      <span className="capitalize">{meal}</span>
+    </button>
+  )
+);
+
+MealButton.displayName = 'MealButton';
 
 const DietaryPage = () => {
   const {
@@ -171,8 +70,45 @@ const DietaryPage = () => {
     setMealImportance,
   } = usePreferences();
 
-  const isDesktop = useMediaQuery('(min-width: 768px)');
+  const isDesktop = useSSRMediaQuery('(min-width: 768px)');
+  const [mounted, setMounted] = useState(false);
   const meals: MealType[] = ['breakfast', 'lunch', 'dinner'];
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleCuisineChange = useCallback(
+    (preferred: Cuisine[]) => {
+      setCuisinePreferences({ preferred, avoided: cuisinePreferences.avoided });
+    },
+    [setCuisinePreferences, cuisinePreferences.avoided]
+  );
+
+  const handleMealToggle = useCallback(
+    (meal: MealType) => {
+      setMealImportance({
+        ...mealImportance,
+        [meal]: !mealImportance[meal],
+      });
+    },
+    [mealImportance, setMealImportance]
+  );
+
+  // SSR placeholder
+  if (!mounted) {
+    return (
+      <div className="max-w-2xl mx-auto p-4">
+        <div className="h-8 w-48 bg-gray-200 rounded mb-6" /> {/* Title placeholder */}
+        <Card className="p-4 space-y-4">
+          <div className="space-y-2">
+            <div className="h-6 w-32 bg-gray-200 rounded" /> {/* Section title placeholder */}
+            <div className="h-10 w-full bg-gray-100 rounded" /> {/* Button placeholder */}
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className={cn('max-w-2xl mx-auto', isDesktop ? '' : 'p-4')}>
@@ -204,9 +140,7 @@ const DietaryPage = () => {
           <ResponsiveMultiSelect<Cuisine>
             options={CUISINE_PREFERENCES}
             selected={cuisinePreferences.preferred}
-            onChange={preferred =>
-              setCuisinePreferences({ preferred, avoided: cuisinePreferences.avoided })
-            }
+            onChange={handleCuisineChange}
             placeholder="Select your favorite cuisines"
             title="Favorite Cuisines"
             searchPlaceholder="Search cuisines..."
@@ -220,24 +154,12 @@ const DietaryPage = () => {
         </div>
         <div className={cn('grid gap-3', isDesktop ? 'grid-cols-3' : 'grid-cols-1')}>
           {meals.map(meal => (
-            <button
+            <MealButton
               key={meal}
-              onClick={() => {
-                setMealImportance({
-                  ...mealImportance,
-                  [meal]: !mealImportance[meal],
-                });
-              }}
-              className={`p-3 rounded-lg border transition-all flex items-center gap-2 justify-center
-                  ${mealImportance[meal] ? 'border-blue-500 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}
-            >
-              {meal === 'breakfast' ? (
-                <Coffee className="w-4 h-4" />
-              ) : (
-                <Utensils className="w-4 h-4" />
-              )}
-              <span className="capitalize">{meal}</span>
-            </button>
+              meal={meal}
+              isImportant={mealImportance[meal]}
+              onClick={() => handleMealToggle(meal)}
+            />
           ))}
         </div>
       </Card>
@@ -245,4 +167,4 @@ const DietaryPage = () => {
   );
 };
 
-export default DietaryPage;
+export default React.memo(DietaryPage);

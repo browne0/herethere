@@ -1,6 +1,6 @@
 'use client';
 
-import { Bike, Sun, Moon } from 'lucide-react';
+import { Bike, Sun, Moon, Footprints, Binoculars, Sunrise } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { StartTime, usePreferences } from '@/lib/stores/preferences';
@@ -10,19 +10,16 @@ const ENERGY_LEVELS = [
     value: 1,
     label: 'Light & Easy',
     description: 'Mostly walking and sightseeing',
-    icon: <Bike className="w-6 h-6" />,
   },
   {
     value: 2,
     label: 'Moderate',
     description: 'Mix of walking and activities',
-    icon: <Bike className="w-6 h-6" />,
   },
   {
     value: 3,
     label: 'Very Active',
     description: 'Full days of activities and exploration',
-    icon: <Bike className="w-6 h-6" />,
   },
 ];
 
@@ -31,7 +28,7 @@ const START_TIMES = [
     value: 'early',
     label: 'Early Bird',
     description: 'Start days before 8am',
-    icon: <Sun className="w-6 h-6" />,
+    icon: <Sunrise className="w-6 h-6" />,
   },
   {
     value: 'mid',
@@ -73,7 +70,6 @@ export default function PacePage() {
                 }`}
               >
                 <div className="flex items-center space-x-3">
-                  <div className="text-gray-600">{level.icon}</div>
                   <div className="text-left">
                     <div className="font-medium">{level.label}</div>
                     <div className="text-sm text-gray-500">{level.description}</div>

@@ -132,8 +132,6 @@ export default function EditPreferences() {
         },
         body: JSON.stringify({
           interests: preferences.interests,
-          pricePreference: preferences.pricePreference,
-          pacePreference: preferences.pacePreference,
           energyLevel: preferences.energyLevel,
           preferredStartTime: preferences.preferredStartTime,
           dietaryRestrictions: preferences.dietaryRestrictions,

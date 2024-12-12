@@ -1,7 +1,5 @@
 'use client';
 
-import { useEffect } from 'react';
-
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -26,30 +24,17 @@ export default function OnboardingLayout({ children }: LayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const currentStep = pathname.split('/').pop() || '';
-  const { interests, pacePreference, preferredStartTime, setAllPreferences, ...preferences } =
-    usePreferences();
-
-  // Load existing preferences when component mounts
-  useEffect(() => {
-    const loadExistingPreferences = async () => {
-      try {
-        const response = await fetch('/api/preferences');
-        if (!response.ok) throw new Error('Failed to fetch preferences');
-
-        const existingPreferences = await response.json();
-
-        // Only set preferences if they exist and have some data
-        if (existingPreferences && Object.keys(existingPreferences).length > 0) {
-          setAllPreferences(existingPreferences);
-        }
-      } catch (error) {
-        console.error('Error loading existing preferences:', error);
-        // Silent fail as this is a background operation
-      }
-    };
-
-    loadExistingPreferences();
-  }, [setAllPreferences]);
+  const {
+    interests,
+    energyLevel,
+    preferredStartTime,
+    setAllPreferences,
+    cuisinePreferences,
+    mealImportance,
+    dietaryRestrictions,
+    reset,
+    ...preferences
+  } = usePreferences();
 
   const currentStepIndex = STEPS.indexOf(currentStep as (typeof STEPS)[number]);
   const progress = currentStepIndex >= 0 ? ((currentStepIndex + 1) / STEPS.length) * 100 : 0;
@@ -73,12 +58,11 @@ export default function OnboardingLayout({ children }: LayoutProps) {
         },
         body: JSON.stringify({
           interests,
-          pricePreference: preferences.pricePreference,
-          energyLevel: preferences.energyLevel,
+          energyLevel,
           preferredStartTime,
-          dietaryRestrictions: preferences.dietaryRestrictions,
-          cuisinePreferences: preferences.cuisinePreferences,
-          mealImportance: preferences.mealImportance,
+          dietaryRestrictions,
+          cuisinePreferences,
+          mealImportance,
           transportPreferences: preferences.transportPreferences,
           crowdPreference: preferences.crowdPreference,
         }),
@@ -89,6 +73,7 @@ export default function OnboardingLayout({ children }: LayoutProps) {
       }
 
       toast.success('Preferences saved successfully');
+      reset();
       router.push('/trips');
     } catch (error) {
       console.error('Error saving preferences:', error);
@@ -109,9 +94,15 @@ export default function OnboardingLayout({ children }: LayoutProps) {
       case 'interests':
         return interests.length === 0;
       case 'pace':
-        return !pacePreference;
+        return !energyLevel || !preferredStartTime;
       case 'crowd-preference':
         return !preferredStartTime;
+      case 'dietary':
+        return (
+          cuisinePreferences.preferred.length === 0 ||
+          !mealImportance ||
+          dietaryRestrictions.length === 0
+        );
       default:
         return false;
     }

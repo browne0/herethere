@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 
 import { ActivityCard } from './ActivityCard';
+import { ActivityShelfType } from '../../types';
 
 // Memoized navigation button
 const NavButton = React.memo(
@@ -71,12 +72,11 @@ const VirtualizedCardWrapper = React.memo(
 VirtualizedCardWrapper.displayName = 'VirtualizedCardWrapper';
 
 interface ActivityShelfProps {
-  title: string;
-  activities: ActivityRecommendation[];
+  shelf: ActivityShelfType;
   onAddActivity: (activity: ActivityRecommendation) => Promise<void>;
 }
 
-export function ActivityShelf({ title, activities, onAddActivity }: ActivityShelfProps) {
+export function ActivityShelf({ shelf, onAddActivity }: ActivityShelfProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [scrollPosition, setScrollPosition] = useState({
     canScrollLeft: false,
@@ -135,12 +135,15 @@ export function ActivityShelf({ title, activities, onAddActivity }: ActivityShel
     return () => resizeObserver.disconnect();
   }, [handleScroll]);
 
-  if (!activities?.length) return null;
+  if (!shelf.activities?.length) return null;
 
   return (
     <div className="relative">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-semibold">{title}</h2>
+        <div>
+          <h2 className="text-2xl font-semibold">{shelf.title}</h2>
+          <p className="text-md text-gray-600">{shelf.description}</p>
+        </div>
         <div className="flex gap-2">
           <NavButton
             direction="left"
@@ -165,7 +168,7 @@ export function ActivityShelf({ title, activities, onAddActivity }: ActivityShel
         }}
         onScroll={handleScroll}
       >
-        {activities.map(activity => (
+        {shelf.activities.map(activity => (
           <VirtualizedCardWrapper key={activity.id} activity={activity} onAdd={onAddActivity} />
         ))}
       </div>

@@ -1,28 +1,5 @@
 import { prisma } from '@/lib/db';
-import { PreferencesState } from '@/lib/stores/preferences';
-
-interface CuisinePreferences {
-  preferred: string[];
-  avoided: string[];
-}
-
-interface MealImportance {
-  breakfast: boolean;
-  lunch: boolean;
-  dinner: boolean;
-}
-
-interface UserPreferences {
-  interests: string[];
-  pricePreference: number;
-  energyLevel: number;
-  preferredStartTime: string;
-  dietaryRestrictions: string[];
-  cuisinePreferences: CuisinePreferences;
-  mealImportance: MealImportance;
-  transportPreferences: string[];
-  crowdPreference: string;
-}
+import { PreferencesState, UserPreferences } from '@/lib/stores/preferences';
 
 export const preferencesService = {
   async updatePreferences(userId: string, preferences: Partial<PreferencesState>) {
@@ -40,7 +17,6 @@ export const preferencesService = {
       crowdPreference: preferences.crowdPreference!,
       energyLevel: preferences.energyLevel!,
       preferredStartTime: preferences.preferredStartTime!,
-      pricePreference: preferences.pricePreference!,
       transportPreferences: preferences.transportPreferences!,
       dietaryRestrictions: preferences.dietaryRestrictions?.includes('none')
         ? []

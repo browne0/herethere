@@ -24,6 +24,30 @@ export default function SummaryPage() {
     }
   };
 
+  const ENERGY_LEVELS = [
+    {
+      value: 1,
+      label: 'Light & Easy',
+      description: 'Mostly walking and sightseeing',
+    },
+    {
+      value: 2,
+      label: 'Moderate',
+      description: 'Mix of walking and activities',
+    },
+    {
+      value: 3,
+      label: 'Very Active',
+      description: 'Full days of activities and exploration',
+    },
+  ];
+
+  const START_TIMES = {
+    early: 'Likes a early start',
+    mid: 'Enjoys a mid-morning start',
+    late: "Doesn't mind a late start",
+  };
+
   const sections = [
     {
       title: 'Interests',
@@ -35,8 +59,8 @@ export default function SummaryPage() {
       title: 'Travel Style',
       icon: <Settings className="w-5 h-5" />,
       items: [
-        `Energy Level: ${preferences.energyLevel}/3`,
-        `Start Time: ${preferences.preferredStartTime}`,
+        `${preferences.energyLevel ? ENERGY_LEVELS[preferences.energyLevel!].description : ''}`,
+        `${preferences.preferredStartTime ? START_TIMES[preferences.preferredStartTime!] : ''}`,
       ],
       edit: () => router.push('/onboarding/pace'),
     },
@@ -52,7 +76,7 @@ export default function SummaryPage() {
     {
       title: 'Sightseeing Preferences',
       icon: <Users className="w-5 h-5" />,
-      items: [getCrowdPreferenceLabel(preferences.crowdPreference)],
+      items: [getCrowdPreferenceLabel(preferences.crowdPreference!)],
       edit: () => router.push('/onboarding/crowd-preference'),
     },
   ];
@@ -82,7 +106,9 @@ export default function SummaryPage() {
                   section.items.map((item, i) => (
                     <div key={i} className="flex items-center space-x-2 text-gray-600">
                       <Check className="w-4 h-4" />
-                      <span className="capitalize">{item}</span>
+                      <span className={section.title === 'Travel Style' ? '' : 'capitalize'}>
+                        {item}
+                      </span>
                     </div>
                   ))
                 ) : (

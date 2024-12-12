@@ -61,7 +61,6 @@ export interface ActivityRecommendation {
 
   // External IDs
   googlePlaceId: string | null;
-  googleTypes: string[];
   lastSyncedAt: Date;
 
   // Restaurant-specific fields

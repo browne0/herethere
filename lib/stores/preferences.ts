@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 export type InterestType =
   | 'outdoors'
@@ -7,8 +8,7 @@ export type InterestType =
   | 'entertainment'
   | 'photography'
   | 'history';
-export type PricePreference = 1 | 2 | 3; // 1 = Budget, 2 = Moderate, 3 = Luxury
-export type StartTime = 'early' | 'mid' | 'late';
+export type StartTime = 'early' | 'mid' | 'late' | null;
 export type TransportMode = 'walking' | 'public-transit' | 'taxi' | 'driving';
 export type Cuisine =
   | 'afghani'
@@ -39,16 +39,19 @@ export type DietaryRestriction =
   | 'kosher'
   | 'gluten-free'
   | 'none';
-export type CrowdPreference = 'popular' | 'hidden' | 'mixed';
+export type CrowdPreference = 'popular' | 'hidden' | 'mixed' | null;
+export type MealImportance = {
+  breakfast: boolean;
+  lunch: boolean;
+  dinner: boolean;
+};
+export type EnergyLevel = 1 | 2 | 3 | null;
 
 export interface UserPreferences {
   // Interest Preferences
   interests: InterestType[];
-  pricePreference: PricePreference;
-
   // Pace Preferences
-  pacePreference: 'relaxed' | 'balanced' | 'active';
-  energyLevel: 1 | 2 | 3;
+  energyLevel: EnergyLevel;
   preferredStartTime: StartTime;
 
   // Dietary Preferences
@@ -57,11 +60,7 @@ export interface UserPreferences {
     preferred: Cuisine[];
     avoided: Cuisine[];
   };
-  mealImportance: {
-    breakfast: boolean;
-    lunch: boolean;
-    dinner: boolean;
-  };
+  mealImportance: MealImportance | null;
 
   // Transportation Requirements
   transportPreferences: TransportMode[];
@@ -73,14 +72,11 @@ export interface UserPreferences {
 export interface PreferencesState extends UserPreferences {
   // Onboarding State
   onboardingCompleted: boolean;
-  currentStep: string;
 
   // Setters
   setInterests: (interests: InterestType[]) => void;
-  setPricePreference: (level: PricePreference) => void;
 
-  setPacePreference: (pace: 'relaxed' | 'balanced' | 'active') => void;
-  setEnergyLevel: (level: 1 | 2 | 3) => void;
+  setEnergyLevel: (level: EnergyLevel) => void;
   setPreferredStartTime: (time: StartTime) => void;
 
   setDietaryRestrictions: (restrictions: DietaryRestriction[]) => void;
@@ -91,77 +87,80 @@ export interface PreferencesState extends UserPreferences {
   setTransportPreferences: (modes: TransportMode[]) => void;
 
   setOnboardingCompleted: (completed: boolean) => void;
-  setCurrentStep: (step: string) => void;
   setAllPreferences: (preferences: Partial<PreferencesState>) => void;
+  reset: () => void;
 }
 
-export const usePreferences = create<PreferencesState>()(set => ({
-  // Initial Interest States
-  interests: [],
-  pricePreference: 2,
+export const usePreferences = create<PreferencesState>()(
+  persist(
+    set => ({
+      // Initial Interest States
+      interests: [],
 
-  // Initial Pace States
-  pacePreference: 'balanced',
-  energyLevel: 2,
-  preferredStartTime: 'mid',
+      // Initial Pace States
+      energyLevel: null,
+      preferredStartTime: null,
 
-  // Initial Dietary States
-  dietaryRestrictions: [],
-  cuisinePreferences: {
-    preferred: [],
-    avoided: [],
-  },
-  mealImportance: {
-    breakfast: false,
-    lunch: false,
-    dinner: false,
-  },
+      // Initial Dietary States
+      dietaryRestrictions: [],
+      cuisinePreferences: {
+        preferred: [],
+        avoided: [],
+      },
+      mealImportance: null,
 
-  crowdPreference: 'hidden',
+      crowdPreference: null,
 
-  // Initial Requirement States
-  transportPreferences: ['walking', 'taxi'],
+      // Initial Requirement States
+      transportPreferences: [],
 
-  // Initial Time Preference States
-  bestTimeOfDay: ['morning', 'afternoon'],
-  prefersIndoor: ['afternoon'],
-  prefersOutdoor: ['morning'],
-  mealTimes: {},
+      // Initial Onboarding State
+      onboardingCompleted: false,
 
-  // Initial Onboarding State
-  onboardingCompleted: false,
-  currentStep: 'interests',
-
-  // Setters
-  setInterests: interests => set({ interests }),
-  setPricePreference: pricePreference => set({ pricePreference }),
-
-  setPacePreference: pacePreference => set({ pacePreference }),
-  setEnergyLevel: energyLevel => set({ energyLevel }),
-  setPreferredStartTime: preferredStartTime => set({ preferredStartTime }),
-
-  setDietaryRestrictions: dietaryRestrictions => set({ dietaryRestrictions }),
-  setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
-  setMealImportance: mealImportance => set({ mealImportance }),
-
-  setCrowdPreference: crowdPreference => set({ crowdPreference }),
-
-  setTransportPreferences: transportPreferences => set({ transportPreferences }),
-
-  setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
-  setCurrentStep: currentStep => set({ currentStep }),
-  setAllPreferences: (preferences: Partial<PreferencesState>) =>
-    set(state => ({
-      ...state,
-      interests: preferences.interests ?? state.interests,
-      pricePreference: preferences.pricePreference ?? state.pricePreference,
-      pacePreference: preferences.pacePreference ?? state.pacePreference,
-      energyLevel: preferences.energyLevel ?? state.energyLevel,
-      preferredStartTime: preferences.preferredStartTime ?? state.preferredStartTime,
-      dietaryRestrictions: preferences.dietaryRestrictions ?? state.dietaryRestrictions,
-      cuisinePreferences: preferences.cuisinePreferences ?? state.cuisinePreferences,
-      mealImportance: preferences.mealImportance ?? state.mealImportance,
-      crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
-      transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
-    })),
-}));
+      // Setters
+      setInterests: interests => set({ interests }),
+      setEnergyLevel: energyLevel => set({ energyLevel }),
+      setPreferredStartTime: preferredStartTime => set({ preferredStartTime }),
+      setDietaryRestrictions: dietaryRestrictions => set({ dietaryRestrictions }),
+      setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
+      setMealImportance: mealImportance => set({ mealImportance }),
+      setCrowdPreference: crowdPreference => set({ crowdPreference }),
+      setTransportPreferences: transportPreferences => set({ transportPreferences }),
+      setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
+      setAllPreferences: (preferences: Partial<PreferencesState>) =>
+        set(state => ({
+          ...state,
+          interests: preferences.interests ?? state.interests,
+          energyLevel: preferences.energyLevel ?? state.energyLevel,
+          preferredStartTime: preferences.preferredStartTime ?? state.preferredStartTime,
+          dietaryRestrictions: preferences.dietaryRestrictions ?? state.dietaryRestrictions,
+          cuisinePreferences: preferences.cuisinePreferences ?? state.cuisinePreferences,
+          mealImportance: preferences.mealImportance ?? state.mealImportance,
+          crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
+          transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
+        })),
+      reset: () =>
+        set({
+          interests: [],
+          energyLevel: null,
+          preferredStartTime: null,
+          dietaryRestrictions: [],
+          cuisinePreferences: {
+            preferred: [],
+            avoided: [],
+          },
+          mealImportance: {
+            breakfast: false,
+            lunch: false,
+            dinner: false,
+          },
+          crowdPreference: null,
+          transportPreferences: [],
+          onboardingCompleted: false,
+        }),
+    }),
+    {
+      name: 'user-preferences', // name of the item in localStorage
+    }
+  )
+);

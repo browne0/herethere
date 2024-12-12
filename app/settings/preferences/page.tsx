@@ -27,8 +27,6 @@ export default async function PreferencesPage() {
   // Parse the preferences from the database
   const initialPreferences = {
     interests: user.preferences!.interests,
-    pricePreference: user.preferences!.pricePreference,
-    pacePreference: user.preferences!.pacePreference,
     energyLevel: user.preferences!.energyLevel,
     preferredStartTime: user.preferences!.preferredStartTime,
     dietaryRestrictions: user.preferences!.dietaryRestrictions,

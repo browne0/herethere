@@ -20,7 +20,7 @@ export default async function TripsPage() {
   });
 
   if (!user?.onboardingCompleted) {
-    redirect('/onboarding');
+    redirect('/onboarding/interests');
   }
 
   const trips = await prisma.trip.findMany({
