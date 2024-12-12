@@ -41,7 +41,7 @@ export type DietaryRestriction =
   | 'none';
 export type CrowdPreference = 'popular' | 'hidden' | 'mixed';
 
-export interface PreferencesState {
+export interface UserPreferences {
   // Interest Preferences
   interests: InterestType[];
   pricePreference: PricePreference;
@@ -63,14 +63,17 @@ export interface PreferencesState {
     dinner: boolean;
   };
 
-  // Requirements
+  // Transportation Requirements
   transportPreferences: TransportMode[];
 
+  // Crowd Preferences
+  crowdPreference: CrowdPreference;
+}
+
+export interface PreferencesState extends UserPreferences {
   // Onboarding State
   onboardingCompleted: boolean;
   currentStep: string;
-
-  crowdPreference: CrowdPreference;
 
   // Setters
   setInterests: (interests: InterestType[]) => void;
@@ -110,8 +113,8 @@ export const usePreferences = create<PreferencesState>()(set => ({
   },
   mealImportance: {
     breakfast: false,
-    lunch: true,
-    dinner: true,
+    lunch: false,
+    dinner: false,
   },
 
   crowdPreference: 'hidden',

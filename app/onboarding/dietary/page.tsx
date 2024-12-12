@@ -25,6 +25,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
+import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface Option<T> {
@@ -41,8 +42,6 @@ interface MultiSelectProps<T> {
   searchPlaceholder?: string;
   type?: 'default' | 'dietary';
 }
-
-type MealType = 'breakfast' | 'lunch' | 'dinner';
 
 // Responsive MultiSelect component that uses Drawer on mobile and Popover on desktop
 const ResponsiveMultiSelect = <T extends string>({
@@ -195,7 +194,6 @@ const DietaryPage = () => {
     { label: 'Middle Eastern', value: 'middle_eastern' },
     { label: 'Seafood', value: 'seafood' },
     { label: 'Spanish', value: 'spanish' },
-    { label: 'Steakhouse', value: 'steak' },
     { label: 'Thai', value: 'thai' },
     { label: 'Turkish', value: 'turkish' },
     { label: 'Vietnamese', value: 'vietnamese' },

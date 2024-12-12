@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 
 import { UserButton, SignedIn, SignedOut } from '@clerk/nextjs';
-import { Menu, X } from 'lucide-react';
+import { Menu, Sliders, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -52,7 +52,15 @@ export function Nav() {
                     avatarBox: 'w-8 h-8 hover:scale-110 transition-transform duration-300',
                   },
                 }}
-              />
+              >
+                <UserButton.MenuItems>
+                  <UserButton.Link
+                    label="Settings"
+                    labelIcon={<Sliders className="h-4 w-4" />}
+                    href="/settings/preferences"
+                  />
+                </UserButton.MenuItems>
+              </UserButton>
             </SignedIn>
 
             <SignedOut>

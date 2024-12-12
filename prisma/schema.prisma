@@ -54,7 +54,7 @@ model User {
   firstName           String?
   lastName            String?
   profileImage        String?
-  preferences         Json? // For storing user preferences that affect recommendations
+  preferences         Json?
   onboardingCompleted Boolean  @default(false)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -64,13 +64,13 @@ model User {
 model Trip {
   id          String              @id @default(cuid())
   userId      String
-  user        User                @relation(fields: [userId], references: [id])
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   cityId      String
   city        City                @relation(fields: [cityId], references: [id])
   title       String
   startDate   DateTime
   endDate     DateTime
-  preferences Json? // Trip-specific preferences
+  preferences Json?
   createdAt   DateTime            @default(now())
   updatedAt   DateTime            @updatedAt
   activities  ItineraryActivity[]
@@ -160,7 +160,7 @@ model ActivityRecommendation {
 model ItineraryActivity {
   id               String                 @id @default(cuid())
   tripId           String
-  trip             Trip                   @relation(fields: [tripId], references: [id])
+  trip             Trip                   @relation(fields: [tripId], references: [id], onDelete: Cascade)
   recommendationId String
   recommendation   ActivityRecommendation @relation(fields: [recommendationId], references: [id])
 
