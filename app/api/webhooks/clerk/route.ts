@@ -42,6 +42,9 @@ export async function POST(req: Request) {
           data: {
             id: evt.data.id,
             email: evt.data.email_addresses[0]?.email_address,
+            firstName: evt.data.first_name,
+            lastName: evt.data.last_name,
+            profileImage: evt.data.has_image ? evt.data.image_url : null,
             onboardingCompleted: false,
           },
         });

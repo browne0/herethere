@@ -8,26 +8,8 @@ import {
 } from '@/constants';
 import { prisma } from '@/lib/db';
 import { Cuisine } from '@/lib/stores/preferences';
-
-export type TripBudget = 'budget' | 'moderate' | 'luxury';
-
-export interface RestaurantScoringParams {
-  dietaryRestrictions: string[];
-  cuisinePreferences: {
-    preferred: Cuisine[];
-    avoided: Cuisine[];
-  };
-  mealImportance: Record<string, number>;
-  transportPreferences: string[];
-  crowdPreference: 'popular' | 'hidden' | 'mixed';
-  budget: TripBudget;
-  startTime?: string;
-  currentLocation?: {
-    lat: number;
-    lng: number;
-  };
-}
-
+import { ScoringParams } from './types';
+import { TripBudget } from '@/app/trips/[tripId]/types';
 interface Location {
   latitude: number;
   longitude: number;
@@ -37,7 +19,7 @@ interface Location {
 }
 
 export const restaurantRecommendationService = {
-  async getRecommendations(cityId: string, params: RestaurantScoringParams) {
+  async getRecommendations(cityId: string, params: ScoringParams) {
     // Get excluded types based on dietary restrictions
     const excludedTypes = this.getExcludedTypes(params.dietaryRestrictions);
 
@@ -89,7 +71,7 @@ export const restaurantRecommendationService = {
     return Array.from(excludedTypes);
   },
 
-  calculateScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
+  calculateScore(restaurant: ActivityRecommendation, params: ScoringParams): number {
     // Calculate weights based on user preferences
     const weights = this.calculateWeights(params);
 
@@ -108,7 +90,7 @@ export const restaurantRecommendationService = {
     );
   },
 
-  calculateWeights(params: RestaurantScoringParams) {
+  calculateWeights(params: ScoringParams) {
     const weights = {
       quality: 0.4,
       price: 0.3,
@@ -182,7 +164,7 @@ export const restaurantRecommendationService = {
     return score;
   },
 
-  calculatePriceScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
+  calculatePriceScore(restaurant: ActivityRecommendation, params: ScoringParams): number {
     const budgetMap: Record<TripBudget, PriceLevel[]> = {
       budget: ['PRICE_LEVEL_FREE', 'PRICE_LEVEL_INEXPENSIVE'],
       moderate: ['PRICE_LEVEL_MODERATE'],
@@ -214,7 +196,7 @@ export const restaurantRecommendationService = {
     return Math.max(0, 1 - priceDiff * 0.25); // Decrease score by 0.25 for each level difference
   },
 
-  calculateMatchScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
+  calculateMatchScore(restaurant: ActivityRecommendation, params: ScoringParams): number {
     let score = 0;
     const types = restaurant.placeTypes || [];
 
@@ -222,7 +204,7 @@ export const restaurantRecommendationService = {
     const cuisineScore = this.calculateCuisineScore(
       types,
       params.cuisinePreferences,
-      params.crowdPreference
+      params.crowdPreference!
     );
     const cuisineWeight = params.currentLocation ? 0.3 : 0.5;
     score += cuisineScore * cuisineWeight;

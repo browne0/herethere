@@ -2,27 +2,8 @@ import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
-
-export type TripBudget = 'budget' | 'moderate' | 'luxury';
-
-export interface MuseumScoringParams {
-  // From trip preferences
-  budget: TripBudget;
-  startTime?: string;
-
-  // From user preferences
-  interests: InterestType[];
-  transportPreferences: TransportMode[];
-  crowdPreference: CrowdPreference;
-  energyLevel: 1 | 2 | 3;
-
-  // Optional context
-  currentLocation?: {
-    lat: number;
-    lng: number;
-  };
-}
-
+import { ScoringParams } from './types';
+import { TripBudget } from '@/app/trips/[tripId]/types';
 interface Location {
   latitude: number;
   longitude: number;
@@ -32,7 +13,7 @@ interface Location {
 }
 
 export const museumRecommendationService = {
-  async getRecommendations(cityId: string, params: MuseumScoringParams) {
+  async getRecommendations(cityId: string, params: ScoringParams) {
     // 1. Get initial set of museums
     const museums = await prisma.activityRecommendation.findMany({
       where: {
@@ -83,7 +64,7 @@ export const museumRecommendationService = {
     return Array.from(placeTypes);
   },
 
-  calculateScore(museum: ActivityRecommendation, params: MuseumScoringParams): number {
+  calculateScore(museum: ActivityRecommendation, params: ScoringParams): number {
     const weights = this.calculateWeights(params);
 
     const qualityScore = this.calculateQualityScore(museum);
@@ -105,7 +86,7 @@ export const museumRecommendationService = {
     );
   },
 
-  calculateWeights(params: MuseumScoringParams) {
+  calculateWeights(params: ScoringParams) {
     const weights = {
       quality: 0.3, // Base on reviews and ratings
       interest: 0.25, // Match to user interests
@@ -188,7 +169,7 @@ export const museumRecommendationService = {
     return score;
   },
 
-  calculateActivityFitScore(museum: ActivityRecommendation, params: MuseumScoringParams): number {
+  calculateActivityFitScore(museum: ActivityRecommendation, params: ScoringParams): number {
     let score = 0;
 
     // Museums are naturally low-intensity activities
@@ -238,7 +219,7 @@ export const museumRecommendationService = {
     return score;
   },
 
-  calculatePriceScore(museum: ActivityRecommendation, params: MuseumScoringParams): number {
+  calculatePriceScore(museum: ActivityRecommendation, params: ScoringParams): number {
     // For free museums, give high score if budget conscious
     if (museum.priceLevel === 'PRICE_LEVEL_FREE') {
       return params.budget === 'budget' ? 1.2 : 1.0; // Bonus for free museums

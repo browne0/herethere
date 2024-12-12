@@ -32,25 +32,95 @@ function getDurationDisplay(minutes: number): string {
     : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
 }
 
-const getPrimaryTypeDisplay = (primaryType: string | null): string | null => {
-  if (!primaryType) return null;
+function getDimensionsFromUrl(url: string): { width: number; height: number } | null {
+  const match = url.match(/-(\d+)x(\d+)\.[a-zA-Z]+$/);
+  if (match) {
+    return {
+      width: parseInt(match[1]),
+      height: parseInt(match[2]),
+    };
+  }
+  return null;
+}
 
-  // Handle restaurants
-  if (primaryType.includes('restaurant') || primaryType === 'steak_house') {
-    return RESTAURANT_TYPES[primaryType as RestaurantType];
+function getBestImageUrl(images: ActivityImages | null): ImageUrl | null {
+  if (!images?.urls?.length) return null;
+
+  const scoredUrls = images.urls.map((imageUrl, index) => {
+    let score = 0;
+
+    // Prefer CDN URLs as they're likely optimized
+    if (imageUrl.cdnUrl) score += 5;
+
+    // Score based on dimensions if available
+    const dimensions = getDimensionsFromUrl(imageUrl.cdnUrl || imageUrl.url);
+    console.log(dimensions);
+    if (dimensions) {
+      const { width, height } = dimensions;
+      const aspectRatio = width / height;
+
+      // Prefer landscape orientation for activity cards
+      if (aspectRatio > 1) score += 5;
+
+      // Prefer reasonable aspect ratios (not too wide or tall)
+      if (aspectRatio > 0.5 && aspectRatio < 2) score += 5;
+
+      // Prefer high resolution but not excessive
+      if (width >= 1200 && width <= 2000) score += 10;
+      else if (width > 2000) score += 5;
+      else if (width < 800) score -= 5;
+
+      // Penalize extremely large images
+      if (width > 3000 || height > 3000) score -= 5;
+    }
+
+    return { imageUrl, score };
+  });
+
+  return scoredUrls.sort((a, b) => b.score - a.score)[0]?.imageUrl || null;
+}
+
+const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null => {
+  // First check primaryType
+  if (activity.primaryType) {
+    // Handle restaurants
+    if (activity.primaryType.includes('restaurant') || activity.primaryType === 'steak_house') {
+      return RESTAURANT_TYPES[activity.primaryType as RestaurantType];
+    }
+
+    // Handle museums
+    if (activity.primaryType in MUSEUM_TYPES) {
+      return MUSEUM_TYPES[activity.primaryType as MuseumType];
+    }
   }
 
-  // Handle museums
-  if (primaryType in MUSEUM_TYPES) {
-    return MUSEUM_TYPES[primaryType as MuseumType];
+  // If no primaryType or not found in constants, check placeTypes array
+  else if (activity.primaryType === '' && activity.placeTypes?.length > 0) {
+    // Check for restaurant types
+    const restaurantType = activity.placeTypes.find(
+      type => type.includes('restaurant') || type === 'steak_house'
+    );
+    if (restaurantType) {
+      return RESTAURANT_TYPES[restaurantType as RestaurantType];
+    }
+
+    // Check for museum types
+    const museumType = activity.placeTypes.find(type => type in MUSEUM_TYPES);
+    if (museumType) {
+      return MUSEUM_TYPES[museumType as MuseumType];
+    }
   }
 
-  // Handle other types
-  return primaryType
-    .replace(/_/g, ' ')
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
+  // If no matching types found, fall back to primaryType formatting
+  if (activity.primaryType) {
+    return activity.primaryType
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+  }
+
+  return null;
 };
 
 export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
@@ -62,7 +132,8 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
 
   // Parse the images JSON to get the photo reference
   const images = activity.images as unknown as ActivityImages;
-  const photoUrl = images?.urls[0].cdnUrl || images?.urls?.[0]?.url;
+  const photoUrl = getBestImageUrl(images);
+
   // Safely extract photo reference
   const handleAdd = async (e: React.MouseEvent) => {
     e.preventDefault();
@@ -90,7 +161,7 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
         <div className="relative w-full h-40">
           {photoUrl ? (
             <CachedImage
-              images={activity.images as unknown as { urls: ImageUrl[] }}
+              photo={photoUrl}
               alt={activity.name}
               className="absolute inset-0 w-full h-full object-cover"
               priority
@@ -128,9 +199,7 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
           </div>
 
           <h3 className="font-medium text-base leading-tight mb-2 line-clamp-2">{activity.name}</h3>
-          <p className="text-sm gap-1 mb-2 ">
-            {getPrimaryTypeDisplay(activity.primaryType) || 'Museum'}
-          </p>
+          <p className="text-sm gap-1 mb-2 ">{getPrimaryTypeDisplay(activity)}</p>
           <p className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">

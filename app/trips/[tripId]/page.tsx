@@ -10,6 +10,7 @@ import { prisma } from '@/lib/db';
 import { TripPageClient } from './TripPageClient';
 import { ParsedTrip } from './types';
 import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
+import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 
 export default async function TripPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
@@ -87,6 +88,11 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     recommendationsData.preferences
   );
 
+  const historicSitesRecommendations = await historicSitesRecommendationService.getRecommendations(
+    recommendationsData.cityId,
+    recommendationsData.preferences
+  );
+
   // Format recommendations into a shelf
   const mustSeeShelf = {
     type: 'must-see',
@@ -111,12 +117,25 @@ export default async function TripPage({ params }: { params: { tripId: string } 
 
   const museumsShelf = {
     type: 'museums',
-    title: 'Museums & Galleries',
-    description: `Discover art, history, and science across ${trip.city.name}'s diverse museums`,
+    title: 'Museums & Cultural Spaces',
+    description: `Art, history, and cultural treasures in ${trip.city.name} to explore`,
     activities: museumsRecommendations,
   };
 
-  const shelves = [mustSeeShelf, restaurantShelf, touristAttractionsShelf, museumsShelf];
+  const historicSitesShelf = {
+    type: 'historic-sites',
+    title: 'Historic Landmarks & Heritage Sites',
+    description: 'Essential historic sites, monuments, and iconic landmarks that shaped the city',
+    activities: historicSitesRecommendations,
+  };
+
+  const shelves = [
+    mustSeeShelf,
+    restaurantShelf,
+    touristAttractionsShelf,
+    museumsShelf,
+    historicSitesShelf,
+  ];
 
   return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;
 }

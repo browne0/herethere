@@ -4,27 +4,8 @@ import _ from 'lodash';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
-
-export type TripBudget = 'budget' | 'moderate' | 'luxury';
-
-export interface AttractionScoringParams {
-  // From trip preferences
-  budget: TripBudget;
-  startTime?: string;
-
-  // From user preferences
-  interests: InterestType[];
-  transportPreferences: TransportMode[];
-  crowdPreference: CrowdPreference;
-  energyLevel: 1 | 2 | 3;
-
-  // Optional context
-  currentLocation?: {
-    lat: number;
-    lng: number;
-  };
-}
-
+import { ScoringParams } from './types';
+import { TripBudget } from '@/app/trips/[tripId]/types';
 interface Location {
   latitude: number;
   longitude: number;
@@ -34,7 +15,7 @@ interface Location {
 }
 
 export const touristAttractionService = {
-  async getRecommendations(cityId: string, params: AttractionScoringParams) {
+  async getRecommendations(cityId: string, params: ScoringParams) {
     const relevantTypes = this.getPlaceTypesFromInterests(params.interests);
 
     // 1. Get initial set of tourist attractions matching interests
@@ -131,7 +112,7 @@ export const touristAttractionService = {
     return baseDuration * energyMultiplier[energyLevel];
   },
 
-  calculateScore(attraction: ActivityRecommendation, params: AttractionScoringParams): number {
+  calculateScore(attraction: ActivityRecommendation, params: ScoringParams): number {
     const weights = this.calculateWeights(params);
 
     const interestScore = this.calculateInterestScore(attraction, params.interests);
@@ -151,7 +132,7 @@ export const touristAttractionService = {
     );
   },
 
-  calculateWeights(params: AttractionScoringParams) {
+  calculateWeights(params: ScoringParams) {
     const weights = {
       interest: 0.35, // Interest match is primary
       activityFit: 0.3, // Activity characteristics (duration, etc)
@@ -193,10 +174,7 @@ export const touristAttractionService = {
     return score;
   },
 
-  calculateActivityFitScore(
-    attraction: ActivityRecommendation,
-    params: AttractionScoringParams
-  ): number {
+  calculateActivityFitScore(attraction: ActivityRecommendation, params: ScoringParams): number {
     let score = 0;
 
     // Duration fit (0-0.4)
@@ -238,7 +216,7 @@ export const touristAttractionService = {
     return score;
   },
 
-  calculatePriceScore(attraction: ActivityRecommendation, params: AttractionScoringParams): number {
+  calculatePriceScore(attraction: ActivityRecommendation, params: ScoringParams): number {
     // For free attractions, give high score if budget conscious
     if (attraction.priceLevel === 'PRICE_LEVEL_FREE') {
       return params.budget === 'budget' ? 1 : 0.8;

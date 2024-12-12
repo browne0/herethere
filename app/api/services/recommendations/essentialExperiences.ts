@@ -4,26 +4,8 @@ import _ from 'lodash';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
-
-export type TripBudget = 'budget' | 'moderate' | 'luxury';
-
-export interface MustSeeScoringParams {
-  // From trip preferences
-  budget: TripBudget;
-  startTime?: string;
-
-  // From user preferences
-  interests: InterestType[];
-  transportPreferences: TransportMode[];
-  crowdPreference: CrowdPreference;
-  energyLevel: 1 | 2 | 3;
-
-  // Optional context
-  currentLocation?: {
-    lat: number;
-    lng: number;
-  };
-}
+import { ScoringParams } from './types';
+import { TripBudget } from '@/app/trips/[tripId]/types';
 
 interface Location {
   latitude: number;
@@ -34,7 +16,7 @@ interface Location {
 }
 
 export const essentialExperiencesRecommendationService = {
-  async getRecommendations(cityId: string, params: MustSeeScoringParams) {
+  async getRecommendations(cityId: string, params: ScoringParams) {
     const relevantTypes = this.getPlaceTypesFromInterests(params.interests);
 
     // 1. Get initial set of must-see attractions
@@ -157,7 +139,7 @@ export const essentialExperiencesRecommendationService = {
     return (highCount * 1 + moderateCount * 0.6 + lowCount * 0.3) / total;
   },
 
-  calculateScore(attraction: ActivityRecommendation, params: MustSeeScoringParams): number {
+  calculateScore(attraction: ActivityRecommendation, params: ScoringParams): number {
     const weights = this.calculateWeights(params);
 
     const mustSeeScore = this.calculateMustSeeScore(attraction);
@@ -179,7 +161,7 @@ export const essentialExperiencesRecommendationService = {
     );
   },
 
-  calculateWeights(params: MustSeeScoringParams) {
+  calculateWeights(params: ScoringParams) {
     const weights = {
       mustSee: 0.3, // Must-see status is primary for this service
       interest: 0.25, // Interest match is important but secondary
@@ -244,10 +226,7 @@ export const essentialExperiencesRecommendationService = {
     return score;
   },
 
-  calculateActivityFitScore(
-    attraction: ActivityRecommendation,
-    params: MustSeeScoringParams
-  ): number {
+  calculateActivityFitScore(attraction: ActivityRecommendation, params: ScoringParams): number {
     let score = 0;
 
     // Activity intensity fit (0-0.4)
@@ -300,7 +279,7 @@ export const essentialExperiencesRecommendationService = {
     return score;
   },
 
-  calculatePriceScore(attraction: ActivityRecommendation, params: MustSeeScoringParams): number {
+  calculatePriceScore(attraction: ActivityRecommendation, params: ScoringParams): number {
     // For free attractions, give high score if budget conscious
     if (attraction.priceLevel === 'PRICE_LEVEL_FREE') {
       return params.budget === 'budget' ? 1 : 0.8;

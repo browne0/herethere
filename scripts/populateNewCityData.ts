@@ -15,7 +15,13 @@ import dotenv from 'dotenv';
 
 import { Logger } from './logger';
 // Import constants (category mapping etc.)
-import { CategoryMapping, PlaceCategory, isCityCoastal, PREDEFINED_CITY_AREAS } from '../constants';
+import {
+  CategoryMapping,
+  PlaceCategory,
+  isCityCoastal,
+  PREDEFINED_CITY_AREAS,
+  fieldMask,
+} from '../constants';
 
 dotenv.config({ path: ['.env.local', '.env'] });
 
@@ -133,38 +139,6 @@ async function processRestaurantsInArea(
     'fine_dining_restaurant',
   ];
 
-  const fieldMask = [
-    // Basic fields
-    'places.id',
-    'places.displayName',
-    'places.formattedAddress',
-    'places.location',
-    'places.types',
-    'places.primaryType',
-    'places.photos',
-    'places.businessStatus',
-    'places.editorialSummary',
-
-    // Advanced fields
-    'places.priceLevel',
-    'places.rating',
-    'places.userRatingCount',
-    'places.regularOpeningHours',
-
-    // Features we use
-    'places.dineIn',
-    'places.reservable',
-    'places.servesLunch',
-    'places.servesDinner',
-    'places.servesBeer',
-    'places.servesWine',
-    'places.servesCocktails',
-    'places.servesVegetarianFood',
-    'places.outdoorSeating',
-    'places.delivery',
-    'places.takeout',
-  ].join(',');
-
   for (const restaurantType of restaurantTypes) {
     const request = {
       locationRestriction: {
@@ -183,7 +157,7 @@ async function processRestaurantsInArea(
       const response = await placesClient.searchNearby(request, {
         otherArgs: {
           headers: {
-            'X-Goog-FieldMask': fieldMask, // Using existing fieldMask
+            'X-Goog-FieldMask': fieldMask,
           },
         },
       });
@@ -220,6 +194,85 @@ async function processRestaurantsInArea(
       await new Promise(resolve => setTimeout(resolve, 500)); // Rate limiting between cuisine types
     } catch (error) {
       logger.error(`Error processing ${restaurantType} in ${area.name}:`, error as Error);
+      stats.errors++;
+    }
+  }
+}
+
+async function processHistoricPlacesInArea(
+  area: SearchArea,
+  city: City,
+  existingPlaceMap: Map<string, Date>,
+  processedPlaceIds: Set<string>,
+  stats: SyncStats,
+  logger: Logger
+): Promise<void> {
+  const historicTypes = [
+    'historical_place',
+    'historical_landmark',
+    'cultural_landmark',
+    'monument',
+    'church',
+    'hindu_temple',
+    'mosque',
+    'synagogue',
+  ];
+
+  for (const historicType of historicTypes) {
+    const request = {
+      locationRestriction: {
+        circle: {
+          center: area.location,
+          radius: area.radius,
+        },
+      },
+      includedTypes: [historicType],
+      excludedTypes: [],
+      maxResultCount: 20,
+      languageCode: 'en',
+    };
+
+    try {
+      const response = await placesClient.searchNearby(request, {
+        otherArgs: {
+          headers: {
+            'X-Goog-FieldMask': fieldMask,
+          },
+        },
+      });
+
+      const places = response[0].places!;
+
+      for (const place of places) {
+        stats.processed++;
+
+        if (processedPlaceIds.has(place.id!)) {
+          stats.skipped++;
+          continue;
+        }
+        processedPlaceIds.add(place.id!);
+
+        const lastSynced = existingPlaceMap.get(place.id!);
+        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+          stats.skipped++;
+          continue;
+        }
+
+        if (validatePlace(place, PlaceCategory.HISTORIC)) {
+          await processPlace(place, city, PlaceCategory.HISTORIC, area, logger);
+          stats.added++;
+          stats.byType[PlaceCategory.HISTORIC]++;
+          stats.byArea[area.name]++;
+        } else {
+          stats.skipped++;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting between places
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500)); // Rate limiting between historic types
+    } catch (error) {
+      logger.error(`Error processing ${historicType} in ${area.name}:`, error as Error);
       stats.errors++;
     }
   }
@@ -638,38 +691,6 @@ async function searchNearbyPlaces(
   stats: SyncStats,
   logger: Logger
 ): Promise<protos.google.maps.places.v1.IPlace[]> {
-  const fieldMask = [
-    // Basic fields
-    'places.id',
-    'places.displayName',
-    'places.formattedAddress',
-    'places.location',
-    'places.types',
-    'places.primaryType',
-    'places.photos',
-    'places.businessStatus',
-    'places.editorialSummary',
-
-    // Advanced fields
-    'places.priceLevel',
-    'places.rating',
-    'places.userRatingCount',
-    'places.regularOpeningHours',
-
-    // Features we use
-    'places.dineIn',
-    'places.reservable',
-    'places.servesLunch',
-    'places.servesDinner',
-    'places.servesBeer',
-    'places.servesWine',
-    'places.servesCocktails',
-    'places.servesVegetarianFood',
-    'places.outdoorSeating',
-    'places.delivery',
-    'places.takeout',
-  ].join(',');
-
   stats.apiCalls.searchNearby++;
   try {
     const request = {
@@ -722,8 +743,17 @@ async function processCityArea(
         stats,
         logger
       );
+    } else if (category === PlaceCategory.HISTORIC) {
+      await processHistoricPlacesInArea(
+        area,
+        city,
+        existingPlaceMap,
+        processedPlaceIds,
+        stats,
+        logger
+      );
     } else {
-      // Original logic for non-restaurant categories
+      // Original logic for other categories
       logger.progress(`\n🔍 Searching for ${category} in ${area.name}...`);
       const places = await searchNearbyPlaces(area, config, stats, logger);
 
@@ -761,6 +791,11 @@ async function processCityArea(
         }
       }
     }
+  }
+
+  // Special handling for coastal cities
+  if (isCityCoastal(city)) {
+    await processCoastalFeatures(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
   }
 }
 

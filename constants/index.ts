@@ -426,3 +426,35 @@ interface SearchArea {
   };
   radius: number;
 }
+
+export const fieldMask = [
+  // Basic fields
+  'places.id',
+  'places.displayName',
+  'places.formattedAddress',
+  'places.location',
+  'places.types',
+  'places.primaryType',
+  'places.photos',
+  'places.businessStatus',
+  'places.editorialSummary',
+
+  // Advanced fields
+  'places.priceLevel',
+  'places.rating',
+  'places.userRatingCount',
+  'places.regularOpeningHours',
+
+  // Features we use
+  'places.dineIn',
+  'places.reservable',
+  'places.servesLunch',
+  'places.servesDinner',
+  'places.servesBeer',
+  'places.servesWine',
+  'places.servesCocktails',
+  'places.servesVegetarianFood',
+  'places.outdoorSeating',
+  'places.delivery',
+  'places.takeout',
+].join(',');
