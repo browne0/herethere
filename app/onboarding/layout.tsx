@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+
 import { useRouter, usePathname } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -32,7 +34,6 @@ export default function OnboardingLayout({ children }: LayoutProps) {
     cuisinePreferences,
     mealImportance,
     dietaryRestrictions,
-    reset,
     ...preferences
   } = usePreferences();
 
@@ -73,8 +74,7 @@ export default function OnboardingLayout({ children }: LayoutProps) {
       }
 
       toast.success('Preferences saved successfully');
-      reset();
-      router.push('/trips');
+      router.push('/trips/new');
     } catch (error) {
       console.error('Error saving preferences:', error);
       toast.error('Failed to save preferences');
@@ -107,6 +107,8 @@ export default function OnboardingLayout({ children }: LayoutProps) {
         return false;
     }
   };
+
+  useEffect(() => {});
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8 flex flex-col">

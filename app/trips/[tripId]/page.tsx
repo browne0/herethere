@@ -3,14 +3,14 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
+import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
+import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
 import { restaurantRecommendationService } from '@/app/api/services/recommendations/restaurants';
 import { touristAttractionService } from '@/app/api/services/recommendations/touristAttractions';
 import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
 import { ParsedTrip } from './types';
-import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
-import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 
 export default async function TripPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();

@@ -48,6 +48,17 @@ export default function SummaryPage() {
     late: "Doesn't mind a late start",
   };
 
+  const getEnergyLevelDescription = (level: number | null) => {
+    if (!level) return 'No energy level set';
+    const energyLevel = ENERGY_LEVELS.find(el => el.value === level);
+    return energyLevel ? energyLevel.description : 'No energy level set';
+  };
+
+  const getStartTimeDescription = (time: string | null) => {
+    if (!time || !(time in START_TIMES)) return 'No start time preference set';
+    return START_TIMES[time as keyof typeof START_TIMES];
+  };
+
   const sections = [
     {
       title: 'Interests',
@@ -59,8 +70,8 @@ export default function SummaryPage() {
       title: 'Travel Style',
       icon: <Settings className="w-5 h-5" />,
       items: [
-        `${preferences.energyLevel ? ENERGY_LEVELS[preferences.energyLevel!].description : ''}`,
-        `${preferences.preferredStartTime ? START_TIMES[preferences.preferredStartTime!] : ''}`,
+        getEnergyLevelDescription(preferences.energyLevel),
+        getStartTimeDescription(preferences.preferredStartTime),
       ],
       edit: () => router.push('/onboarding/pace'),
     },

@@ -7,6 +7,7 @@ import { tripService } from '@/app/api/services/trips';
 export async function GET(request: NextRequest, { params }: { params: { tripId: string } }) {
   try {
     const { userId } = await auth();
+    const { tripId } = await params;
     if (!userId) {
       return new NextResponse('Unauthorized', { status: 401 });
     }
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { tripId: 
 
     const trip = await tripService.getTrip({
       userId,
-      tripId: params.tripId,
+      tripId: tripId,
       include,
     });
 
@@ -35,13 +36,14 @@ export async function GET(request: NextRequest, { params }: { params: { tripId: 
 export async function DELETE(_req: Request, { params }: { params: { tripId: string } }) {
   try {
     const { userId } = await auth();
+    const { tripId } = await params;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
     const result = await tripService.deleteTrip({
       userId,
-      tripId: params.tripId,
+      tripId,
     });
 
     return NextResponse.json({

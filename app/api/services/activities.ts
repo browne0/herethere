@@ -163,16 +163,18 @@ export const activityService = {
   },
 
   async deleteActivity(params: { tripId: string; activityId: string; userId: string }) {
+    const { tripId, userId, activityId } = await params;
+
     // Verify trip ownership first
     const trip = await prisma.trip.findUnique({
       where: {
-        id: params.tripId,
-        userId: params.userId,
+        id: tripId,
+        userId: userId,
       },
       include: {
         activities: {
           where: {
-            id: params.activityId,
+            id: activityId,
           },
         },
       },
@@ -189,8 +191,8 @@ export const activityService = {
     // Delete the activity
     const deletedActivity = await prisma.itineraryActivity.delete({
       where: {
-        id: params.activityId,
-        tripId: params.tripId,
+        id: activityId,
+        tripId: tripId,
       },
     });
 
