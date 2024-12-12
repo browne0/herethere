@@ -23,11 +23,11 @@ import {
   DrawerTrigger,
 } from '@/components/ui/drawer';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 
 interface Option<T> {
   label: string;

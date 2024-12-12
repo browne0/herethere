@@ -1,5 +1,6 @@
-import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { City } from '@prisma/client';
+
+import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 
 export enum PlaceCategory {
   MUSEUM = 'MUSEUM',

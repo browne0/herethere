@@ -34,28 +34,36 @@ export const preferencesService = {
 
     // Merge new preferences with existing ones
     const currentPreferences = (user?.preferences as Partial<UserPreferences>) || {};
-    const updatedPreferences = {
+    const updatedPreferences: UserPreferences = {
       ...currentPreferences,
-      ...preferences,
+      interests: preferences.interests!,
+      crowdPreference: preferences.crowdPreference!,
+      energyLevel: preferences.energyLevel!,
+      preferredStartTime: preferences.preferredStartTime!,
+      pricePreference: preferences.pricePreference!,
+      transportPreferences: preferences.transportPreferences!,
+      dietaryRestrictions: preferences.dietaryRestrictions?.includes('none')
+        ? []
+        : preferences.dietaryRestrictions!,
       // Handle nested objects properly
       cuisinePreferences: preferences.cuisinePreferences
         ? {
             ...currentPreferences.cuisinePreferences,
             ...preferences.cuisinePreferences,
           }
-        : currentPreferences.cuisinePreferences,
+        : currentPreferences.cuisinePreferences!,
       mealImportance: preferences.mealImportance
         ? {
             ...currentPreferences.mealImportance,
             ...preferences.mealImportance,
           }
-        : currentPreferences.mealImportance,
+        : currentPreferences.mealImportance!,
     };
 
     return await prisma.user.update({
       where: { id: userId },
       data: {
-        preferences: updatedPreferences,
+        preferences: updatedPreferences as any,
         onboardingCompleted: true,
         updatedAt: new Date(),
       },

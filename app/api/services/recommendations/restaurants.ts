@@ -1,7 +1,11 @@
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 import _ from 'lodash';
 
-import { CategoryMapping, CUISINE_PREFERENCES } from '@/constants';
+import {
+  CUISINE_PREFERENCES,
+  GOOGLE_RESTAURANT_TYPES,
+  NON_VEGETARIAN_RESTAURANTS,
+} from '@/constants';
 import { prisma } from '@/lib/db';
 import { Cuisine, PricePreference } from '@/lib/stores/preferences';
 
@@ -35,19 +39,31 @@ interface Location {
 
 export const restaurantRecommendationService = {
   async getRecommendations(cityId: string, params: RestaurantScoringParams) {
-    // 1. Get initial set of restaurants
+    // Get excluded types based on dietary restrictions
+    const excludedTypes = this.getExcludedTypes(params.dietaryRestrictions);
+
+    // 1. Get initial set of restaurants with dietary and type filtering
     const restaurants = await prisma.activityRecommendation.findMany({
       where: {
         cityId,
         businessStatus: 'OPERATIONAL',
         primaryType: {
-          in: CategoryMapping.RESTAURANT.includedTypes,
+          in: GOOGLE_RESTAURANT_TYPES,
+          notIn: excludedTypes,
         },
+        // Ensure no excluded types in the placeTypes array
+        ...(params.dietaryRestrictions.length > 0 && {
+          NOT: {
+            placeTypes: {
+              hasSome: excludedTypes,
+            },
+          },
+        }),
       },
-      take: 50, // Get larger initial set for scoring
+      take: 50,
     });
 
-    // 2. Score restaurants
+    // 2. Score restaurants (filtering already done by Prisma query)
     const scored = restaurants.map(restaurant => ({
       ...restaurant,
       score: this.calculateScore(restaurant, params),
@@ -55,14 +71,23 @@ export const restaurantRecommendationService = {
 
     // 3. Sort by score and filter out low scores
     const recommendations = scored
-      .filter(r => r.score > 0) // Remove any that failed hard requirements
+      .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 20); // Take top 20
-    // .map(({ score, ...restaurant }) => restaurant);
-
-    console.log(recommendations);
+      .slice(0, 20);
 
     return recommendations;
+  },
+
+  getExcludedTypes(restrictions: string[]): string[] {
+    if (restrictions.length === 0) return [];
+
+    let excludedTypes = new Set<string>();
+
+    if (restrictions.includes('vegetarian') || restrictions.includes('vegan')) {
+      excludedTypes = new Set([...NON_VEGETARIAN_RESTAURANTS]);
+    }
+
+    return Array.from(excludedTypes);
   },
 
   calculateScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
@@ -73,40 +98,51 @@ export const restaurantRecommendationService = {
     const qualityScore = this.calculateQualityScore(restaurant);
     const priceScore = this.calculatePriceScore(restaurant, params);
     const matchScore = this.calculateMatchScore(restaurant, params);
+    const mustSeeScore = this.calculateMustSeeScore(restaurant);
 
     // Combine scores using weights
-    return qualityScore * weights.quality + priceScore * weights.price + matchScore * weights.match;
+    return (
+      qualityScore * weights.quality +
+      priceScore * weights.price +
+      matchScore * weights.match +
+      mustSeeScore * weights.mustSee
+    );
   },
 
   calculateWeights(params: RestaurantScoringParams) {
     const weights = {
       quality: 0.4,
       price: 0.3,
-      match: 0.3,
+      match: 0.25,
+      mustSee: 0.05, // Reduced weight for must-see locations to act more as a tie-breaker
     };
 
     // Adjust weights based on crowd preference
     if (params.crowdPreference === 'popular') {
-      weights.quality += 0.1;
-      weights.match -= 0.1;
+      weights.quality += 0.05;
+      weights.match -= 0.05;
     } else if (params.crowdPreference === 'hidden') {
-      weights.quality -= 0.1;
-      weights.match += 0.1;
+      weights.quality -= 0.05;
+      weights.match += 0.05;
     }
 
     // Adjust for dietary restrictions
     if (params.dietaryRestrictions.length > 0) {
-      weights.match += 0.1;
-      weights.quality -= 0.1;
+      weights.match += 0.05;
+      weights.quality -= 0.05;
     }
 
     // Adjust for budget sensitivity
     if (params.budget === 'budget') {
-      weights.price += 0.1;
-      weights.quality -= 0.1;
+      weights.price += 0.05;
+      weights.quality -= 0.05;
     }
 
     return weights;
+  },
+
+  calculateMustSeeScore(restaurant: ActivityRecommendation): number {
+    return restaurant.isMustSee ? 1 : 0;
   },
 
   calculateQualityScore(restaurant: ActivityRecommendation): number {
@@ -177,14 +213,6 @@ export const restaurantRecommendationService = {
     let score = 0;
     const types = restaurant.placeTypes || [];
 
-    // Dietary restrictions are highest priority (50% if no location, 40% if location provided)
-    const dietaryScore = this.calculateDietaryScore(types, params.dietaryRestrictions);
-    if (dietaryScore === 0 && params.dietaryRestrictions.length > 0) {
-      return 0; // Immediate disqualification if dietary needs aren't met
-    }
-    const dietaryWeight = params.currentLocation ? 0.4 : 0.5;
-    score += dietaryScore * dietaryWeight;
-
     // Cuisine preferences (50% if no location, 30% if location provided)
     const cuisineScore = this.calculateCuisineScore(
       types,
@@ -207,24 +235,6 @@ export const restaurantRecommendationService = {
     return score;
   },
 
-  calculateDietaryScore(types: string[], restrictions: string[]): number {
-    console.log(restrictions);
-    if (restrictions.length === 0) return 1;
-
-    const matches = restrictions.every(restriction => {
-      switch (restriction) {
-        case 'vegetarian':
-          return types.some(t => t.includes('vegetarian'));
-        case 'vegan':
-          return types.some(t => t.includes('vegan'));
-        default:
-          return true;
-      }
-    });
-
-    return matches ? 1 : 0;
-  },
-
   calculateCuisineScore(
     types: string[],
     preferences: { preferred: Cuisine[]; avoided: Cuisine[] },
@@ -236,7 +246,7 @@ export const restaurantRecommendationService = {
     const cuisineValues = new Set(CUISINE_PREFERENCES.map(cuisine => cuisine.value));
 
     const cuisineTypes = types.filter(item => {
-      // Extract the possible cuisine value from the item (e.g., remove '_restaurant')
+      // Extract the possible cuisine value from the item
       const normalizedItem = item.replace(/_restaurant$/, '');
       return cuisineValues.has(normalizedItem as Cuisine);
     });
