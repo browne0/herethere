@@ -1,6 +1,7 @@
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 import _ from 'lodash';
 
+import { TripBudget } from '@/app/trips/[tripId]/types';
 import {
   CUISINE_PREFERENCES,
   GOOGLE_RESTAURANT_TYPES,
@@ -8,8 +9,8 @@ import {
 } from '@/constants';
 import { prisma } from '@/lib/db';
 import { Cuisine } from '@/lib/stores/preferences';
+
 import { ScoringParams } from './types';
-import { TripBudget } from '@/app/trips/[tripId]/types';
 interface Location {
   latitude: number;
   longitude: number;

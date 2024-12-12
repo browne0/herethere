@@ -1,11 +1,12 @@
 import { ActivityRecommendation, PriceLevel, SeasonalAvailability } from '@prisma/client';
 import _ from 'lodash';
 
+import { TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
-import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
+import { InterestType, TransportMode } from '@/lib/stores/preferences';
+
 import { ScoringParams } from './types';
-import { TripBudget } from '@/app/trips/[tripId]/types';
 
 interface Location {
   latitude: number;
