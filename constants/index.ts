@@ -39,6 +39,12 @@ export const RESTAURANT_TYPES = {
   fine_dining_restaurant: 'Fine Dining',
 };
 
+export const MUSEUM_TYPES = {
+  museum: 'Museum',
+  art_gallery: 'Art Gallery',
+  planetarium: 'Planetarium',
+};
+
 // Derive other restaurant-related constants
 export const GOOGLE_RESTAURANT_TYPES = Object.keys(RESTAURANT_TYPES);
 

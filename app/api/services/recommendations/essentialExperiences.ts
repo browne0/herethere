@@ -1,22 +1,24 @@
-import { ActivityRecommendation, PriceLevel } from '@prisma/client';
+import { ActivityRecommendation, PriceLevel, SeasonalAvailability } from '@prisma/client';
 import _ from 'lodash';
 
+import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
-import { Cuisine } from '@/lib/stores/preferences';
+import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
 
 export type TripBudget = 'budget' | 'moderate' | 'luxury';
 
 export interface MustSeeScoringParams {
-  dietaryRestrictions: string[];
-  cuisinePreferences: {
-    preferred: Cuisine[];
-    avoided: Cuisine[];
-  };
-  mealImportance: Record<string, number>;
-  transportPreferences: string[];
-  crowdPreference: 'popular' | 'hidden' | 'mixed';
+  // From trip preferences
   budget: TripBudget;
   startTime?: string;
+
+  // From user preferences
+  interests: InterestType[];
+  transportPreferences: TransportMode[];
+  crowdPreference: CrowdPreference;
+  energyLevel: 1 | 2 | 3;
+
+  // Optional context
   currentLocation?: {
     lat: number;
     lng: number;
@@ -33,6 +35,8 @@ interface Location {
 
 export const essentialExperiencesRecommendationService = {
   async getRecommendations(cityId: string, params: MustSeeScoringParams) {
+    const relevantTypes = this.getPlaceTypesFromInterests(params.interests);
+
     // 1. Get initial set of must-see attractions
     const attractions = await prisma.activityRecommendation.findMany({
       where: {
@@ -40,7 +44,7 @@ export const essentialExperiencesRecommendationService = {
         businessStatus: 'OPERATIONAL',
         NOT: {
           placeTypes: {
-            has: 'restaurant', // Exclude food-related places
+            has: 'restaurant', // Exclude restaurants
           },
         },
         OR: [
@@ -48,16 +52,12 @@ export const essentialExperiencesRecommendationService = {
           { isTouristAttraction: true },
           {
             placeTypes: {
-              hasSome: [
-                'tourist_attraction',
-                'point_of_interest',
-                'landmark',
-                'monument',
-                'museum',
-              ],
+              hasSome: relevantTypes,
             },
           },
         ],
+        // Only show seasonally appropriate activities
+        seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },
       take: 50,
     });
@@ -68,97 +68,233 @@ export const essentialExperiencesRecommendationService = {
       score: this.calculateScore(attraction, params),
     }));
 
-    // 3. Sort by score and return top recommendations
+    // 3. Sort by score and filter out low scores
     const recommendations = scored
       .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
       .slice(0, 20);
 
-    console.log(recommendations);
     return recommendations;
   },
 
+  getPlaceTypesFromInterests(interests: InterestType[]): string[] {
+    const placeTypes = new Set<string>();
+
+    interests.forEach(interest => {
+      switch (interest) {
+        case 'outdoors':
+          CategoryMapping[PlaceCategory.PARK].includedTypes.forEach(type => placeTypes.add(type));
+          CategoryMapping[PlaceCategory.BEACH].includedTypes.forEach(type => placeTypes.add(type));
+          break;
+        case 'arts':
+          CategoryMapping[PlaceCategory.MUSEUM].includedTypes.forEach(type => placeTypes.add(type));
+          break;
+        case 'history':
+          CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          CategoryMapping[PlaceCategory.MUSEUM].includedTypes.forEach(type => placeTypes.add(type));
+          break;
+        case 'entertainment':
+          CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          break;
+        case 'photography':
+          CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          CategoryMapping[PlaceCategory.PARK].includedTypes.forEach(type => placeTypes.add(type));
+          break;
+      }
+    });
+
+    // Always include essential tourist types for must-see attractions
+    CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type => placeTypes.add(type));
+    CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type => placeTypes.add(type));
+
+    return Array.from(placeTypes);
+  },
+
+  getActivityIntensityScore(placeTypes: string[]): number {
+    // Define activity types by intensity
+    const highIntensityTypes = new Set([
+      'hiking_trail',
+      'amusement_park',
+      'zoo',
+      'aquarium',
+      'sports_complex',
+      'beach',
+    ]);
+
+    const moderateIntensityTypes = new Set([
+      'park',
+      'shopping_mall',
+      'garden',
+      'tourist_attraction',
+    ]);
+
+    const lowIntensityTypes = new Set([
+      'museum',
+      'art_gallery',
+      'monument',
+      'historic_site',
+      'church',
+      'temple',
+      'observation_deck',
+    ]);
+
+    // Count matches in each category
+    const highCount = placeTypes.filter(type => highIntensityTypes.has(type)).length;
+    const moderateCount = placeTypes.filter(type => moderateIntensityTypes.has(type)).length;
+    const lowCount = placeTypes.filter(type => lowIntensityTypes.has(type)).length;
+
+    // Calculate weighted score (0-1 scale)
+    const total = highCount + moderateCount + lowCount || 1; // Avoid division by zero
+    return (highCount * 1 + moderateCount * 0.6 + lowCount * 0.3) / total;
+  },
+
   calculateScore(attraction: ActivityRecommendation, params: MustSeeScoringParams): number {
-    // Calculate weights based on user preferences
     const weights = this.calculateWeights(params);
 
-    // Calculate individual scores
-    const qualityScore = this.calculateQualityScore(attraction);
-    const priceScore = this.calculatePriceScore(attraction, params);
-    const popularityScore = this.calculatePopularityScore(attraction, params.crowdPreference);
-    const locationScore = this.calculateLocationScore(attraction, params);
     const mustSeeScore = this.calculateMustSeeScore(attraction);
+    const interestScore = this.calculateInterestScore(attraction, params.interests);
+    const activityFitScore = this.calculateActivityFitScore(attraction, params);
+    const priceScore = this.calculatePriceScore(attraction, params);
+    const locationScore = this.calculateLocationScore(
+      attraction.location as unknown as Location,
+      params.currentLocation,
+      params.transportPreferences
+    );
 
-    // Combine scores using weights
     return (
-      qualityScore * weights.quality +
+      mustSeeScore * weights.mustSee +
+      interestScore * weights.interest +
+      activityFitScore * weights.activityFit +
       priceScore * weights.price +
-      popularityScore * weights.popularity +
-      locationScore * weights.location +
-      mustSeeScore * weights.mustSee
+      locationScore * weights.location
     );
   },
 
   calculateWeights(params: MustSeeScoringParams) {
     const weights = {
-      quality: 0.25,
-      price: 0.15,
-      popularity: 0.25,
-      location: 0.15,
-      mustSee: 0.2, // Higher weight for must-see status compared to restaurants
+      mustSee: 0.3, // Must-see status is primary for this service
+      interest: 0.25, // Interest match is important but secondary
+      activityFit: 0.2, // Activity characteristics
+      price: 0.15, // Price considerations
+      location: 0.1, // Location/accessibility
     };
 
     // Adjust weights based on crowd preference
     if (params.crowdPreference === 'popular') {
-      weights.popularity += 0.05;
+      weights.mustSee += 0.05;
       weights.location -= 0.05;
     } else if (params.crowdPreference === 'hidden') {
-      weights.popularity -= 0.05;
-      weights.location += 0.05;
+      weights.mustSee -= 0.05;
+      weights.interest += 0.05;
     }
 
     // Adjust for budget sensitivity
     if (params.budget === 'budget') {
       weights.price += 0.05;
-      weights.quality -= 0.05;
+      weights.activityFit -= 0.05;
     }
 
     return weights;
   },
 
-  calculateQualityScore(attraction: ActivityRecommendation): number {
+  calculateMustSeeScore(attraction: ActivityRecommendation): number {
     let score = 0;
 
-    // Rating Quality (0-0.6)
-    switch (attraction.ratingTier) {
-      case 'EXCEPTIONAL':
-        score += 0.6;
+    // Core must-see factors
+    if (attraction.isMustSee) {
+      score += 0.6;
+    }
+    if (attraction.isTouristAttraction) {
+      score += 0.3;
+    }
+
+    // Bonus for significant landmarks or high ratings
+    if (attraction.placeTypes.includes('landmark') || attraction.placeTypes.includes('monument')) {
+      score = Math.min(1, score + 0.2);
+    }
+    if (attraction.ratingTier === 'EXCEPTIONAL' && attraction.reviewCountTier === 'VERY_HIGH') {
+      score = Math.min(1, score + 0.1);
+    }
+
+    return score;
+  },
+
+  calculateInterestScore(attraction: ActivityRecommendation, interests: InterestType[]): number {
+    const relevantTypes = this.getPlaceTypesFromInterests(interests);
+    const matchingTypes = attraction.placeTypes.filter(type => relevantTypes.includes(type));
+
+    // Calculate base score from type matches
+    let score = matchingTypes.length / Math.max(relevantTypes.length, 1);
+
+    // Boost score for highly rated attractions within matching types
+    if (matchingTypes.length > 0) {
+      if (attraction.ratingTier === 'EXCEPTIONAL') score = Math.min(1, score + 0.2);
+      else if (attraction.ratingTier === 'HIGH') score = Math.min(1, score + 0.1);
+    }
+
+    return score;
+  },
+
+  calculateActivityFitScore(
+    attraction: ActivityRecommendation,
+    params: MustSeeScoringParams
+  ): number {
+    let score = 0;
+
+    // Activity intensity fit (0-0.4)
+    const activityIntensity = this.getActivityIntensityScore(attraction.placeTypes);
+    let intensityScore = 0;
+
+    switch (params.energyLevel) {
+      case 1: // Light & Easy - prefer low intensity
+        intensityScore = 0.4 * (1 - activityIntensity);
         break;
-      case 'HIGH':
-        score += 0.45;
+      case 2: // Moderate - prefer medium intensity
+        intensityScore = 0.4 * (1 - Math.abs(0.5 - activityIntensity));
         break;
-      case 'AVERAGE':
-        score += 0.3;
-        break;
-      case 'LOW':
-        score += 0.15;
+      case 3: // Very Active - prefer high intensity
+        intensityScore = 0.4 * activityIntensity;
         break;
     }
 
-    // Review Volume (0-0.4)
-    switch (attraction.reviewCountTier) {
-      case 'VERY_HIGH':
-        score += 0.4;
-        break;
-      case 'HIGH':
+    // Review quality (0-0.3)
+    switch (attraction.ratingTier) {
+      case 'EXCEPTIONAL':
         score += 0.3;
         break;
-      case 'MODERATE':
+      case 'HIGH':
         score += 0.2;
         break;
-      case 'LOW':
+      case 'AVERAGE':
         score += 0.1;
         break;
+    }
+
+    // Crowd level alignment (0-0.3)
+    const popularityScore =
+      attraction.reviewCountTier === 'VERY_HIGH'
+        ? 1
+        : attraction.reviewCountTier === 'HIGH'
+          ? 0.7
+          : attraction.reviewCountTier === 'MODERATE'
+            ? 0.4
+            : 0.2;
+
+    if (params.crowdPreference === 'popular') {
+      score += 0.3 * popularityScore;
+    } else if (params.crowdPreference === 'hidden') {
+      score += 0.3 * (1 - popularityScore);
+    } else {
+      score += 0.15; // Neutral score for mixed preference
     }
 
     return score;
@@ -179,7 +315,7 @@ export const essentialExperiencesRecommendationService = {
     // Direct budget match (0-0.6)
     let score = budgetMap[params.budget].includes(attraction.priceLevel) ? 0.6 : 0;
 
-    // Price preference alignment (0-0.4)
+    // Price level alignment (0-0.4)
     const priceMap: Record<PriceLevel, number> = {
       PRICE_LEVEL_UNSPECIFIED: 3,
       PRICE_LEVEL_FREE: 1,
@@ -190,9 +326,9 @@ export const essentialExperiencesRecommendationService = {
     };
 
     const budgetValues = {
-      budget: 1.5, // average of free and inexpensive
+      budget: 1.5,
       moderate: 3,
-      luxury: 4.5, // average of expensive and very expensive
+      luxury: 4.5,
     };
 
     const priceDiff = Math.abs(priceMap[attraction.priceLevel] - budgetValues[params.budget]);
@@ -201,77 +337,31 @@ export const essentialExperiencesRecommendationService = {
     return score;
   },
 
-  calculatePopularityScore(
-    attraction: ActivityRecommendation,
-    crowdPreference: 'popular' | 'hidden' | 'mixed'
+  calculateLocationScore(
+    location: Location,
+    currentLocation?: { lat: number; lng: number },
+    transportPreferences?: TransportMode[]
   ): number {
-    let score = 0;
-
-    // Base popularity from review count and rating
-    if (attraction.reviewCountTier === 'VERY_HIGH' && attraction.ratingTier === 'EXCEPTIONAL') {
-      score = 1;
-    } else if (
-      attraction.reviewCountTier === 'HIGH' ||
-      (attraction.reviewCountTier === 'MODERATE' && attraction.ratingTier === 'HIGH')
-    ) {
-      score = 0.8;
-    } else if (attraction.reviewCountTier === 'MODERATE') {
-      score = 0.6;
-    } else {
-      score = 0.4;
+    if (!currentLocation || !transportPreferences) {
+      return 0.5; // Neutral score if no location context
     }
 
-    // Adjust based on crowd preference
-    if (crowdPreference === 'hidden') {
-      score = 1 - score; // Invert the score for those seeking hidden gems
-    } else if (crowdPreference === 'mixed') {
-      score = 0.5 + (score - 0.5) * 0.5; // Moderate the extremes
-    }
-
-    return score;
-  },
-
-  calculateLocationScore(attraction: ActivityRecommendation, params: MustSeeScoringParams): number {
-    if (!params.currentLocation || !attraction.location) {
-      return 0.5; // Neutral score if location data is missing
-    }
-
-    const location = attraction.location as unknown as Location;
     const distance = this.calculateDistance(
-      params.currentLocation.lat,
-      params.currentLocation.lng,
+      currentLocation.lat,
+      currentLocation.lng,
       location.latitude,
       location.longitude
     );
 
     // Adjust acceptable distance based on transport preferences
     let maxDistance = 1000; // Default 1km for walking
-    if (params.transportPreferences.includes('public_transit')) {
+    if (transportPreferences.includes('public-transit')) {
       maxDistance = 5000; // 5km for public transit
-    } else if (params.transportPreferences.includes('driving')) {
+    } else if (transportPreferences.includes('driving')) {
       maxDistance = 10000; // 10km for driving
     }
 
     return Math.max(0, 1 - distance / maxDistance);
-  },
-
-  calculateMustSeeScore(attraction: ActivityRecommendation): number {
-    let score = 0;
-
-    if (attraction.isMustSee) {
-      score += 0.6;
-    }
-
-    if (attraction.isTouristAttraction) {
-      score += 0.4;
-    }
-
-    // Bonus for significant landmarks
-    if (attraction.placeTypes.includes('landmark') || attraction.placeTypes.includes('monument')) {
-      score = Math.min(1, score + 0.2);
-    }
-
-    return score;
   },
 
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

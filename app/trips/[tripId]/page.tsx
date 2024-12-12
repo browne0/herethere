@@ -9,6 +9,7 @@ import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
 import { ParsedTrip } from './types';
+import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
 
 export default async function TripPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
@@ -54,6 +55,9 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       transportPreferences: user?.preferences?.transportPreferences,
       crowdPreference: user?.preferences?.crowdPreference,
       budget: trip.preferences?.budget,
+      interests: user?.preferences?.interests,
+      energyLevel: user?.preferences?.energyLevel,
+      preferredStartTime: user?.preferences?.preferredStartTime,
       currentLocation: {
         lat: trip.city.latitude,
         lng: trip.city.longitude,
@@ -75,11 +79,12 @@ export default async function TripPage({ params }: { params: { tripId: string } 
 
   const touristAttractionRecommendations = await touristAttractionService.getRecommendations(
     recommendationsData.cityId,
-    {
-      ...recommendationsData.preferences,
-      interests: user?.preferences?.interests,
-      energyLevel: user?.preferences?.energyLevel,
-    }
+    recommendationsData.preferences
+  );
+
+  const museumsRecommendations = await museumRecommendationService.getRecommendations(
+    recommendationsData.cityId,
+    recommendationsData.preferences
   );
 
   // Format recommendations into a shelf
@@ -104,7 +109,14 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     activities: touristAttractionRecommendations,
   };
 
-  const shelves = [mustSeeShelf, restaurantShelf, touristAttractionsShelf];
+  const museumsShelf = {
+    type: 'museums',
+    title: 'Museums & Galleries',
+    description: `Discover art, history, and science across ${trip.city.name}'s diverse museums`,
+    activities: museumsRecommendations,
+  };
+
+  const shelves = [mustSeeShelf, restaurantShelf, touristAttractionsShelf, museumsShelf];
 
   return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;
 }

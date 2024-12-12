@@ -87,36 +87,32 @@ export const touristAttractionService = {
         case 'arts':
           CategoryMapping[PlaceCategory.MUSEUM].includedTypes.forEach(type => placeTypes.add(type));
           break;
-        case 'food':
-          CategoryMapping[PlaceCategory.RESTAURANT].includedTypes.forEach(type =>
-            placeTypes.add(type)
-          );
-          break;
-        case 'entertainment':
-          CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type =>
-            placeTypes.add(type)
-          );
-          CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes.forEach(type =>
-            placeTypes.add(type)
-          );
-          break;
-        case 'photography':
-          // For photography, include tourist attractions and historical places which are typically photogenic
-          CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type =>
-            placeTypes.add(type)
-          );
-          CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type =>
-            placeTypes.add(type)
-          );
-          break;
         case 'history':
           CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type =>
             placeTypes.add(type)
           );
           CategoryMapping[PlaceCategory.MUSEUM].includedTypes.forEach(type => placeTypes.add(type));
           break;
+        case 'entertainment':
+          CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          break;
+        case 'photography':
+          CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type =>
+            placeTypes.add(type)
+          );
+          CategoryMapping[PlaceCategory.PARK].includedTypes.forEach(type => placeTypes.add(type));
+          break;
       }
     });
+
+    // Always include essential tourist types
+    CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type => placeTypes.add(type));
+    CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type => placeTypes.add(type));
 
     return Array.from(placeTypes);
   },
@@ -243,6 +239,11 @@ export const touristAttractionService = {
   },
 
   calculatePriceScore(attraction: ActivityRecommendation, params: AttractionScoringParams): number {
+    // For free attractions, give high score if budget conscious
+    if (attraction.priceLevel === 'PRICE_LEVEL_FREE') {
+      return params.budget === 'budget' ? 1 : 0.8;
+    }
+
     const budgetMap: Record<TripBudget, PriceLevel[]> = {
       budget: ['PRICE_LEVEL_FREE', 'PRICE_LEVEL_INEXPENSIVE'],
       moderate: ['PRICE_LEVEL_MODERATE'],
@@ -252,7 +253,7 @@ export const touristAttractionService = {
     // Direct budget match (0-0.6)
     let score = budgetMap[params.budget].includes(attraction.priceLevel) ? 0.6 : 0;
 
-    // Price preference alignment (0-0.4)
+    // Price level alignment (0-0.4)
     const priceMap: Record<PriceLevel, number> = {
       PRICE_LEVEL_UNSPECIFIED: 3,
       PRICE_LEVEL_FREE: 1,
@@ -291,11 +292,11 @@ export const touristAttractionService = {
     );
 
     // Adjust acceptable distance based on transport preferences
-    let maxDistance = 500; // Default 500m for walking
+    let maxDistance = 1000; // Default 1km for walking
     if (transportPreferences.includes('public-transit')) {
-      maxDistance = 2000; // 2km for public transit
+      maxDistance = 5000; // 5km for public transit
     } else if (transportPreferences.includes('driving')) {
-      maxDistance = 5000; // 5km for driving
+      maxDistance = 10000; // 10km for driving
     }
 
     return Math.max(0, 1 - distance / maxDistance);

@@ -7,10 +7,12 @@ import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
-import { RESTAURANT_TYPES } from '@/constants';
+import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
+type MuseumTypes = typeof MUSEUM_TYPES;
+type MuseumType = keyof MuseumTypes;
 
 interface ActivityCardProps {
   activity: ActivityRecommendation;
@@ -29,6 +31,27 @@ function getDurationDisplay(minutes: number): string {
     ? `${hours}h ${remainingMinutes}m`
     : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
 }
+
+const getPrimaryTypeDisplay = (primaryType: string | null): string | null => {
+  if (!primaryType) return null;
+
+  // Handle restaurants
+  if (primaryType.includes('restaurant') || primaryType === 'steak_house') {
+    return RESTAURANT_TYPES[primaryType as RestaurantType];
+  }
+
+  // Handle museums
+  if (primaryType in MUSEUM_TYPES) {
+    return MUSEUM_TYPES[primaryType as MuseumType];
+  }
+
+  // Handle other types
+  return primaryType
+    .replace(/_/g, ' ')
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+};
 
 export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -106,8 +129,7 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
 
           <h3 className="font-medium text-base leading-tight mb-2 line-clamp-2">{activity.name}</h3>
           <p className="text-sm gap-1 mb-2 ">
-            {/(_restaurant|steak_house)/.test(activity.primaryType!) &&
-              RESTAURANT_TYPES[activity.primaryType! as RestaurantType]}
+            {getPrimaryTypeDisplay(activity.primaryType) || 'Museum'}
           </p>
           <p className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0" />

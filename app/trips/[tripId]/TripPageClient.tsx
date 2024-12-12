@@ -24,6 +24,7 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
   const { view, initialize } = useTripView();
   const { setActivities, setTripId } = useActivitiesStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  console.log(shelves);
 
   useEffect(() => {
     initialize('recommendations');
