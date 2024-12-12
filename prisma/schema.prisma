@@ -139,7 +139,6 @@ model ActivityRecommendation {
 
   // External IDs and metadata
   googlePlaceId String?  @unique // For updating from Google Places
-  googleTypes   String[] // Raw place types from Google
   lastSyncedAt  DateTime // Track when we last synced with Google
 
   viatorProductId String?

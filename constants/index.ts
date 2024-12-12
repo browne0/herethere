@@ -1,3 +1,4 @@
+import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { City } from '@prisma/client';
 
 export enum PlaceCategory {
@@ -11,29 +12,122 @@ export enum PlaceCategory {
   RESTAURANT = 'RESTAURANT',
 }
 
-interface CategoryConfig {
-  includedTypes: string[];
-  excludedTypes: string[];
-  excludedPrimaryTypes?: string[];
-  requiresValidation: boolean;
-}
+// Single source of truth for restaurant types
+export const RESTAURANT_TYPES = {
+  afghani_restaurant: 'Afghani',
+  african_restaurant: 'African',
+  american_restaurant: 'American',
+  asian_restaurant: 'Asian',
+  brazilian_restaurant: 'Brazilian',
+  chinese_restaurant: 'Chinese',
+  french_restaurant: 'French',
+  greek_restaurant: 'Greek',
+  indian_restaurant: 'Indian',
+  italian_restaurant: 'Italian',
+  japanese_restaurant: 'Japanese',
+  korean_restaurant: 'Korean',
+  lebanese_restaurant: 'Lebanese',
+  mexican_restaurant: 'Mexican',
+  middle_eastern_restaurant: 'Middle Eastern',
+  seafood_restaurant: 'Seafood',
+  spanish_restaurant: 'Spanish',
+  steak_house: 'Steak House',
+  thai_restaurant: 'Thai',
+  turkish_restaurant: 'Turkish',
+  vietnamese_restaurant: 'Vietnamese',
+  fine_dining_restaurant: 'Fine Dining',
+};
 
-interface SearchArea {
-  name: string;
-  location: {
-    latitude: number;
-    longitude: number;
-  };
-  radius: number;
-}
+// Derive other restaurant-related constants
+export const GOOGLE_RESTAURANT_TYPES = Object.keys(RESTAURANT_TYPES);
 
-export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
+export const CUISINE_PREFERENCES: Array<{ label: string; value: Cuisine }> = Object.entries(
+  RESTAURANT_TYPES
+)
+  .filter(([key]) => !key.includes('steak_house') && !key.includes('fine_dining'))
+  .map(([key, label]) => ({
+    label,
+    value: key.replace('_restaurant', '') as Cuisine,
+  }));
+
+// Place type indicators consolidated
+export const PLACE_INDICATORS = {
+  HISTORICAL: {
+    TIME_PERIODS: new Set([
+      'century',
+      'built in',
+      'opened in',
+      'founded in',
+      'established in',
+      'dated',
+      'ancient',
+      'historic',
+      'historical',
+      'heritage',
+    ]),
+    ARCHITECTURAL: new Set([
+      'gothic',
+      'victorian',
+      'colonial',
+      'classical',
+      'renaissance',
+      'baroque',
+      'monument',
+      'memorial',
+      'landmark',
+      'ruins',
+    ]),
+    CULTURAL: new Set([
+      'national monument',
+      'national historic',
+      'preserved',
+      'restoration',
+      'traditional',
+      'original',
+    ]),
+  },
+  BEACH: {
+    NAMES: new Set([
+      'beach',
+      'strand',
+      'seashore',
+      'shore',
+      'bay',
+      'cove',
+      'harbor',
+      'pier',
+      'boardwalk',
+      'waterfront',
+    ]),
+    NATURAL_FEATURES: new Set(['sand', 'shoreline', 'coastal', 'ocean', 'sea', 'maritime']),
+  },
+  PARK: {
+    BOTANICAL: new Set([
+      'botanical',
+      'botanic',
+      'arboretum',
+      'conservatory',
+      'japanese garden',
+      'chinese garden',
+    ]),
+    URBAN: new Set([
+      'park',
+      'commons',
+      'square',
+      'plaza',
+      'promenade',
+      'riverfront park',
+      'lakefront park',
+    ]),
+  },
+};
+
+export const CategoryMapping = {
   [PlaceCategory.MUSEUM]: {
     includedTypes: ['museum', 'art_gallery', 'planetarium'],
     excludedTypes: [],
     requiresValidation: false,
   },
-
   [PlaceCategory.HISTORIC]: {
     includedTypes: [
       'historical_place',
@@ -48,7 +142,6 @@ export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
     excludedTypes: [],
     requiresValidation: true,
   },
-
   [PlaceCategory.ATTRACTION]: {
     includedTypes: [
       'tourist_attraction',
@@ -63,13 +156,11 @@ export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
     excludedTypes: [],
     requiresValidation: false,
   },
-
   [PlaceCategory.PARK]: {
     includedTypes: ['park', 'botanical_garden', 'garden', 'national_park', 'state_park'],
     excludedTypes: [],
     requiresValidation: true,
   },
-
   [PlaceCategory.NIGHTLIFE]: {
     includedTypes: [
       'night_club',
@@ -84,50 +175,23 @@ export const CategoryMapping: Record<PlaceCategory, CategoryConfig> = {
     excludedTypes: [],
     requiresValidation: true,
   },
-
   [PlaceCategory.BEACH]: {
     includedTypes: ['beach'],
     excludedTypes: [],
     requiresValidation: true,
   },
-
   [PlaceCategory.SHOPPING]: {
     includedTypes: ['shopping_mall', 'department_store', 'plaza'],
     excludedTypes: ['convenience_store', 'grocery_store', 'food_store', 'supermarket'],
     requiresValidation: false,
   },
-
   [PlaceCategory.RESTAURANT]: {
-    includedTypes: [
-      'afghani_restaurant',
-      'african_restaurant',
-      'american_restaurant',
-      'asian_restaurant',
-      'brazilian_restaurant',
-      'chinese_restaurant',
-      'french_restaurant',
-      'greek_restaurant',
-      'indian_restaurant',
-      'italian_restaurant',
-      'japanese_restaurant',
-      'korean_restaurant',
-      'lebanese_restaurant',
-      'mexican_restaurant',
-      'middle_eastern_restaurant',
-      'seafood_restaurant',
-      'spanish_restaurant',
-      'steak_house',
-      'thai_restaurant',
-      'turkish_restaurant',
-      'vietnamese_restaurant',
-      'fine_dining_restaurant',
-    ],
+    includedTypes: Object.keys(RESTAURANT_TYPES),
     excludedTypes: ['fast_food_restaurant', 'cafeteria', 'grocery_store'],
     requiresValidation: true,
   },
 };
 
-// Used to determine beach/coastal feature search
 export const COASTAL_CITIES = new Set([
   'cancun-MX',
   'punta cana-DO',
@@ -143,15 +207,8 @@ export const COASTAL_CITIES = new Set([
   'dubai-AE',
 ]);
 
-export function isCityCoastal(city: City): boolean {
-  const cityKey = `${city.name.toLowerCase()}-${city.countryCode}`;
-  return COASTAL_CITIES.has(cityKey);
-}
-
-// Predefined search areas for major cities
 export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
   'New York': [
-    // Midtown
     {
       name: 'Times Square',
       location: { latitude: 40.758, longitude: -73.9855 },
@@ -167,8 +224,6 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
       location: { latitude: 40.7464, longitude: -73.9857 },
       radius: 1000,
     },
-
-    // Central Park Areas
     {
       name: 'Central Park South',
       location: { latitude: 40.7651, longitude: -73.9767 },
@@ -179,8 +234,6 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
       location: { latitude: 40.7852, longitude: -73.9683 },
       radius: 1200,
     },
-
-    // Upper East/West
     {
       name: 'Upper East Side',
       location: { latitude: 40.7789, longitude: -73.9622 },
@@ -191,8 +244,6 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
       location: { latitude: 40.7825, longitude: -73.9754 },
       radius: 1500,
     },
-
-    // Downtown
     {
       name: 'Greenwich Village',
       location: { latitude: 40.732, longitude: -73.9977 },
@@ -223,8 +274,6 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
       location: { latitude: 40.7156, longitude: -73.995 },
       radius: 1200,
     },
-
-    // Brooklyn
     {
       name: 'Williamsburg',
       location: { latitude: 40.7081, longitude: -73.9571 },
@@ -240,8 +289,6 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
       location: { latitude: 40.696, longitude: -73.9949 },
       radius: 1000,
     },
-
-    // Queens
     {
       name: 'Long Island City',
       location: { latitude: 40.7505, longitude: -73.9246 },
@@ -339,81 +386,19 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
   ],
 };
 
-// Historical indicators - used for validation
-export const HISTORICAL_INDICATORS = {
-  TIME_PERIODS: new Set([
-    'century',
-    'built in',
-    'opened in',
-    'founded in',
-    'established in',
-    'dated',
-    'ancient',
-    'historic',
-    'historical',
-    'heritage',
-  ]),
-  ARCHITECTURAL: new Set([
-    'gothic',
-    'victorian',
-    'colonial',
-    'classical',
-    'renaissance',
-    'baroque',
-    'monument',
-    'memorial',
-    'landmark',
-    'ruins',
-  ]),
-  CULTURAL: new Set([
-    'national monument',
-    'national historic',
-    'preserved',
-    'restoration',
-    'traditional',
-    'original',
-  ]),
-};
+export function isCityCoastal(city: City): boolean {
+  const cityKey = `${city.name.toLowerCase()}-${city.countryCode}`;
+  return COASTAL_CITIES.has(cityKey);
+}
 
-// Beach/Waterfront indicators
-export const BEACH_INDICATORS = {
-  NAMES: new Set([
-    'beach',
-    'strand',
-    'seashore',
-    'shore',
-    'bay',
-    'cove',
-    'harbor',
-    'pier',
-    'boardwalk',
-    'waterfront',
-  ]),
-  NATURAL_FEATURES: new Set(['sand', 'shoreline', 'coastal', 'ocean', 'sea', 'maritime']),
-};
+export const DIETARY_RESTRICTIONS: Array<{ label: string; value: DietaryRestriction }> = [
+  { label: 'No dietary restrictions', value: 'none' },
+  { label: 'Vegetarian', value: 'vegetarian' },
+  { label: 'Vegan', value: 'vegan' },
+];
 
-// Park subtypes
-export const PARK_TYPES = {
-  BOTANICAL: new Set([
-    'botanical',
-    'botanic',
-    'arboretum',
-    'conservatory',
-    'japanese garden',
-    'chinese garden',
-  ]),
-  URBAN: new Set([
-    'park',
-    'commons',
-    'square',
-    'plaza',
-    'promenade',
-    'riverfront park',
-    'lakefront park',
-  ]),
-};
+export const NON_VEGETARIAN_RESTAURANTS = ['seafood_restaurant', 'steak_house'];
 
-// Upscale restaurant indicators
 export const UPSCALE_RESTAURANT_INDICATORS = new Set([
   'michelin',
   'fine dining',
@@ -425,3 +410,12 @@ export const UPSCALE_RESTAURANT_INDICATORS = new Set([
   'elegant',
   'sophisticated',
 ]);
+
+interface SearchArea {
+  name: string;
+  location: {
+    latitude: number;
+    longitude: number;
+  };
+  radius: number;
+}

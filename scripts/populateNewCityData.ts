@@ -100,6 +100,131 @@ function generateImageKey(photoReference: string, width: number, height: number)
   return `places/${cleanReference}-${width}x${height}.jpg`;
 }
 
+async function processRestaurantsInArea(
+  area: SearchArea,
+  city: City,
+  existingPlaceMap: Map<string, Date>,
+  processedPlaceIds: Set<string>,
+  stats: SyncStats,
+  logger: Logger
+): Promise<void> {
+  const restaurantTypes = [
+    'afghani_restaurant',
+    'african_restaurant',
+    'american_restaurant',
+    'asian_restaurant',
+    'brazilian_restaurant',
+    'chinese_restaurant',
+    'french_restaurant',
+    'greek_restaurant',
+    'indian_restaurant',
+    'italian_restaurant',
+    'japanese_restaurant',
+    'korean_restaurant',
+    'lebanese_restaurant',
+    'mexican_restaurant',
+    'middle_eastern_restaurant',
+    'seafood_restaurant',
+    'spanish_restaurant',
+    'steak_house',
+    'thai_restaurant',
+    'turkish_restaurant',
+    'vietnamese_restaurant',
+    'fine_dining_restaurant',
+  ];
+
+  const fieldMask = [
+    // Basic fields
+    'places.id',
+    'places.displayName',
+    'places.formattedAddress',
+    'places.location',
+    'places.types',
+    'places.primaryType',
+    'places.photos',
+    'places.businessStatus',
+    'places.editorialSummary',
+
+    // Advanced fields
+    'places.priceLevel',
+    'places.rating',
+    'places.userRatingCount',
+    'places.regularOpeningHours',
+
+    // Features we use
+    'places.dineIn',
+    'places.reservable',
+    'places.servesLunch',
+    'places.servesDinner',
+    'places.servesBeer',
+    'places.servesWine',
+    'places.servesCocktails',
+    'places.servesVegetarianFood',
+    'places.outdoorSeating',
+    'places.delivery',
+    'places.takeout',
+  ].join(',');
+
+  for (const restaurantType of restaurantTypes) {
+    const request = {
+      locationRestriction: {
+        circle: {
+          center: area.location,
+          radius: area.radius,
+        },
+      },
+      includedTypes: [restaurantType],
+      excludedTypes: ['fast_food_restaurant', 'cafeteria', 'grocery_store'],
+      maxResultCount: 20,
+      languageCode: 'en',
+    };
+
+    try {
+      const response = await placesClient.searchNearby(request, {
+        otherArgs: {
+          headers: {
+            'X-Goog-FieldMask': fieldMask, // Using existing fieldMask
+          },
+        },
+      });
+
+      const places = response[0].places!;
+
+      for (const place of places) {
+        stats.processed++;
+
+        if (processedPlaceIds.has(place.id!)) {
+          stats.skipped++;
+          continue;
+        }
+        processedPlaceIds.add(place.id!);
+
+        const lastSynced = existingPlaceMap.get(place.id!);
+        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+          stats.skipped++;
+          continue;
+        }
+
+        if (validatePlace(place, PlaceCategory.RESTAURANT)) {
+          await processPlace(place, city, PlaceCategory.RESTAURANT, area, logger);
+          stats.added++;
+          stats.byType[PlaceCategory.RESTAURANT]++;
+          stats.byArea[area.name]++;
+        } else {
+          stats.skipped++;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting between places
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500)); // Rate limiting between cuisine types
+    } catch (error) {
+      logger.error(`Error processing ${restaurantType} in ${area.name}:`, error as Error);
+      stats.errors++;
+    }
+  }
+}
+
 async function fetchAndUploadPhotos(
   photos: protos.google.maps.places.v1.IPhoto[],
   placeId: string
@@ -588,96 +713,53 @@ async function processCityArea(
 
   // Process each category
   for (const [category, config] of Object.entries(CategoryMapping)) {
-    logger.progress(`\n🔍 Searching for ${category} in ${area.name}...`);
+    if (category === PlaceCategory.RESTAURANT) {
+      await processRestaurantsInArea(
+        area,
+        city,
+        existingPlaceMap,
+        processedPlaceIds,
+        stats,
+        logger
+      );
+    } else {
+      // Original logic for non-restaurant categories
+      logger.progress(`\n🔍 Searching for ${category} in ${area.name}...`);
+      const places = await searchNearbyPlaces(area, config, stats, logger);
 
-    const places = await searchNearbyPlaces(area, config, stats, logger);
-    logger.info(`Found ${places.length} ${category} places`);
+      for (const place of places) {
+        stats.processed++;
 
-    for (const place of places) {
-      stats.processed++;
+        if (processedPlaceIds.has(place.id!)) {
+          stats.skipped++;
+          continue;
+        }
+        processedPlaceIds.add(place.id!);
 
-      // Skip logic
-      if (processedPlaceIds.has(place.id!)) {
-        logger.skip(`Skipping already processed: ${place.displayName!.text}`);
-        stats.skipped++;
-        continue;
-      }
-      processedPlaceIds.add(place.id!);
-
-      const lastSynced = existingPlaceMap.get(place.id!);
-      if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-        logger.skip(`Skipping recently synced: ${place.displayName!.text}`);
-        stats.skipped++;
-        continue;
-      }
-
-      try {
-        const placeCategory = determinePlaceCategory(place);
-        if (!placeCategory || !validatePlace(place, placeCategory)) {
+        const lastSynced = existingPlaceMap.get(place.id!);
+        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
           stats.skipped++;
           continue;
         }
 
-        await processPlace(place, city, placeCategory, area, logger);
-        stats.added++;
-        stats.byType[placeCategory] = (stats.byType[placeCategory] || 0) + 1;
-        stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
+        try {
+          const placeCategory = determinePlaceCategory(place);
+          if (!placeCategory || !validatePlace(place, placeCategory)) {
+            stats.skipped++;
+            continue;
+          }
 
-        // Update subtype statistics
-        updateSubtypeStats(place, placeCategory, stats);
+          await processPlace(place, city, placeCategory, area, logger);
+          stats.added++;
+          stats.byType[placeCategory]++;
+          stats.byArea[area.name]++;
 
-        await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting
-      } catch (error) {
-        logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
-        stats.errors++;
+          await new Promise(resolve => setTimeout(resolve, 200));
+        } catch (error) {
+          logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
+          stats.errors++;
+        }
       }
-    }
-  }
-
-  // Special handling for coastal cities
-  if (isCityCoastal(city)) {
-    await processCoastalFeatures(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
-  }
-
-  logger.info(`\n📊 Area Stats for ${area.name}:`);
-  logger.info(`  Processed: ${stats.processed}`);
-  logger.info(`  Added: ${stats.added}`);
-  logger.info(`  Skipped: ${stats.skipped}`);
-  logger.info(`  Errors: ${stats.errors}`);
-}
-
-function updateSubtypeStats(
-  place: protos.google.maps.places.v1.IPlace,
-  category: PlaceCategory,
-  stats: SyncStats
-): void {
-  if (category === PlaceCategory.RESTAURANT) {
-    if (isUpscaleRestaurant(place)) {
-      stats.restaurantSubtypes.upscale++;
-    } else {
-      stats.restaurantSubtypes.standard++;
-    }
-
-    // Track specific restaurant types
-    place
-      .types!.filter((t: string) => t.endsWith('_restaurant'))
-      .forEach((type: string) => {
-        const baseType = type.replace('_restaurant', '');
-        stats.restaurantSubtypes.byType[baseType] =
-          (stats.restaurantSubtypes.byType[baseType] || 0) + 1;
-      });
-  }
-
-  if (category === PlaceCategory.PARK) {
-    const isBotanical = place.types!.includes('botanical_garden');
-    stats.parkSubtypes[isBotanical ? 'botanical' : 'urban']++;
-  }
-
-  if (category === PlaceCategory.SHOPPING) {
-    if (place.types!.includes('shopping_mall')) {
-      stats.shoppingSubtypes.malls++;
-    } else {
-      stats.shoppingSubtypes.markets++;
     }
   }
 }

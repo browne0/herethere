@@ -7,6 +7,10 @@ import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
+import { RESTAURANT_TYPES } from '@/constants';
+
+type RestaurantTypes = typeof RESTAURANT_TYPES;
+type RestaurantType = keyof RestaurantTypes;
 
 interface ActivityCardProps {
   activity: ActivityRecommendation;
@@ -101,14 +105,17 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
           </div>
 
           <h3 className="font-medium text-base leading-tight mb-2 line-clamp-2">{activity.name}</h3>
-
-          <div className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+          <p className="text-sm gap-1 mb-2 ">
+            {/(_restaurant|steak_house)/.test(activity.primaryType!) &&
+              RESTAURANT_TYPES[activity.primaryType! as RestaurantType]}
+          </p>
+          <p className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">
               {(activity.location as { neighborhood: string })?.neighborhood ||
                 'Location unavailable'}
             </span>
-          </div>
+          </p>
 
           {/* Push button to bottom */}
           <div className="flex-grow" />

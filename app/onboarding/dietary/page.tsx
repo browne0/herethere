@@ -27,6 +27,7 @@ import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 
 interface Option<T> {
   label: string;
@@ -170,35 +171,6 @@ const DietaryPage = () => {
     setMealImportance,
   } = usePreferences();
 
-  const DIETARY_RESTRICTIONS: Array<{ label: string; value: DietaryRestriction }> = [
-    { label: 'No dietary restrictions', value: 'none' },
-    { label: 'Vegetarian', value: 'vegetarian' },
-    { label: 'Vegan', value: 'vegan' },
-  ];
-
-  const CUISINE_PREFERENCES: Array<{ label: string; value: Cuisine }> = [
-    { label: 'Afghan', value: 'afghani' },
-    { label: 'African', value: 'african' },
-    { label: 'American', value: 'american' },
-    { label: 'Asian', value: 'asian' },
-    { label: 'Brazilian', value: 'brazilian' },
-    { label: 'Chinese', value: 'chinese' },
-    { label: 'French', value: 'french' },
-    { label: 'Greek', value: 'greek' },
-    { label: 'Indian', value: 'indian' },
-    { label: 'Italian', value: 'italian' },
-    { label: 'Japanese', value: 'japanese' },
-    { label: 'Korean', value: 'korean' },
-    { label: 'Lebanese', value: 'lebanese' },
-    { label: 'Mexican', value: 'mexican' },
-    { label: 'Middle Eastern', value: 'middle_eastern' },
-    { label: 'Seafood', value: 'seafood' },
-    { label: 'Spanish', value: 'spanish' },
-    { label: 'Thai', value: 'thai' },
-    { label: 'Turkish', value: 'turkish' },
-    { label: 'Vietnamese', value: 'vietnamese' },
-  ];
-
   const isDesktop = useMediaQuery('(min-width: 768px)');
   const meals: MealType[] = ['breakfast', 'lunch', 'dinner'];
 
@@ -214,7 +186,7 @@ const DietaryPage = () => {
         <div>
           <div className="font-medium">Dietary Restrictions</div>
           <div className="text-sm text-gray-500">Get catered restaurant suggestions for you</div>
-          <ResponsiveMultiSelect
+          <ResponsiveMultiSelect<DietaryRestriction>
             options={DIETARY_RESTRICTIONS}
             selected={dietaryRestrictions}
             onChange={setDietaryRestrictions}
@@ -229,7 +201,7 @@ const DietaryPage = () => {
         <div>
           <div className="font-medium">Favorite Cuisines</div>
           <div className="text-sm text-gray-500">Select which foods you enjoy</div>
-          <ResponsiveMultiSelect
+          <ResponsiveMultiSelect<Cuisine>
             options={CUISINE_PREFERENCES}
             selected={cuisinePreferences.preferred}
             onChange={preferred =>

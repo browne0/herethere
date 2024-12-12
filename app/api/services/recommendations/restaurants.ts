@@ -1,9 +1,9 @@
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 import _ from 'lodash';
 
-import { CategoryMapping } from '@/constants';
+import { CategoryMapping, CUISINE_PREFERENCES } from '@/constants';
 import { prisma } from '@/lib/db';
-import { PricePreference } from '@/lib/stores/preferences';
+import { Cuisine, PricePreference } from '@/lib/stores/preferences';
 
 export type TripBudget = 'budget' | 'moderate' | 'luxury';
 
@@ -11,8 +11,8 @@ export interface RestaurantScoringParams {
   pricePreference: PricePreference;
   dietaryRestrictions: string[];
   cuisinePreferences: {
-    preferred: string[];
-    avoided: string[];
+    preferred: Cuisine[];
+    avoided: Cuisine[];
   };
   mealImportance: Record<string, number>;
   transportPreferences: string[];
@@ -35,7 +35,6 @@ interface Location {
 
 export const restaurantRecommendationService = {
   async getRecommendations(cityId: string, params: RestaurantScoringParams) {
-    console.log(params);
     // 1. Get initial set of restaurants
     const restaurants = await prisma.activityRecommendation.findMany({
       where: {
@@ -58,8 +57,10 @@ export const restaurantRecommendationService = {
     const recommendations = scored
       .filter(r => r.score > 0) // Remove any that failed hard requirements
       .sort((a, b) => b.score - a.score)
-      .slice(0, 20) // Take top 20
-      .map(({ score, ...restaurant }) => restaurant);
+      .slice(0, 20); // Take top 20
+    // .map(({ score, ...restaurant }) => restaurant);
+
+    console.log(recommendations);
 
     return recommendations;
   },
@@ -174,7 +175,7 @@ export const restaurantRecommendationService = {
 
   calculateMatchScore(restaurant: ActivityRecommendation, params: RestaurantScoringParams): number {
     let score = 0;
-    const types = restaurant.googleTypes || [];
+    const types = restaurant.placeTypes || [];
 
     // Dietary restrictions are highest priority (50% if no location, 40% if location provided)
     const dietaryScore = this.calculateDietaryScore(types, params.dietaryRestrictions);
@@ -207,6 +208,7 @@ export const restaurantRecommendationService = {
   },
 
   calculateDietaryScore(types: string[], restrictions: string[]): number {
+    console.log(restrictions);
     if (restrictions.length === 0) return 1;
 
     const matches = restrictions.every(restriction => {
@@ -225,11 +227,19 @@ export const restaurantRecommendationService = {
 
   calculateCuisineScore(
     types: string[],
-    preferences: { preferred: string[]; avoided: string[] },
+    preferences: { preferred: Cuisine[]; avoided: Cuisine[] },
     crowdPreference: 'popular' | 'hidden' | 'mixed'
   ): number {
     let score = 0;
-    const cuisineTypes = types.filter(t => t.includes('cuisine'));
+
+    // Create a set of cuisine preference values for quick lookup
+    const cuisineValues = new Set(CUISINE_PREFERENCES.map(cuisine => cuisine.value));
+
+    const cuisineTypes = types.filter(item => {
+      // Extract the possible cuisine value from the item (e.g., remove '_restaurant')
+      const normalizedItem = item.replace(/_restaurant$/, '');
+      return cuisineValues.has(normalizedItem as Cuisine);
+    });
 
     // Handle no cuisine types
     if (cuisineTypes.length === 0) return 0.5; // Neutral score
