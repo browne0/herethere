@@ -18,7 +18,6 @@ export const RESTAURANT_TYPES = {
   afghani_restaurant: 'Afghani',
   african_restaurant: 'African',
   american_restaurant: 'American',
-  asian_restaurant: 'Asian',
   brazilian_restaurant: 'Brazilian',
   chinese_restaurant: 'Chinese',
   french_restaurant: 'French',
@@ -188,8 +187,16 @@ export const CategoryMapping = {
     requiresValidation: true,
   },
   [PlaceCategory.SHOPPING]: {
-    includedTypes: ['shopping_mall', 'department_store', 'plaza'],
-    excludedTypes: ['convenience_store', 'grocery_store', 'food_store', 'supermarket'],
+    includedTypes: ['shopping_mall', 'gift_shop'],
+    excludedTypes: [
+      'convenience_store',
+      'grocery_store',
+      'food_store',
+      'supermarket',
+      'warehouse_store',
+      'department_store',
+      'butcher_shop',
+    ],
     requiresValidation: false,
   },
   [PlaceCategory.RESTAURANT]: {

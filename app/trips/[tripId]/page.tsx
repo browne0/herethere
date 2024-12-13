@@ -6,6 +6,7 @@ import { essentialExperiencesRecommendationService } from '@/app/api/services/re
 import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
 import { restaurantRecommendationService } from '@/app/api/services/recommendations/restaurants';
+import { shoppingRecommendationService } from '@/app/api/services/recommendations/shopping';
 import { touristAttractionService } from '@/app/api/services/recommendations/touristAttractions';
 import { prisma } from '@/lib/db';
 
@@ -93,6 +94,11 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     recommendationsData.preferences
   );
 
+  const shoppingRecommendations = await shoppingRecommendationService.getRecommendations(
+    recommendationsData.cityId,
+    recommendationsData.preferences
+  );
+
   // Format recommendations into a shelf
   const mustSeeShelf = {
     type: 'must-see',
@@ -124,9 +130,16 @@ export default async function TripPage({ params }: { params: { tripId: string } 
 
   const historicSitesShelf = {
     type: 'historic-sites',
-    title: 'Historic Landmarks & Heritage Sites',
-    description: 'Essential historic sites, monuments, and iconic landmarks that shaped the city',
+    title: 'Historic & Cultural Landmarks',
+    description: `Iconic institutions and landmarks that define ${trip.city.name}'s character`,
     activities: historicSitesRecommendations,
+  };
+
+  const shoppingShelf = {
+    type: 'shopping',
+    title: 'Shopping & Market Highlights',
+    description: `From local markets to luxury boutiques and shopping districts`,
+    activities: shoppingRecommendations,
   };
 
   const shelves = [
@@ -135,6 +148,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     touristAttractionsShelf,
     museumsShelf,
     historicSitesShelf,
+    shoppingShelf,
   ];
 
   return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;

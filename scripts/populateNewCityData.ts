@@ -207,16 +207,7 @@ async function processHistoricPlacesInArea(
   stats: SyncStats,
   logger: Logger
 ): Promise<void> {
-  const historicTypes = [
-    'historical_place',
-    'historical_landmark',
-    'cultural_landmark',
-    'monument',
-    'church',
-    'hindu_temple',
-    'mosque',
-    'synagogue',
-  ];
+  const historicTypes = CategoryMapping[PlaceCategory.HISTORIC].includedTypes;
 
   for (const historicType of historicTypes) {
     const request = {
