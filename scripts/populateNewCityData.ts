@@ -114,32 +114,9 @@ async function processRestaurantsInArea(
   stats: SyncStats,
   logger: Logger
 ): Promise<void> {
-  const restaurantTypes = [
-    'afghani_restaurant',
-    'african_restaurant',
-    'american_restaurant',
-    'asian_restaurant',
-    'brazilian_restaurant',
-    'chinese_restaurant',
-    'french_restaurant',
-    'greek_restaurant',
-    'indian_restaurant',
-    'italian_restaurant',
-    'japanese_restaurant',
-    'korean_restaurant',
-    'lebanese_restaurant',
-    'mexican_restaurant',
-    'middle_eastern_restaurant',
-    'seafood_restaurant',
-    'spanish_restaurant',
-    'steak_house',
-    'thai_restaurant',
-    'turkish_restaurant',
-    'vietnamese_restaurant',
-    'fine_dining_restaurant',
-  ];
+  const restaurantTypes = CategoryMapping[PlaceCategory.RESTAURANT];
 
-  for (const restaurantType of restaurantTypes) {
+  for (const restaurantType of restaurantTypes.includedTypes) {
     const request = {
       locationRestriction: {
         circle: {
@@ -148,7 +125,7 @@ async function processRestaurantsInArea(
         },
       },
       includedTypes: [restaurantType],
-      excludedTypes: ['fast_food_restaurant', 'cafeteria', 'grocery_store'],
+      excludedTypes: [...restaurantTypes.excludedTypes],
       maxResultCount: 20,
       languageCode: 'en',
     };
@@ -207,9 +184,9 @@ async function processHistoricPlacesInArea(
   stats: SyncStats,
   logger: Logger
 ): Promise<void> {
-  const historicTypes = CategoryMapping[PlaceCategory.HISTORIC].includedTypes;
+  const historicTypes = CategoryMapping[PlaceCategory.HISTORIC];
 
-  for (const historicType of historicTypes) {
+  for (const historicType of historicTypes.includedTypes) {
     const request = {
       locationRestriction: {
         circle: {
@@ -218,7 +195,7 @@ async function processHistoricPlacesInArea(
         },
       },
       includedTypes: [historicType],
-      excludedTypes: [],
+      excludedTypes: [...historicTypes.excludedTypes],
       maxResultCount: 20,
       languageCode: 'en',
     };
