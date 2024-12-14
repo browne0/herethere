@@ -42,7 +42,7 @@ export const essentialExperiencesRecommendationService = {
         // Only show seasonally appropriate activities
         seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },
-      take: 50,
+      take: 100,
     });
 
     // 2. Score attractions
@@ -113,12 +113,7 @@ export const essentialExperiencesRecommendationService = {
       'beach',
     ]);
 
-    const moderateIntensityTypes = new Set([
-      'park',
-      'shopping_mall',
-      'garden',
-      'tourist_attraction',
-    ]);
+    const moderateIntensityTypes = new Set(['park', 'garden', 'tourist_attraction']);
 
     const lowIntensityTypes = new Set([
       'museum',

@@ -27,7 +27,7 @@ export interface ActivityShelfType {
 
 // More specific budget and activity types
 export type TripBudget = 'budget' | 'moderate' | 'luxury';
-export type ActivityType = 'sightseeing' | 'museums' | 'outdoors' | 'shopping' | 'nightlife';
+export type ActivityType = 'sightseeing' | 'museums' | 'outdoors' | 'nightlife';
 
 export interface TripPreferences {
   budget: TripBudget;

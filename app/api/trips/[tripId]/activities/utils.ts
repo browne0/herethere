@@ -52,7 +52,6 @@ const INTENSITY_WEIGHTS: Record<string, number> = {
   museum: 40,
   art_gallery: 40,
   restaurant: 20,
-  shopping_mall: 50,
   beach: 70,
   night_club: 80,
   entertainment: 60,

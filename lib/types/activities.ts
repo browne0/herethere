@@ -61,16 +61,6 @@ export const ACTIVITY_CATEGORIES = {
       AddressType.casino,
     ] as GooglePlaceTypeArray,
   },
-  SHOPPING: {
-    id: 'shopping',
-    label: 'Shopping',
-    description: 'Markets & shopping areas',
-    googlePlaceTypes: [
-      AddressType.shopping_mall,
-      AddressType.store,
-      AddressType.department_store,
-    ] as GooglePlaceTypeArray,
-  },
   SPA_WELLNESS: {
     id: 'spa_wellness',
     label: 'Spa wellness',

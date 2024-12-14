@@ -9,7 +9,6 @@ import {
   PartyPopper,
   Utensils,
   Wine,
-  ShoppingBag,
   Heart,
   LucideIcon,
 } from 'lucide-react';
@@ -28,7 +27,6 @@ const ACTIVITY_ICONS: Record<keyof typeof ACTIVITY_CATEGORIES, LucideIcon> = {
   FESTIVALS_EVENTS: PartyPopper,
   FOOD_EXPLORATION: Utensils,
   NIGHTLIFE: Wine,
-  SHOPPING: ShoppingBag,
   SPA_WELLNESS: Heart,
 } as const;
 

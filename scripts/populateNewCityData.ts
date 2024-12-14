@@ -14,7 +14,6 @@ import axios from 'axios';
 import dotenv from 'dotenv';
 
 import { Logger } from './logger';
-// Import constants (category mapping etc.)
 import {
   CategoryMapping,
   PlaceCategory,
@@ -72,19 +71,18 @@ interface SyncStats {
     beaches: number;
     waterfront: number;
   };
-  shoppingSubtypes: {
-    malls: number;
-    markets: number;
-  };
   restaurantSubtypes: {
     upscale: number;
     standard: number;
     byType: Record<string, number>;
   };
+  nightlifeSubtypes: {
+    bars: number;
+    clubs: number;
+  };
 }
 
 // Helper Functions
-
 async function checkImageExists(key: string): Promise<boolean> {
   try {
     await s3Client.send(
@@ -101,9 +99,89 @@ async function checkImageExists(key: string): Promise<boolean> {
 
 // Helper to generate image key
 function generateImageKey(photoReference: string, width: number, height: number): string {
-  // Create a clean filename from the photo reference
   const cleanReference = photoReference.replace(/[^a-zA-Z0-9]/g, '-');
   return `places/${cleanReference}-${width}x${height}.jpg`;
+}
+
+async function processNightlifeInArea(
+  area: SearchArea,
+  city: City,
+  existingPlaceMap: Map<string, Date>,
+  processedPlaceIds: Set<string>,
+  stats: SyncStats,
+  logger: Logger
+): Promise<void> {
+  const nightlifeTypes = CategoryMapping[PlaceCategory.NIGHTLIFE];
+
+  for (const nightlifeType of nightlifeTypes.includedTypes) {
+    const request = {
+      locationRestriction: {
+        circle: {
+          center: area.location,
+          radius: area.radius,
+        },
+      },
+      includedTypes: [nightlifeType],
+      excludedTypes: [...nightlifeTypes.excludedTypes],
+      maxResultCount: 20,
+      languageCode: 'en',
+    };
+
+    try {
+      const response = await placesClient.searchNearby(request, {
+        otherArgs: {
+          headers: {
+            'X-Goog-FieldMask': fieldMask,
+          },
+        },
+      });
+
+      const places = response[0].places!;
+
+      for (const place of places) {
+        stats.processed++;
+
+        if (processedPlaceIds.has(place.id!)) {
+          stats.skipped++;
+          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
+          continue;
+        }
+        processedPlaceIds.add(place.id!);
+
+        const lastSynced = existingPlaceMap.get(place.id!);
+        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+          stats.skipped++;
+          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
+          continue;
+        }
+
+        if (validatePlace(place, PlaceCategory.NIGHTLIFE)) {
+          await processPlace(place, city, PlaceCategory.NIGHTLIFE, area, logger);
+          stats.added++;
+          stats.byType[PlaceCategory.NIGHTLIFE]++;
+          stats.byArea[area.name]++;
+
+          if (place.types!.includes('bar')) {
+            stats.nightlifeSubtypes.bars++;
+          } else if (place.types!.includes('night_club')) {
+            stats.nightlifeSubtypes.clubs++;
+          }
+        } else {
+          stats.skipped++;
+          logger.info(
+            `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
+          );
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      logger.error(`Error processing ${nightlifeType} in ${area.name}:`, error as Error);
+      stats.errors++;
+    }
+  }
 }
 
 async function processRestaurantsInArea(
@@ -146,6 +224,7 @@ async function processRestaurantsInArea(
 
         if (processedPlaceIds.has(place.id!)) {
           stats.skipped++;
+          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
           continue;
         }
         processedPlaceIds.add(place.id!);
@@ -153,6 +232,7 @@ async function processRestaurantsInArea(
         const lastSynced = existingPlaceMap.get(place.id!);
         if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
           stats.skipped++;
+          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
           continue;
         }
 
@@ -163,84 +243,9 @@ async function processRestaurantsInArea(
           stats.byArea[area.name]++;
         } else {
           stats.skipped++;
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting between places
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500)); // Rate limiting between cuisine types
-    } catch (error) {
-      logger.error(`Error processing ${restaurantType} in ${area.name}:`, error as Error);
-      stats.errors++;
-    }
-  }
-}
-
-async function processShoppingPlacesInArea(
-  area: SearchArea,
-  city: City,
-  existingPlaceMap: Map<string, Date>,
-  processedPlaceIds: Set<string>,
-  stats: SyncStats,
-  logger: Logger
-): Promise<void> {
-  const shoppingConfig = CategoryMapping[PlaceCategory.SHOPPING];
-
-  // Process each included type separately to track stats
-  for (const shoppingType of shoppingConfig.includedTypes) {
-    const request = {
-      locationRestriction: {
-        circle: {
-          center: area.location,
-          radius: area.radius,
-        },
-      },
-      includedTypes: [shoppingType],
-      excludedTypes: shoppingConfig.excludedTypes,
-      maxResultCount: 20,
-      languageCode: 'en',
-    };
-
-    try {
-      const response = await placesClient.searchNearby(request, {
-        otherArgs: {
-          headers: {
-            'X-Goog-FieldMask': fieldMask,
-          },
-        },
-      });
-
-      const places = response[0].places!;
-
-      for (const place of places) {
-        stats.processed++;
-
-        if (processedPlaceIds.has(place.id!)) {
-          stats.skipped++;
-          continue;
-        }
-        processedPlaceIds.add(place.id!);
-
-        const lastSynced = existingPlaceMap.get(place.id!);
-        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-          stats.skipped++;
-          continue;
-        }
-
-        if (validatePlace(place, PlaceCategory.SHOPPING)) {
-          await processPlace(place, city, PlaceCategory.SHOPPING, area, logger);
-          stats.added++;
-          stats.byType[PlaceCategory.SHOPPING]++;
-          stats.byArea[area.name]++;
-
-          // Track subtypes
-          if (shoppingType === 'shopping_mall') {
-            stats.shoppingSubtypes.malls++;
-          } else if (shoppingType === 'market') {
-            stats.shoppingSubtypes.markets++;
-          }
-        } else {
-          stats.skipped++;
+          logger.info(
+            `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
+          );
         }
 
         await new Promise(resolve => setTimeout(resolve, 200));
@@ -248,7 +253,7 @@ async function processShoppingPlacesInArea(
 
       await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
-      logger.error(`Error processing ${shoppingType} in ${area.name}:`, error as Error);
+      logger.error(`Error processing ${restaurantType} in ${area.name}:`, error as Error);
       stats.errors++;
     }
   }
@@ -294,6 +299,7 @@ async function processHistoricPlacesInArea(
 
         if (processedPlaceIds.has(place.id!)) {
           stats.skipped++;
+          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
           continue;
         }
         processedPlaceIds.add(place.id!);
@@ -301,6 +307,7 @@ async function processHistoricPlacesInArea(
         const lastSynced = existingPlaceMap.get(place.id!);
         if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
           stats.skipped++;
+          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
           continue;
         }
 
@@ -311,12 +318,15 @@ async function processHistoricPlacesInArea(
           stats.byArea[area.name]++;
         } else {
           stats.skipped++;
+          logger.info(
+            `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
+          );
         }
 
-        await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting between places
+        await new Promise(resolve => setTimeout(resolve, 200));
       }
 
-      await new Promise(resolve => setTimeout(resolve, 500)); // Rate limiting between historic types
+      await new Promise(resolve => setTimeout(resolve, 500));
     } catch (error) {
       logger.error(`Error processing ${historicType} in ${area.name}:`, error as Error);
       stats.errors++;
@@ -337,31 +347,26 @@ async function fetchAndUploadPhotos(
       const width = Math.min(photo.widthPx || 800, 1600);
       const height = photo.heightPx || Math.round((width * 3) / 4);
 
-      // Generate consistent key with dimensions
       const key = generateImageKey(photoId!, width, height);
 
-      // Construct the Google Places Photo URL
       const googleUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=${height}&maxWidthPx=${width}&key=${process
         .env.GOOGLE_MAPS_API_KEY!}`;
 
-      // Check if image already exists
       const exists = await checkImageExists(key);
       if (exists) {
         results.push({
-          url: googleUrl, // Original Google URL
-          cdnUrl: `${process.env.CDN_BASE_URL}/${key}`, // Our cached CDN URL
+          url: googleUrl,
+          cdnUrl: `${process.env.CDN_BASE_URL}/${key}`,
         });
         continue;
       }
 
-      // Fetch image
       const response = await axios({
         url: googleUrl,
         method: 'GET',
         responseType: 'arraybuffer',
       });
 
-      // Upload to S3
       await s3Client.send(
         new PutObjectCommand({
           Bucket: process.env.CDN_BUCKET_NAME!,
@@ -379,8 +384,8 @@ async function fetchAndUploadPhotos(
       );
 
       results.push({
-        url: googleUrl, // Original Google URL
-        cdnUrl: `${process.env.CDN_BASE_URL}/${key}`, // Our cached CDN URL
+        url: googleUrl,
+        cdnUrl: `${process.env.CDN_BASE_URL}/${key}`,
       });
 
       await new Promise(resolve => setTimeout(resolve, 500));
@@ -410,7 +415,6 @@ function determineIndoorOutdoor(place: protos.google.maps.places.v1.IPlace): Ind
   const types = place.types || [];
 
   if (types.includes('beach')) return 'OUTDOOR';
-  if (types.includes('shopping_mall') || types.includes('department_store')) return 'INDOOR';
 
   const indoorTypes = ['museum', 'art_gallery', 'restaurant', 'night_club', 'bar'];
   const outdoorTypes = ['park', 'garden', 'beach', 'wildlife_park'];
@@ -436,7 +440,6 @@ function determineDuration(
     PARK: 90,
     NIGHTLIFE: 120,
     BEACH: 180,
-    SHOPPING: 120,
     RESTAURANT: 90,
   };
 
@@ -460,10 +463,9 @@ function isUpscaleRestaurant(place: protos.google.maps.places.v1.IPlace): boolea
     place.priceLevel === 'PRICE_LEVEL_EXPENSIVE' ||
     place.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE' ||
     place.types!.includes('fine_dining_restaurant') ||
-    // Additional checks based on available data
     (place.reservable === true &&
       place.priceLevel === 'PRICE_LEVEL_MODERATE' &&
-      place.rating! >= 4.5) // High-rated moderate places might be upscale
+      place.rating! >= 4.5)
   );
 }
 
@@ -477,7 +479,7 @@ function hasLateNightHours(place: protos.google.maps.places.v1.IPlace): boolean 
   return place.regularOpeningHours.periods.some(
     (period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod) => {
       const closeHour = period.close?.hour || 0;
-      return closeHour >= 21 || closeHour < 4; // Open past 9 PM or into early morning
+      return closeHour >= 21 || closeHour < 4;
     }
   );
 }
@@ -488,7 +490,6 @@ function validatePlace(
 ): boolean {
   if (!place.rating || !place.userRatingCount) return false;
 
-  // Base validation varies by category
   const thresholds = {
     rating: getBaseRatingThreshold(category, place),
     reviews: getBaseReviewThreshold(category, place),
@@ -499,7 +500,6 @@ function validatePlace(
 
   if (!meetsBaseThresholds) return false;
 
-  // Additional category-specific validation
   switch (category) {
     case PlaceCategory.RESTAURANT:
       return validateRestaurant(place);
@@ -507,8 +507,6 @@ function validatePlace(
       return validateNightlife(place);
     case PlaceCategory.HISTORIC:
       return validateHistoric(place);
-    case PlaceCategory.SHOPPING:
-      return validateShoppingPlace(place);
     default:
       return true;
   }
@@ -525,10 +523,6 @@ function getBaseRatingThreshold(
       return 4.3;
     case PlaceCategory.NIGHTLIFE:
       return 4.0;
-    case PlaceCategory.SHOPPING:
-      if (place.types!.includes('shopping_mall')) return 4.3;
-      if (place.types!.includes('market')) return 4.2;
-      return 4.0; // gift shops can have lower ratings as they're often tourist-focused
     default:
       return 4.2;
   }
@@ -545,26 +539,15 @@ function getBaseReviewThreshold(
       return 400;
     case PlaceCategory.NIGHTLIFE:
       return 300;
-    case PlaceCategory.SHOPPING:
-      if (place.types!.includes('shopping_mall')) return 1000; // Malls should be well-reviewed
-      if (place.types!.includes('market')) return 500; // Markets need decent review volume
-      return 200; // Gift shops typically have fewer reviews
     default:
       return 500;
   }
 }
 
 function validateRestaurant(place: protos.google.maps.places.v1.IPlace): boolean {
-  // Must be operational
   if (place.businessStatus !== 'OPERATIONAL') return false;
-
-  // Must offer dine-in
   if (place.dineIn === false) return false;
-
-  // Should serve either lunch or dinner
   if (place.servesLunch === false && place.servesDinner === false) return false;
-
-  // If it's expensive, it should be reservable
   if (
     (place.priceLevel === 'PRICE_LEVEL_EXPENSIVE' ||
       place.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE') &&
@@ -572,19 +555,13 @@ function validateRestaurant(place: protos.google.maps.places.v1.IPlace): boolean
   ) {
     return false;
   }
-
   return true;
 }
 
 function validateNightlife(place: protos.google.maps.places.v1.IPlace): boolean {
-  // Must be operational
   if (place.businessStatus !== 'OPERATIONAL') return false;
-
-  // Should be open late (after 9 PM) on some days
   const hasLateHours = hasLateNightHours(place);
   if (!hasLateHours) return false;
-
-  // Should serve drinks if it's a bar/club type
   if (
     place.types!.some(t => ['bar', 'night_club'].includes(t)) &&
     !place.servesBeer &&
@@ -593,24 +570,20 @@ function validateNightlife(place: protos.google.maps.places.v1.IPlace): boolean 
   ) {
     return false;
   }
-
   return true;
 }
 
 function validateHistoric(place: protos.google.maps.places.v1.IPlace): boolean {
-  // Must be operational
   if (place.businessStatus !== 'OPERATIONAL') return false;
 
-  // Check editorial summary for historical indicators
   const summary = (place.editorialSummary?.text || '').toLowerCase();
   const hasHistoricalSummary =
     summary.includes('historic') ||
     summary.includes('century') ||
     summary.includes('ancient') ||
     summary.includes('heritage') ||
-    /\b1[0-9]{3}\b/.test(summary); // Year pattern
+    /\b1[0-9]{3}\b/.test(summary);
 
-  // Multiple relevant types increase confidence
   const historicTypes = [
     'historical_place',
     'historical_landmark',
@@ -620,145 +593,9 @@ function validateHistoric(place: protos.google.maps.places.v1.IPlace): boolean {
 
   const hasMultipleHistoricTypes = place.types!.filter(t => historicTypes.includes(t)).length > 1;
 
-  // Either need historical summary or multiple historic types
   return hasHistoricalSummary || hasMultipleHistoricTypes;
 }
 
-function validateShoppingPlace(place: protos.google.maps.places.v1.IPlace): boolean {
-  // Must be operational
-  if (place.businessStatus !== 'OPERATIONAL') return false;
-
-  // Must have regular opening hours
-  if (!place.regularOpeningHours?.periods?.length) return false;
-
-  // Must have photos
-  if (!place.photos?.length) return false;
-
-  const name = place.displayName?.text?.toLowerCase() || '';
-  const description = place.editorialSummary?.text?.toLowerCase() || '';
-
-  // For markets, ensure they're tourist-relevant
-  if (place.types!.includes('market')) {
-    const isTouristMarket =
-      description.includes('traditional') ||
-      description.includes('local') ||
-      description.includes('artisan') ||
-      description.includes('craft') ||
-      description.includes('specialty') ||
-      name.includes('flea') ||
-      name.includes('street') ||
-      name.includes('artisan');
-
-    if (!isTouristMarket) return false;
-  }
-
-  // For gift shops, ensure they're tourist-focused
-  if (place.types!.includes('gift_shop')) {
-    const isTouristGiftShop =
-      description.includes('souvenir') ||
-      description.includes('local') ||
-      description.includes('handmade') ||
-      description.includes('craft') ||
-      name.includes('souvenir') ||
-      place.types!.includes('tourist_attraction');
-
-    if (!isTouristGiftShop) return false;
-  }
-
-  // For clothing stores, ensure they're unique/high-end
-  if (place.types!.includes('clothing_store')) {
-    // Require higher rating threshold for clothing stores
-    if (place.rating! < 4.4 || place.userRatingCount! < 200) return false;
-
-    // Check for indicators of unique or high-end clothing
-    const isNotableClothing =
-      // Price level indicators
-      place.priceLevel === 'PRICE_LEVEL_EXPENSIVE' ||
-      place.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE' ||
-      // Look for high-end/unique indicators in description
-      description.includes('designer') ||
-      description.includes('luxury') ||
-      description.includes('boutique') ||
-      description.includes('vintage') ||
-      description.includes('couture') ||
-      description.includes('handmade') ||
-      description.includes('artisanal') ||
-      description.includes('local designer') ||
-      // Local/cultural indicators
-      description.includes('traditional') ||
-      description.includes('authentic') ||
-      description.includes('local brand') ||
-      description.includes('locally made') ||
-      // Tourist relevance
-      place.types!.includes('tourist_attraction') ||
-      description.includes('famous for') ||
-      description.includes('known for');
-
-    // Reject if no notable characteristics found
-    if (!isNotableClothing) return false;
-
-    // Additional validation: exclude common chain stores
-    const commonChains = new Set([
-      // Fast Fashion
-      'zara',
-      'h&m',
-      'uniqlo',
-      'gap',
-      'forever 21',
-      'old navy',
-      'primark',
-      'cotton on',
-      'pull&bear',
-      'bershka',
-      'stradivarius',
-      'massimo dutti',
-
-      // Athletic/Outdoor
-      'nike',
-      'adidas',
-      'puma',
-      'under armour',
-      'lululemon',
-      'foot locker',
-      'the north face',
-
-      // Mid-range
-      'banana republic',
-      'express',
-      'american eagle',
-      'urban outfitters',
-      'anthropologie',
-      'aeropostale',
-      'hollister',
-      'abercrombie',
-      'topshop',
-      'zara home',
-
-      // Department Stores
-      'macys',
-      'nordstrom',
-      'bloomingdales',
-      'saks fifth avenue',
-      'neiman marcus',
-      'jc penney',
-      'marks & spencer',
-      'target',
-      'walmart',
-
-      // Others
-      'guess',
-      'calvin klein',
-      'tommy hilfiger',
-      'coach',
-      'michael kors',
-    ]);
-    if (commonChains.has(name)) return false;
-  }
-
-  return true;
-}
-
-// Main Processing Functions
 async function processPlace(
   place: protos.google.maps.places.v1.IPlace,
   city: City,
@@ -766,10 +603,8 @@ async function processPlace(
   area: SearchArea,
   logger: Logger
 ): Promise<void> {
-  logger.progress(`Processing ${place.displayName!.text} (${category})`);
+  logger.info(`Processing: ${place.displayName!.text} in ${area.name}`);
   try {
-    // Process photos
-    logger.info(`Fetching ${Math.min(place.photos?.length || 0, 5)} photos...`);
     const imageUrls = await fetchAndUploadPhotos(place.photos || [], place.id!);
 
     const activityData: Prisma.ActivityRecommendationCreateInput = {
@@ -844,7 +679,7 @@ async function processPlace(
         lastSyncedAt: activityData.lastSyncedAt,
       },
     });
-    logger.success(`✅ Successfully processed ${place.displayName!.text}`);
+    logger.info(`✅ Processed successfully: ${place.displayName!.text} in ${area.name}`);
   } catch (error) {
     logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
     throw error;
@@ -898,7 +733,6 @@ async function processCityArea(
   logger.info(`\nProcessing area: ${area.name}`);
   stats.byArea[area.name] = 0;
 
-  // Process each category
   for (const [category, config] of Object.entries(CategoryMapping)) {
     if (category === PlaceCategory.RESTAURANT) {
       await processRestaurantsInArea(
@@ -918,18 +752,10 @@ async function processCityArea(
         stats,
         logger
       );
-    } else if (category === PlaceCategory.SHOPPING) {
-      await processShoppingPlacesInArea(
-        area,
-        city,
-        existingPlaceMap,
-        processedPlaceIds,
-        stats,
-        logger
-      );
+    } else if (category === PlaceCategory.NIGHTLIFE) {
+      await processNightlifeInArea(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
     } else {
-      // Original logic for other categories
-      logger.progress(`\n🔍 Searching for ${category} in ${area.name}...`);
+      logger.info(`\n🔍 Searching for ${category} in ${area.name}...`);
       const places = await searchNearbyPlaces(area, config, stats, logger);
 
       for (const place of places) {
@@ -937,6 +763,7 @@ async function processCityArea(
 
         if (processedPlaceIds.has(place.id!)) {
           stats.skipped++;
+          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
           continue;
         }
         processedPlaceIds.add(place.id!);
@@ -944,6 +771,7 @@ async function processCityArea(
         const lastSynced = existingPlaceMap.get(place.id!);
         if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
           stats.skipped++;
+          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
           continue;
         }
 
@@ -951,6 +779,9 @@ async function processCityArea(
           const placeCategory = determinePlaceCategory(place);
           if (!placeCategory || !validatePlace(place, placeCategory)) {
             stats.skipped++;
+            logger.info(
+              `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
+            );
             continue;
           }
 
@@ -968,7 +799,6 @@ async function processCityArea(
     }
   }
 
-  // Special handling for coastal cities
   if (isCityCoastal(city)) {
     await processCoastalFeatures(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
   }
@@ -1001,6 +831,7 @@ async function processCoastalFeatures(
 
       if (processedPlaceIds.has(place.id!)) {
         stats.skipped++;
+        logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
         continue;
       }
       processedPlaceIds.add(place.id!);
@@ -1008,6 +839,7 @@ async function processCoastalFeatures(
       const lastSynced = existingPlaceMap.get(place.id!);
       if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
         stats.skipped++;
+        logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
         continue;
       }
 
@@ -1017,11 +849,10 @@ async function processCoastalFeatures(
         stats.byType[PlaceCategory.BEACH] = (stats.byType[PlaceCategory.BEACH] || 0) + 1;
         stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
 
-        // Update beach statistics
         const isBeach = place.types!.includes('beach');
         stats.beachSubtypes[isBeach ? 'beaches' : 'waterfront']++;
 
-        await new Promise(resolve => setTimeout(resolve, 200)); // Rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
       } catch (error) {
         logger.error(
           `Error processing coastal feature ${place.displayName!.text}:`,
@@ -1059,29 +890,27 @@ function initializeStats(): SyncStats {
       beaches: 0,
       waterfront: 0,
     },
-    shoppingSubtypes: {
-      malls: 0,
-      markets: 0,
-    },
     restaurantSubtypes: {
       upscale: 0,
       standard: 0,
       byType: {},
     },
+    nightlifeSubtypes: {
+      bars: 0,
+      clubs: 0,
+    },
   };
 }
 
 function generateSearchAreas(city: City): SearchArea[] {
-  // Use predefined areas if available
   if (PREDEFINED_CITY_AREAS[city.name]) {
     return PREDEFINED_CITY_AREAS[city.name];
   }
 
-  // Generate grid pattern
   const areas: SearchArea[] = [];
-  const baseRadius = 2000; // 2km radius
+  const baseRadius = 2000;
   const gridSize = 3;
-  const offset = (baseRadius * 1.5) / 111300; // Convert meters to degrees
+  const offset = (baseRadius * 1.5) / 111300;
 
   for (let i = 0; i < gridSize; i++) {
     for (let j = 0; j < gridSize; j++) {
@@ -1108,7 +937,6 @@ async function populateCityData(cityId: string, logger: Logger) {
 
     logger.info(`Starting comprehensive data sync for ${city.name}...`);
 
-    // Get existing places for skip logic
     logger.info('\nFetching existing places...');
     const existingPlaces = await prisma.activityRecommendation.findMany({
       where: { cityId },
@@ -1119,7 +947,6 @@ async function populateCityData(cityId: string, logger: Logger) {
     const existingPlaceMap = new Map(existingPlaces.map(p => [p.googlePlaceId!, p.lastSyncedAt]));
     const processedPlaceIds = new Set<string>();
 
-    // Process each area
     const searchAreas = generateSearchAreas(city);
     logger.info(`Generated ${searchAreas.length} search areas`);
 

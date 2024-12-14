@@ -1,51 +1,80 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 
-import { GoogleMap, LoadScript, Rectangle, Circle } from '@react-google-maps/api';
+import { GoogleMap, Rectangle, Circle, Polygon } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
+import { Card, CardContent } from '@/components/ui/card';
 
-const SAMPLE_CITIES = [
-  {
-    name: 'Manhattan',
-    bounds: {
-      north: 40.8845,
-      south: 40.6829,
-      east: -73.9071,
-      west: -74.0479,
-    },
-    center: { lat: 40.7831, lng: -73.9712 },
-  },
-  {
-    name: 'Central Paris',
-    bounds: {
-      north: 48.9021,
-      south: 48.8156,
-      east: 2.4699,
-      west: 2.2241,
-    },
-    center: { lat: 48.8566, lng: 2.3522 },
-  },
+// Manhattan's polygon coordinates
+const MANHATTAN_POLYGON = [
+  { lat: 40.6829, lng: -74.0479 }, // Battery Park
+  { lat: 40.7077, lng: -74.0134 }, // West Village
+  { lat: 40.7489, lng: -73.9973 }, // Chelsea
+  { lat: 40.7831, lng: -73.9876 }, // Upper West Side
+  { lat: 40.8845, lng: -73.9233 }, // Inwood
+  { lat: 40.8785, lng: -73.9071 }, // Harlem River
+  { lat: 40.7941, lng: -73.931 }, // East Harlem
+  { lat: 40.7569, lng: -73.9666 }, // Midtown East
+  { lat: 40.7073, lng: -73.9776 }, // East Village
+  { lat: 40.6829, lng: -74.0479 }, // Back to Battery Park
 ];
 
+const isPointInPolygon = (
+  point: { lat: number; lng: number },
+  polygon: { lat: number; lng: number }[]
+) => {
+  const x = point.lng,
+    y = point.lat;
+  let inside = false;
+
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const xi = polygon[i].lng,
+      yi = polygon[i].lat;
+    const xj = polygon[j].lng,
+      yj = polygon[j].lat;
+
+    const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+
+    if (intersect) inside = !inside;
+  }
+
+  return inside;
+};
+
+const INITIAL_CENTER = { lat: 40.7831, lng: -73.9712 };
+
 const BoundsVisualizer = () => {
-  const [selectedCity, setSelectedCity] = useState(SAMPLE_CITIES[0]);
   const [showGrid, setShowGrid] = useState(true);
   const [cellSize, setCellSize] = useState(0.015); // ~1.5km
   const [overlap, setOverlap] = useState(0.3); // 30% overlap
-  const [searchAreas, setSearchAreas] = useState([]);
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const [searchAreas, setSearchAreas] = useState<
+    Array<{
+      center: { lat: number; lng: number };
+      radius: number;
+      id: string;
+      isInManhattan: boolean;
+    }>
+  >([]);
+
   const { isLoaded, loadError } = useGoogleMapsStatus();
 
   useEffect(() => {
     if (showGrid) {
-      const cells = generateGridCells(selectedCity.bounds, cellSize, overlap);
+      const cells = generateGridCells(cellSize, overlap);
       setSearchAreas(cells);
     }
-  }, [selectedCity, cellSize, overlap, showGrid]);
+  }, [cellSize, overlap, showGrid]);
 
-  const generateGridCells = (bounds, cellSize, overlap) => {
+  const generateGridCells = (cellSize: number, overlap: number) => {
+    const bounds = {
+      north: 40.8845,
+      south: 40.6829,
+      east: -73.9071,
+      west: -74.0479,
+    };
+
     const cells = [];
     const effectiveCellSize = cellSize * (1 - overlap);
 
@@ -60,10 +89,14 @@ const BoundsVisualizer = () => {
         const lat = bounds.south + i * effectiveCellSize + cellSize / 2;
         const lng = bounds.west + j * effectiveCellSize + cellSize / 2;
 
+        const center = { lat, lng };
+        const isInManhattan = isPointInPolygon(center, MANHATTAN_POLYGON);
+
         cells.push({
-          center: { lat, lng },
+          center,
           radius: (cellSize * 111000) / 2, // Convert degrees to meters (approximately)
           id: `${i}-${j}`,
+          isInManhattan,
         });
       }
     }
@@ -71,16 +104,28 @@ const BoundsVisualizer = () => {
     return cells;
   };
 
-  const mapOptions = {
+  const mapOptions: google.maps.MapOptions = {
     mapTypeId: 'terrain',
     mapTypeControl: true,
     zoomControl: true,
     streetViewControl: false,
+    styles: [
+      {
+        featureType: 'poi',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'transit',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+    ],
   };
 
   if (!isLoaded) {
     return (
-      <div className="h-full flex items-center justify-center bg-muted/20">
+      <div className="h-screen flex items-center justify-center bg-muted/20">
         <div className="flex flex-col items-center gap-2">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
           <p className="text-sm text-muted-foreground">Loading map...</p>
@@ -91,27 +136,21 @@ const BoundsVisualizer = () => {
 
   if (loadError) {
     return (
-      <div className="h-full flex items-center justify-center bg-destructive/10">
-        <p className="text-destructive">Failed to load map</p>
+      <div className="h-screen flex items-center justify-center bg-destructive/10">
+        <Card>
+          <CardContent>
+            <p className="text-destructive">Failed to load map</p>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
-  return (
-    <div className="w-full flex flex-col gap-4">
-      <div className="flex gap-4 items-center p-4 bg-white shadow rounded">
-        <select
-          className="p-2 border rounded"
-          value={selectedCity.name}
-          onChange={e => setSelectedCity(SAMPLE_CITIES.find(c => c.name === e.target.value))}
-        >
-          {SAMPLE_CITIES.map(city => (
-            <option key={city.name} value={city.name}>
-              {city.name}
-            </option>
-          ))}
-        </select>
+  const validSearchAreas = searchAreas.filter(area => area.isInManhattan);
 
+  return (
+    <div className="w-full h-screen flex flex-col gap-4">
+      <div className="flex gap-4 items-center p-4 bg-white shadow rounded">
         <label className="flex items-center gap-2">
           <input type="checkbox" checked={showGrid} onChange={e => setShowGrid(e.target.checked)} />
           Show Search Grid
@@ -146,15 +185,16 @@ const BoundsVisualizer = () => {
         </div>
       </div>
 
-      <div className="flex-1 h-96">
+      <div className="relative flex-1">
         <GoogleMap
-          mapContainerClassName="w-full h-full"
-          center={selectedCity.center}
+          mapContainerStyle={{ width: '100%', height: '100%', position: 'absolute' }}
+          center={INITIAL_CENTER}
           zoom={12}
           options={mapOptions}
         >
-          <Rectangle
-            bounds={selectedCity.bounds}
+          {/* Manhattan boundary */}
+          <Polygon
+            paths={MANHATTAN_POLYGON}
             options={{
               fillColor: '#000000',
               fillOpacity: 0.05,
@@ -171,9 +211,9 @@ const BoundsVisualizer = () => {
                 center={area.center}
                 radius={area.radius}
                 options={{
-                  fillColor: '#0088FF',
-                  fillOpacity: 0.1,
-                  strokeColor: '#0088FF',
+                  fillColor: area.isInManhattan ? '#0088FF' : '#FF0000',
+                  fillOpacity: area.isInManhattan ? 0.2 : 0.1,
+                  strokeColor: area.isInManhattan ? '#0088FF' : '#FF0000',
                   strokeOpacity: 0.8,
                   strokeWeight: 1,
                 }}
@@ -185,8 +225,9 @@ const BoundsVisualizer = () => {
       <div className="p-4 bg-gray-100 rounded">
         <h3 className="font-semibold">Coverage Statistics:</h3>
         <ul className="mt-2">
-          <li>Number of search areas: {searchAreas.length}</li>
-          <li>Average area size: {(cellSize * 111).toFixed(1)}km</li>
+          <li>Total search areas: {searchAreas.length}</li>
+          <li>Valid Manhattan areas: {validSearchAreas.length}</li>
+          <li>Area size: {(cellSize * 111).toFixed(1)}km</li>
           <li>Overlap: {(overlap * 100).toFixed(0)}%</li>
         </ul>
       </div>

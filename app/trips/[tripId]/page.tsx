@@ -5,8 +5,8 @@ import { redirect } from 'next/navigation';
 import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
 import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
+import { nightlifeRecommendationService } from '@/app/api/services/recommendations/nightlife';
 import { restaurantRecommendationService } from '@/app/api/services/recommendations/restaurants';
-import { shoppingRecommendationService } from '@/app/api/services/recommendations/shopping';
 import { touristAttractionService } from '@/app/api/services/recommendations/touristAttractions';
 import { prisma } from '@/lib/db';
 
@@ -94,7 +94,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     recommendationsData.preferences
   );
 
-  const shoppingRecommendations = await shoppingRecommendationService.getRecommendations(
+  const nightlifeRecommendations = await nightlifeRecommendationService.getRecommendations(
     recommendationsData.cityId,
     recommendationsData.preferences
   );
@@ -135,14 +135,12 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     activities: historicSitesRecommendations,
   };
 
-  const shoppingShelf = {
-    type: 'shopping',
-    title: 'Shopping & Market Highlights',
-    description: `From local markets to luxury boutiques and shopping districts`,
-    activities: shoppingRecommendations,
+  const nightlifeShelf = {
+    type: 'nightlife',
+    title: 'Nightlife & Entertainment',
+    description: `From stylish rooftop bars to legendary music venues`,
+    activities: nightlifeRecommendations,
   };
-
-  console.log(shoppingRecommendations.length);
 
   const shelves = [
     mustSeeShelf,
@@ -150,7 +148,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     touristAttractionsShelf,
     museumsShelf,
     historicSitesShelf,
-    shoppingShelf,
+    nightlifeShelf,
   ];
 
   return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;

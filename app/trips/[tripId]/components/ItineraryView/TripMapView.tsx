@@ -7,7 +7,6 @@ import { format } from 'date-fns';
 import {
   Camera,
   Music,
-  ShoppingBag,
   Umbrella,
   TreePine,
   PartyPopper,
@@ -41,7 +40,6 @@ const ACTIVITY_ICONS: Record<string, LucideIcon> = {
   events: PartyPopper,
   food: Utensils,
   nightlife: Music,
-  shopping: ShoppingBag,
   wellness: Heart,
   default: Camera,
 };
