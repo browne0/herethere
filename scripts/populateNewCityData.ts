@@ -176,6 +176,84 @@ async function processRestaurantsInArea(
   }
 }
 
+async function processShoppingPlacesInArea(
+  area: SearchArea,
+  city: City,
+  existingPlaceMap: Map<string, Date>,
+  processedPlaceIds: Set<string>,
+  stats: SyncStats,
+  logger: Logger
+): Promise<void> {
+  const shoppingConfig = CategoryMapping[PlaceCategory.SHOPPING];
+
+  // Process each included type separately to track stats
+  for (const shoppingType of shoppingConfig.includedTypes) {
+    const request = {
+      locationRestriction: {
+        circle: {
+          center: area.location,
+          radius: area.radius,
+        },
+      },
+      includedTypes: [shoppingType],
+      excludedTypes: shoppingConfig.excludedTypes,
+      maxResultCount: 20,
+      languageCode: 'en',
+    };
+
+    try {
+      const response = await placesClient.searchNearby(request, {
+        otherArgs: {
+          headers: {
+            'X-Goog-FieldMask': fieldMask,
+          },
+        },
+      });
+
+      const places = response[0].places!;
+
+      for (const place of places) {
+        stats.processed++;
+
+        if (processedPlaceIds.has(place.id!)) {
+          stats.skipped++;
+          continue;
+        }
+        processedPlaceIds.add(place.id!);
+
+        const lastSynced = existingPlaceMap.get(place.id!);
+        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
+          stats.skipped++;
+          continue;
+        }
+
+        if (validatePlace(place, PlaceCategory.SHOPPING)) {
+          await processPlace(place, city, PlaceCategory.SHOPPING, area, logger);
+          stats.added++;
+          stats.byType[PlaceCategory.SHOPPING]++;
+          stats.byArea[area.name]++;
+
+          // Track subtypes
+          if (shoppingType === 'shopping_mall') {
+            stats.shoppingSubtypes.malls++;
+          } else if (shoppingType === 'market') {
+            stats.shoppingSubtypes.markets++;
+          }
+        } else {
+          stats.skipped++;
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 200));
+      }
+
+      await new Promise(resolve => setTimeout(resolve, 500));
+    } catch (error) {
+      logger.error(`Error processing ${shoppingType} in ${area.name}:`, error as Error);
+      stats.errors++;
+    }
+  }
+}
+
 async function processHistoricPlacesInArea(
   area: SearchArea,
   city: City,
@@ -371,18 +449,9 @@ function determinePlaceCategory(place: protos.google.maps.places.v1.IPlace): Pla
     const matchesExcluded = config.excludedTypes?.some(t => place.types!.includes(t)) || false;
 
     if (matchesIncluded && !matchesExcluded) {
-      if (!config.requiresValidation) {
-        return category as PlaceCategory;
-      }
-
-      // Additional validation for specific categories
-      if (category === 'RESTAURANT' && isUpscaleRestaurant(place)) return PlaceCategory.RESTAURANT;
-      if (category === 'HISTORIC' && hasHistoricalIndicators(place)) return PlaceCategory.HISTORIC;
-      if (category === 'BEACH' && hasBeachIndicators(place)) return PlaceCategory.BEACH;
-      if (category === 'NIGHTLIFE' && hasLateNightHours(place)) return PlaceCategory.NIGHTLIFE;
+      return category as PlaceCategory;
     }
   }
-
   return null;
 }
 
@@ -396,21 +465,6 @@ function isUpscaleRestaurant(place: protos.google.maps.places.v1.IPlace): boolea
       place.priceLevel === 'PRICE_LEVEL_MODERATE' &&
       place.rating! >= 4.5) // High-rated moderate places might be upscale
   );
-}
-
-function hasHistoricalIndicators(place: protos.google.maps.places.v1.IPlace): boolean {
-  const text = [place.displayName?.text, place.editorialSummary?.text]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase();
-
-  return (
-    text.includes('historic') ||
-    text.includes('century') ||
-    text.includes('ancient') ||
-    text.includes('heritage') ||
-    /\b1[0-9]{3}\b/.test(text)
-  ); // Year pattern
 }
 
 function hasBeachIndicators(place: protos.google.maps.places.v1.IPlace): boolean {
@@ -453,6 +507,8 @@ function validatePlace(
       return validateNightlife(place);
     case PlaceCategory.HISTORIC:
       return validateHistoric(place);
+    case PlaceCategory.SHOPPING:
+      return validateShoppingPlace(place);
     default:
       return true;
   }
@@ -466,9 +522,13 @@ function getBaseRatingThreshold(
     case PlaceCategory.RESTAURANT:
       return isUpscaleRestaurant(place) ? 4.4 : 4.2;
     case PlaceCategory.HISTORIC:
-      return 4.3; // Historical places should be well-reviewed
+      return 4.3;
     case PlaceCategory.NIGHTLIFE:
-      return 4.0; // Nightlife tends to have lower ratings
+      return 4.0;
+    case PlaceCategory.SHOPPING:
+      if (place.types!.includes('shopping_mall')) return 4.3;
+      if (place.types!.includes('market')) return 4.2;
+      return 4.0; // gift shops can have lower ratings as they're often tourist-focused
     default:
       return 4.2;
   }
@@ -482,9 +542,13 @@ function getBaseReviewThreshold(
     case PlaceCategory.RESTAURANT:
       return isUpscaleRestaurant(place) ? 300 : 500;
     case PlaceCategory.HISTORIC:
-      return 400; // Historical places should have significant reviews
+      return 400;
     case PlaceCategory.NIGHTLIFE:
-      return 300; // Lower threshold for nightlife
+      return 300;
+    case PlaceCategory.SHOPPING:
+      if (place.types!.includes('shopping_mall')) return 1000; // Malls should be well-reviewed
+      if (place.types!.includes('market')) return 500; // Markets need decent review volume
+      return 200; // Gift shops typically have fewer reviews
     default:
       return 500;
   }
@@ -558,6 +622,140 @@ function validateHistoric(place: protos.google.maps.places.v1.IPlace): boolean {
 
   // Either need historical summary or multiple historic types
   return hasHistoricalSummary || hasMultipleHistoricTypes;
+}
+
+function validateShoppingPlace(place: protos.google.maps.places.v1.IPlace): boolean {
+  // Must be operational
+  if (place.businessStatus !== 'OPERATIONAL') return false;
+
+  // Must have regular opening hours
+  if (!place.regularOpeningHours?.periods?.length) return false;
+
+  // Must have photos
+  if (!place.photos?.length) return false;
+
+  const name = place.displayName?.text?.toLowerCase() || '';
+  const description = place.editorialSummary?.text?.toLowerCase() || '';
+
+  // For markets, ensure they're tourist-relevant
+  if (place.types!.includes('market')) {
+    const isTouristMarket =
+      description.includes('traditional') ||
+      description.includes('local') ||
+      description.includes('artisan') ||
+      description.includes('craft') ||
+      description.includes('specialty') ||
+      name.includes('flea') ||
+      name.includes('street') ||
+      name.includes('artisan');
+
+    if (!isTouristMarket) return false;
+  }
+
+  // For gift shops, ensure they're tourist-focused
+  if (place.types!.includes('gift_shop')) {
+    const isTouristGiftShop =
+      description.includes('souvenir') ||
+      description.includes('local') ||
+      description.includes('handmade') ||
+      description.includes('craft') ||
+      name.includes('souvenir') ||
+      place.types!.includes('tourist_attraction');
+
+    if (!isTouristGiftShop) return false;
+  }
+
+  // For clothing stores, ensure they're unique/high-end
+  if (place.types!.includes('clothing_store')) {
+    // Require higher rating threshold for clothing stores
+    if (place.rating! < 4.4 || place.userRatingCount! < 200) return false;
+
+    // Check for indicators of unique or high-end clothing
+    const isNotableClothing =
+      // Price level indicators
+      place.priceLevel === 'PRICE_LEVEL_EXPENSIVE' ||
+      place.priceLevel === 'PRICE_LEVEL_VERY_EXPENSIVE' ||
+      // Look for high-end/unique indicators in description
+      description.includes('designer') ||
+      description.includes('luxury') ||
+      description.includes('boutique') ||
+      description.includes('vintage') ||
+      description.includes('couture') ||
+      description.includes('handmade') ||
+      description.includes('artisanal') ||
+      description.includes('local designer') ||
+      // Local/cultural indicators
+      description.includes('traditional') ||
+      description.includes('authentic') ||
+      description.includes('local brand') ||
+      description.includes('locally made') ||
+      // Tourist relevance
+      place.types!.includes('tourist_attraction') ||
+      description.includes('famous for') ||
+      description.includes('known for');
+
+    // Reject if no notable characteristics found
+    if (!isNotableClothing) return false;
+
+    // Additional validation: exclude common chain stores
+    const commonChains = new Set([
+      // Fast Fashion
+      'zara',
+      'h&m',
+      'uniqlo',
+      'gap',
+      'forever 21',
+      'old navy',
+      'primark',
+      'cotton on',
+      'pull&bear',
+      'bershka',
+      'stradivarius',
+      'massimo dutti',
+
+      // Athletic/Outdoor
+      'nike',
+      'adidas',
+      'puma',
+      'under armour',
+      'lululemon',
+      'foot locker',
+      'the north face',
+
+      // Mid-range
+      'banana republic',
+      'express',
+      'american eagle',
+      'urban outfitters',
+      'anthropologie',
+      'aeropostale',
+      'hollister',
+      'abercrombie',
+      'topshop',
+      'zara home',
+
+      // Department Stores
+      'macys',
+      'nordstrom',
+      'bloomingdales',
+      'saks fifth avenue',
+      'neiman marcus',
+      'jc penney',
+      'marks & spencer',
+      'target',
+      'walmart',
+
+      // Others
+      'guess',
+      'calvin klein',
+      'tommy hilfiger',
+      'coach',
+      'michael kors',
+    ]);
+    if (commonChains.has(name)) return false;
+  }
+
+  return true;
 }
 
 // Main Processing Functions
@@ -713,6 +911,15 @@ async function processCityArea(
       );
     } else if (category === PlaceCategory.HISTORIC) {
       await processHistoricPlacesInArea(
+        area,
+        city,
+        existingPlaceMap,
+        processedPlaceIds,
+        stats,
+        logger
+      );
+    } else if (category === PlaceCategory.SHOPPING) {
+      await processShoppingPlacesInArea(
         area,
         city,
         existingPlaceMap,

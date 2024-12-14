@@ -142,6 +142,8 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     activities: shoppingRecommendations,
   };
 
+  console.log(shoppingRecommendations.length);
+
   const shelves = [
     mustSeeShelf,
     restaurantShelf,

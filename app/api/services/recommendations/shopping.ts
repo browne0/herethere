@@ -23,19 +23,23 @@ export const shoppingRecommendationService = {
       where: {
         cityId,
         businessStatus: 'OPERATIONAL',
-        primaryType: {
-          in: CategoryMapping[PlaceCategory.SHOPPING].includedTypes,
+        placeTypes: {
+          hasSome: CategoryMapping[PlaceCategory.SHOPPING].includedTypes,
         },
         NOT: {
           placeTypes: {
-            hasSome: CategoryMapping[PlaceCategory.SHOPPING].excludedTypes,
+            hasSome: [
+              ...CategoryMapping[PlaceCategory.SHOPPING].excludedTypes,
+              'restaurant',
+              'museum',
+            ],
           },
         },
         // Ensure high quality
         rating: { gte: 4.0 },
         reviewCountTier: { in: ['VERY_HIGH', 'HIGH'] },
       },
-      take: 50,
+      take: 100,
     });
 
     // Group by name to identify chains
@@ -56,9 +60,9 @@ export const shoppingRecommendationService = {
 
     // Filter and return top recommendations
     const recommendations = scored
-      .filter(r => r.score > 0.4) // Higher minimum threshold
+      .filter(r => r.score > 0)
       .sort((a, b) => b.score - a.score)
-      .slice(0, 12);
+      .slice(0, 20);
 
     return recommendations;
   },

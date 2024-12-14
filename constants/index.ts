@@ -187,7 +187,7 @@ export const CategoryMapping = {
     requiresValidation: true,
   },
   [PlaceCategory.SHOPPING]: {
-    includedTypes: ['shopping_mall', 'gift_shop'],
+    includedTypes: ['shopping_mall', 'gift_shop', 'market', 'clothing_store'],
     excludedTypes: [
       'convenience_store',
       'grocery_store',
@@ -197,7 +197,7 @@ export const CategoryMapping = {
       'department_store',
       'butcher_shop',
     ],
-    requiresValidation: false,
+    requiresValidation: true,
   },
   [PlaceCategory.RESTAURANT]: {
     includedTypes: Object.keys(RESTAURANT_TYPES),
@@ -302,11 +302,6 @@ export const PREDEFINED_CITY_AREAS: Record<string, SearchArea[]> = {
       name: 'Brooklyn Heights',
       location: { latitude: 40.696, longitude: -73.9949 },
       radius: 1000,
-    },
-    {
-      name: 'Long Island City',
-      location: { latitude: 40.7505, longitude: -73.9246 },
-      radius: 1500,
     },
   ],
 

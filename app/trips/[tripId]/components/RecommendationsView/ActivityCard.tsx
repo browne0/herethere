@@ -5,9 +5,9 @@ import { Heart, Loader2, Star, MapPin } from 'lucide-react';
 
 import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
+import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
-import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -54,7 +54,6 @@ function getBestImageUrl(images: ActivityImages | null): ImageUrl | null {
 
     // Score based on dimensions if available
     const dimensions = getDimensionsFromUrl(imageUrl.cdnUrl || imageUrl.url);
-    console.log(dimensions);
     if (dimensions) {
       const { width, height } = dimensions;
       const aspectRatio = width / height;
