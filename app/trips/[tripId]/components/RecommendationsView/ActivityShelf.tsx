@@ -4,6 +4,8 @@ import { ActivityRecommendation } from '@prisma/client';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 
+import { ActivityStatus } from '@/lib/stores/activitiesStore';
+
 import { ActivityCard } from './ActivityCard';
 import { ActivityShelfType } from '../../types';
 
@@ -51,7 +53,7 @@ const VirtualizedCardWrapper = React.memo(
     onAdd,
   }: {
     activity: ActivityRecommendation;
-    onAdd: (activity: ActivityRecommendation) => Promise<void>;
+    onAdd: (activity: ActivityRecommendation, status: ActivityStatus) => Promise<void>;
     shelf: ActivityShelfType;
   }) => {
     const { ref, inView } = useInView({
@@ -75,7 +77,7 @@ VirtualizedCardWrapper.displayName = 'VirtualizedCardWrapper';
 
 interface ActivityShelfProps {
   shelf: ActivityShelfType;
-  onAddActivity: (activity: ActivityRecommendation) => Promise<void>;
+  onAddActivity: (activity: ActivityRecommendation, status: ActivityStatus) => Promise<void>;
 }
 
 export function ActivityShelf({ shelf, onAddActivity }: ActivityShelfProps) {

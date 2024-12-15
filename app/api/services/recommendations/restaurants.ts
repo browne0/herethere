@@ -162,7 +162,7 @@ export const restaurantRecommendationService = {
   calculatePriceScore(restaurant: ActivityRecommendation, params: ScoringParams): number {
     const budgetMap: Record<TripBudget, PriceLevel[]> = {
       budget: ['PRICE_LEVEL_FREE', 'PRICE_LEVEL_INEXPENSIVE'],
-      moderate: ['PRICE_LEVEL_MODERATE'],
+      moderate: ['PRICE_LEVEL_INEXPENSIVE', 'PRICE_LEVEL_MODERATE', 'PRICE_LEVEL_EXPENSIVE'],
       luxury: ['PRICE_LEVEL_EXPENSIVE', 'PRICE_LEVEL_VERY_EXPENSIVE'],
     };
 

@@ -68,8 +68,6 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     },
   };
 
-  console.log(recommendationsData);
-
   // Get restaurant recommendations directly using the service
   const restaurantRecommendations = await restaurantRecommendationService.getRecommendations(
     recommendationsData.cityId,

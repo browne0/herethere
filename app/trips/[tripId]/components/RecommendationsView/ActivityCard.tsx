@@ -1,13 +1,14 @@
 import { useState } from 'react';
 
 import { ActivityRecommendation } from '@prisma/client';
-import { Heart, Loader2, Star, MapPin } from 'lucide-react';
+import { Heart, Loader2, Star, MapPin, CalendarPlus, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
 import { ActivityShelfType } from '../../types';
@@ -19,7 +20,7 @@ type MuseumType = keyof MuseumTypes;
 
 interface ActivityCardProps {
   activity: ActivityRecommendation;
-  onAdd: (activity: ActivityRecommendation) => Promise<void>;
+  onAdd: (activity: ActivityRecommendation, status: ActivityStatus) => Promise<void>;
   shelf: ActivityShelfType;
 }
 
@@ -50,7 +51,7 @@ function getDimensionsFromUrl(url: string): { width: number; height: number } | 
 function getBestImageUrl(images: ActivityImages | null): ImageUrl | null {
   if (!images?.urls?.length) return null;
 
-  const scoredUrls = images.urls.map((imageUrl, index) => {
+  const scoredUrls = images.urls.map(imageUrl => {
     let score = 0;
 
     // Prefer CDN URLs as they're likely optimized
@@ -128,27 +129,43 @@ const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null 
 
 export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [isFavorited, setIsFavorited] = useState(false);
-  const { activities } = useActivitiesStore();
-  const addedActivityIds = new Set(activities.map(a => a.recommendationId));
-  const isAdded = addedActivityIds.has(activity.id);
+  const { findActivityByRecommendationId, tripId, removeActivity } = useActivitiesStore();
 
-  // Parse the images JSON to get the photo reference
-  const images = activity.images as unknown as ActivityImages;
-  const photoUrl = getBestImageUrl(images);
+  const existingActivity = findActivityByRecommendationId(activity.id);
+  const currentStatus = existingActivity?.status || 'none';
 
-  // Safely extract photo reference
-  const handleAdd = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (isAdded || isLoading) return;
-
+  const handleAction = async (newStatus: ActivityStatus) => {
+    if (isLoading) return;
     setIsLoading(true);
+
     try {
-      await onAdd(activity);
+      // If clicking the same status, remove the activity
+      if (existingActivity && currentStatus === newStatus) {
+        const response = await fetch(`/api/trips/${tripId}/activities/${existingActivity.id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) throw new Error('Failed to remove activity');
+
+        removeActivity(existingActivity.id);
+        toast.success('Activity removed from trip');
+      } else {
+        // Existing add/update logic
+        await onAdd(activity, newStatus);
+      }
+    } catch (error) {
+      console.error('Error managing activity:', error);
+      toast.error('Error', {
+        description: 'Failed to manage activity. Please try again.',
+      });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // Parse the images JSON to get the photo reference
+  const images = activity.images as unknown as ActivityImages;
+  const photoUrl = getBestImageUrl(images);
 
   return (
     <div className="w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex-shrink-0">
@@ -187,9 +204,9 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
             <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
           </div>
 
-          <h3 className="font-medium text-sm leading-tight mb-2 line-clamp-2">{activity.name}</h3>
-          <p className="text-sm gap-1 mb-2 ">{getPrimaryTypeDisplay(activity)}</p>
-          <p className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
+          <h3 className="font-medium text-sm leading-tight line-clamp-2">{activity.name}</h3>
+          <p className="text-sm gap-1 text-gray-500 mb-2">{getPrimaryTypeDisplay(activity)}</p>
+          <p className="flex items-center gap-1.5 text-sm text-gray-500">
             <MapPin className="w-4 h-4 flex-shrink-0" />
             <span className="truncate">
               {(activity.location as { neighborhood: string })?.neighborhood ||
@@ -200,48 +217,53 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
           {/* Push button to bottom */}
           <div className="flex-grow" />
 
-          <Button
-            onClick={handleAdd}
-            disabled={isLoading || isAdded}
-            variant={isAdded ? 'outline' : 'default'}
-            className={`w-full ${
-              isAdded
-                ? 'text-green-600 border-green-200 bg-green-50 hover:bg-green-50 hover:text-green-600'
-                : ''
-            }`}
-          >
-            {isLoading ? (
-              <>
+          <div className="space-y-2">
+            <Button
+              onClick={() => handleAction('planned')}
+              disabled={isLoading}
+              variant={currentStatus === 'planned' ? 'default' : 'outline'}
+              className={`w-full ${
+                currentStatus === 'planned'
+                  ? 'bg-primary hover:bg-primary/90'
+                  : 'border-primary/20 hover:bg-primary/10'
+              }`}
+            >
+              {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Adding...
-              </>
-            ) : isAdded ? (
-              'Added to trip'
-            ) : (
-              'Add to trip'
-            )}
-          </Button>
-          <Button
-            onClick={handleAdd}
-            disabled={isLoading || isAdded}
-            variant={'ghost'}
-            className={`w-full border border-black text-black mt-2 ${
-              isAdded
-                ? 'text-green-600 border-green-200 bg-green-50 hover:bg-green-50 hover:text-green-600'
-                : ''
-            }`}
-          >
-            {isLoading ? (
-              <>
+              ) : (
+                <>
+                  {currentStatus === 'planned' ? (
+                    <Check className="w-4 h-4 mr-2" />
+                  ) : (
+                    <CalendarPlus className="w-4 h-4 mr-2" />
+                  )}
+                </>
+              )}
+              {currentStatus === 'planned' ? 'Added to trip' : 'Add to trip'}
+            </Button>
+
+            <Button
+              onClick={() => handleAction('interested')}
+              disabled={isLoading}
+              variant={currentStatus === 'interested' ? 'secondary' : 'outline'}
+              className={`w-full ${
+                currentStatus === 'interested'
+                  ? 'bg-purple-100 text-purple-900 hover:bg-purple-200'
+                  : 'hover:bg-purple-50'
+              }`}
+            >
+              {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                Adding...
-              </>
-            ) : isAdded ? (
-              'Marked as interested'
-            ) : (
-              'Interested'
-            )}
-          </Button>
+              ) : (
+                <Heart
+                  className={`w-4 h-4 mr-2 ${
+                    currentStatus === 'interested' ? 'fill-purple-900' : ''
+                  }`}
+                />
+              )}
+              Interested
+            </Button>
+          </div>
         </div>
       </div>
     </div>

@@ -43,7 +43,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
       alt={alt}
       className={`object-cover ${className}`}
       unoptimized
-      loading="eager"
+      loading="lazy"
     />
   );
 };

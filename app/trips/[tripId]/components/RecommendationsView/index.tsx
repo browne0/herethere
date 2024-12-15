@@ -3,7 +3,7 @@
 import { ActivityRecommendation } from '@prisma/client';
 import { toast } from 'sonner';
 
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import ActivityShelfComponent from './ActivityShelf';
 import { ActivityShelfType } from '../../types';
@@ -13,34 +13,59 @@ interface RecommendationsViewProps {
 }
 
 export function RecommendationsView({ shelves }: RecommendationsViewProps) {
-  const { addActivity, tripId } = useActivitiesStore();
+  const { addActivity, tripId, updateActivityStatus, findActivityByRecommendationId } =
+    useActivitiesStore();
 
-  const handleAddActivity = async (activity: ActivityRecommendation) => {
+  const handleAddActivity = async (activity: ActivityRecommendation, newStatus: ActivityStatus) => {
     try {
-      const response = await fetch(`/api/trips/${tripId}/activities`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          recommendationId: activity.id,
-          startTime: new Date().toISOString(), // This will be properly scheduled by the backend
-        }),
-      });
+      const existingActivity = findActivityByRecommendationId(activity.id);
 
-      if (!response.ok) throw new Error('Failed to add activity');
+      if (existingActivity) {
+        // Update existing activity
+        const response = await fetch(`/api/trips/${tripId}/activities/${existingActivity.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: newStatus }),
+        });
 
-      const { activity: newActivity } = await response.json();
+        if (!response.ok) throw new Error('Failed to update activity');
 
-      addActivity(newActivity);
+        // Update in store
+        updateActivityStatus(existingActivity.id, newStatus);
 
-      toast.success('Activity added!', {
-        description: "We'll schedule this at the best time for your trip.",
-      });
+        toast.success('Activity updated!', {
+          description:
+            newStatus === 'planned'
+              ? "We'll schedule this at the best time."
+              : "We'll keep this in mind when planning.",
+        });
+      } else {
+        // Create new activity with status
+        const response = await fetch(`/api/trips/${tripId}/activities`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            recommendationId: activity.id,
+            status: newStatus,
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to add activity');
+
+        const { activity: newActivity } = await response.json();
+        addActivity(newActivity);
+
+        toast.success('Activity added!', {
+          description:
+            newStatus === 'planned'
+              ? "We'll optimize your schedule to fit this in."
+              : "We'll keep this in your interests list.",
+        });
+      }
     } catch (error) {
-      console.error('Error adding activity:', error);
+      console.error('Error managing activity:', error);
       toast.error('Error', {
-        description: 'Failed to add activity. Please try again.',
+        description: 'Failed to manage activity. Please try again.',
       });
     }
   };

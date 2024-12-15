@@ -4,6 +4,7 @@ import { addMinutes, isSameDay } from 'date-fns';
 
 import { prisma } from '@/lib/db';
 import { getTransitTime } from '@/lib/maps/utils';
+import { ActivityStatus } from '@/lib/stores/activitiesStore';
 
 import { findAvailableSlots, scoreTimeSlot } from '../trips/[tripId]/activities/utils';
 
@@ -15,6 +16,20 @@ interface ScheduleActivityParams {
   tripId: string;
   userId: string;
   recommendationId: string;
+}
+
+interface UpdateActivityParams {
+  tripId: string;
+  activityId: string;
+  userId: string;
+  status: ActivityStatus;
+}
+
+interface CreateActivityParams {
+  tripId: string;
+  userId: string;
+  recommendationId: string;
+  status: ActivityStatus;
 }
 
 interface TimeSlotResult {
@@ -197,5 +212,117 @@ export const activityService = {
     });
 
     return deletedActivity;
+  },
+
+  async updateActivity({ tripId, activityId, userId, status }: UpdateActivityParams) {
+    // Validate trip access first
+    const trip = await this.validateTripAccess(tripId, userId);
+
+    // Get the current activity
+    const currentActivity = await prisma.itineraryActivity.findUnique({
+      where: { id: activityId },
+      include: { recommendation: true },
+    });
+
+    if (!currentActivity) {
+      throw new Error('Activity not found');
+    }
+
+    // If changing to planned status, we need to schedule it
+    if (status === 'planned') {
+      // Find the best time slot using existing service method
+      const { bestSlot, bestTransitTime } = await this.findBestTimeSlot(
+        trip,
+        currentActivity.recommendation,
+        trip.activities
+      );
+
+      // Calculate start and end times
+      const startTime = addMinutes(bestSlot, bestTransitTime);
+      const endTime = addMinutes(startTime, currentActivity.recommendation.duration);
+
+      return await prisma.itineraryActivity.update({
+        where: { id: activityId },
+        data: {
+          status,
+          startTime,
+          endTime,
+          transitTimeFromPrevious: bestTransitTime,
+        },
+        include: {
+          recommendation: true,
+        },
+      });
+    }
+
+    // For other statuses (interested, etc), clear scheduling data
+    return await prisma.itineraryActivity.update({
+      where: { id: activityId },
+      data: {
+        status,
+        // Clear scheduling data if not planned
+        startTime: new Date(),
+        endTime: new Date(),
+        transitTimeFromPrevious: 0,
+      },
+      include: {
+        recommendation: true,
+      },
+    });
+  },
+
+  async createActivity({ tripId, userId, recommendationId, status }: CreateActivityParams) {
+    // Validate trip access first
+    const trip = await this.validateTripAccess(tripId, userId);
+
+    // Get the recommendation
+    const recommendation = await prisma.activityRecommendation.findUnique({
+      where: { id: recommendationId },
+    });
+
+    if (!recommendation) {
+      throw new Error('Activity recommendation not found');
+    }
+
+    // For 'interested' status, create without scheduling
+    if (status === 'interested') {
+      return await prisma.itineraryActivity.create({
+        data: {
+          tripId,
+          recommendationId,
+          status,
+          startTime: new Date(),
+          endTime: new Date(),
+          transitTimeFromPrevious: 0,
+        },
+        include: {
+          recommendation: true,
+        },
+      });
+    }
+
+    // For 'planned' status, use the scheduling logic
+    const { bestSlot, bestTransitTime } = await this.findBestTimeSlot(
+      trip,
+      recommendation,
+      trip.activities
+    );
+
+    const startTime = addMinutes(bestSlot, bestTransitTime);
+    const endTime = addMinutes(startTime, recommendation.duration);
+
+    return await prisma.itineraryActivity.create({
+      data: {
+        tripId,
+        recommendationId,
+        status,
+        startTime,
+        endTime,
+        transitTimeFromPrevious: bestTransitTime,
+      },
+      include: {
+        recommendation: true,
+      },
+    });
   },
 };
