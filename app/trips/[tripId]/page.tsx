@@ -12,6 +12,7 @@ import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
 import { ParsedTrip } from './types';
+import { spaWellnessRecommendationService } from '@/app/api/services/recommendations/spas';
 
 export default async function TripPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
@@ -99,6 +100,11 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     recommendationsData.preferences
   );
 
+  const spaAndWellnessRecommendations = await spaWellnessRecommendationService.getRecommendations(
+    recommendationsData.cityId,
+    recommendationsData.preferences
+  );
+
   // Format recommendations into a shelf
   const mustSeeShelf = {
     type: 'must-see',
@@ -142,6 +148,13 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     activities: nightlifeRecommendations,
   };
 
+  const spasAndWellnessShelf = {
+    type: 'spas',
+    title: 'Spas & Wellness',
+    description: `From luxury day spas to premium wellness experiences`,
+    activities: spaAndWellnessRecommendations,
+  };
+
   const shelves = [
     mustSeeShelf,
     restaurantShelf,
@@ -149,6 +162,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     museumsShelf,
     historicSitesShelf,
     nightlifeShelf,
+    spasAndWellnessShelf,
   ];
 
   return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;

@@ -8,6 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { ActivityShelfType } from '../../types';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -17,6 +19,7 @@ type MuseumType = keyof MuseumTypes;
 interface ActivityCardProps {
   activity: ActivityRecommendation;
   onAdd: (activity: ActivityRecommendation) => Promise<void>;
+  shelf: ActivityShelfType;
 }
 
 interface ActivityImages {
@@ -122,7 +125,7 @@ const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null 
   return null;
 };
 
-export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
+export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const { activities } = useActivitiesStore();
@@ -146,16 +149,10 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
     }
   };
 
-  const handleFavorite = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsFavorited(!isFavorited);
-  };
-
   return (
     <div className="w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex-shrink-0">
       {/* Fixed height container for consistent card sizing */}
-      <div className="h-80 flex flex-col">
+      <div className="h-96 flex flex-col">
         {/* Image container with fixed aspect ratio */}
         <div className="relative w-full h-40">
           {photoUrl ? (
@@ -170,21 +167,13 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
               <MapPin className="w-8 h-8 text-gray-400" />
             </div>
           )}
-          {activity.isMustSee && (
+          {activity.isMustSee && shelf.type !== 'must-see' && (
             <div className="absolute top-3 left-3">
               <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
                 Must See
               </Badge>
             </div>
           )}
-          <button
-            onClick={handleFavorite}
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/90 hover:bg-white transition-colors"
-          >
-            <Heart
-              className={`w-5 h-5 ${isFavorited ? 'fill-current text-red-500' : 'text-gray-600'}`}
-            />
-          </button>
         </div>
 
         {/* Content container */}
@@ -210,26 +199,19 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
           {/* Push button to bottom */}
           <div className="flex-grow" />
 
-          <button
+          <Button
             onClick={handleAdd}
             disabled={isLoading || isAdded}
-            className={`
-              w-full py-2 px-4 rounded-lg
-              font-medium text-sm
-              transition-all duration-200
-              flex items-center justify-center gap-2
-              ${
-                isAdded
-                  ? 'bg-green-50 text-green-600 border border-green-200 cursor-default'
-                  : isLoading
-                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                    : 'bg-gray-900 text-white hover:bg-gray-800'
-              }
-            `}
+            variant={isAdded ? 'outline' : 'default'}
+            className={`w-full ${
+              isAdded
+                ? 'text-green-600 border-green-200 bg-green-50 hover:bg-green-50 hover:text-green-600'
+                : ''
+            }`}
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 Adding...
               </>
             ) : isAdded ? (
@@ -237,7 +219,28 @@ export function ActivityCard({ activity, onAdd }: ActivityCardProps) {
             ) : (
               'Add to trip'
             )}
-          </button>
+          </Button>
+          <Button
+            onClick={handleAdd}
+            disabled={isLoading || isAdded}
+            variant={'ghost'}
+            className={`w-full border border-black text-black mt-2 ${
+              isAdded
+                ? 'text-green-600 border-green-200 bg-green-50 hover:bg-green-50 hover:text-green-600'
+                : ''
+            }`}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Adding...
+              </>
+            ) : isAdded ? (
+              'Marked as interested'
+            ) : (
+              'Interested'
+            )}
+          </Button>
         </div>
       </div>
     </div>

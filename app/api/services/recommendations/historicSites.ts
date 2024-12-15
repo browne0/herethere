@@ -42,7 +42,6 @@ export const historicSitesRecommendationService = {
         ],
         seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },
-      take: 50,
     });
 
     // Score sites with our historically-focused algorithm

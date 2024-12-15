@@ -47,10 +47,12 @@ NavButton.displayName = 'NavButton';
 const VirtualizedCardWrapper = React.memo(
   ({
     activity,
+    shelf,
     onAdd,
   }: {
     activity: ActivityRecommendation;
     onAdd: (activity: ActivityRecommendation) => Promise<void>;
+    shelf: ActivityShelfType;
   }) => {
     const { ref, inView } = useInView({
       threshold: 0,
@@ -60,7 +62,7 @@ const VirtualizedCardWrapper = React.memo(
     return (
       <div ref={ref} className="flex-shrink-0">
         {inView ? (
-          <ActivityCard activity={activity} onAdd={onAdd} />
+          <ActivityCard shelf={shelf} activity={activity} onAdd={onAdd} />
         ) : (
           <div className="w-72 h-80 bg-gray-100 animate-pulse rounded-xl flex-shrink-0" />
         )}
@@ -169,7 +171,12 @@ export function ActivityShelf({ shelf, onAddActivity }: ActivityShelfProps) {
         onScroll={handleScroll}
       >
         {shelf.activities.map(activity => (
-          <VirtualizedCardWrapper key={activity.id} activity={activity} onAdd={onAddActivity} />
+          <VirtualizedCardWrapper
+            shelf={shelf}
+            key={activity.id}
+            activity={activity}
+            onAdd={onAddActivity}
+          />
         ))}
       </div>
     </div>

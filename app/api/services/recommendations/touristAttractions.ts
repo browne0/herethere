@@ -39,7 +39,6 @@ export const touristAttractionService = {
         // Only show seasonally appropriate activities
         seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },
-      take: 50,
     });
 
     // 2. Score attractions

@@ -20,6 +20,8 @@ import {
   isCityCoastal,
   PREDEFINED_CITY_AREAS,
   fieldMask,
+  PLACE_INDICATORS,
+  RESTAURANT_TYPES,
 } from '../constants';
 
 dotenv.config({ path: ['.env.local', '.env'] });
@@ -97,241 +99,9 @@ async function checkImageExists(key: string): Promise<boolean> {
   }
 }
 
-// Helper to generate image key
 function generateImageKey(photoReference: string, width: number, height: number): string {
   const cleanReference = photoReference.replace(/[^a-zA-Z0-9]/g, '-');
   return `places/${cleanReference}-${width}x${height}.jpg`;
-}
-
-async function processNightlifeInArea(
-  area: SearchArea,
-  city: City,
-  existingPlaceMap: Map<string, Date>,
-  processedPlaceIds: Set<string>,
-  stats: SyncStats,
-  logger: Logger
-): Promise<void> {
-  const nightlifeTypes = CategoryMapping[PlaceCategory.NIGHTLIFE];
-
-  for (const nightlifeType of nightlifeTypes.includedTypes) {
-    const request = {
-      locationRestriction: {
-        circle: {
-          center: area.location,
-          radius: area.radius,
-        },
-      },
-      includedTypes: [nightlifeType],
-      excludedTypes: [...nightlifeTypes.excludedTypes],
-      maxResultCount: 20,
-      languageCode: 'en',
-    };
-
-    try {
-      const response = await placesClient.searchNearby(request, {
-        otherArgs: {
-          headers: {
-            'X-Goog-FieldMask': fieldMask,
-          },
-        },
-      });
-
-      const places = response[0].places!;
-
-      for (const place of places) {
-        stats.processed++;
-
-        if (processedPlaceIds.has(place.id!)) {
-          stats.skipped++;
-          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-        processedPlaceIds.add(place.id!);
-
-        const lastSynced = existingPlaceMap.get(place.id!);
-        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-          stats.skipped++;
-          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-
-        if (validatePlace(place, PlaceCategory.NIGHTLIFE)) {
-          await processPlace(place, city, PlaceCategory.NIGHTLIFE, area, logger);
-          stats.added++;
-          stats.byType[PlaceCategory.NIGHTLIFE]++;
-          stats.byArea[area.name]++;
-
-          if (place.types!.includes('bar')) {
-            stats.nightlifeSubtypes.bars++;
-          } else if (place.types!.includes('night_club')) {
-            stats.nightlifeSubtypes.clubs++;
-          }
-        } else {
-          stats.skipped++;
-          logger.info(
-            `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
-          );
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      logger.error(`Error processing ${nightlifeType} in ${area.name}:`, error as Error);
-      stats.errors++;
-    }
-  }
-}
-
-async function processRestaurantsInArea(
-  area: SearchArea,
-  city: City,
-  existingPlaceMap: Map<string, Date>,
-  processedPlaceIds: Set<string>,
-  stats: SyncStats,
-  logger: Logger
-): Promise<void> {
-  const restaurantTypes = CategoryMapping[PlaceCategory.RESTAURANT];
-
-  for (const restaurantType of restaurantTypes.includedTypes) {
-    const request = {
-      locationRestriction: {
-        circle: {
-          center: area.location,
-          radius: area.radius,
-        },
-      },
-      includedTypes: [restaurantType],
-      excludedTypes: [...restaurantTypes.excludedTypes],
-      maxResultCount: 20,
-      languageCode: 'en',
-    };
-
-    try {
-      const response = await placesClient.searchNearby(request, {
-        otherArgs: {
-          headers: {
-            'X-Goog-FieldMask': fieldMask,
-          },
-        },
-      });
-
-      const places = response[0].places!;
-
-      for (const place of places) {
-        stats.processed++;
-
-        if (processedPlaceIds.has(place.id!)) {
-          stats.skipped++;
-          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-        processedPlaceIds.add(place.id!);
-
-        const lastSynced = existingPlaceMap.get(place.id!);
-        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-          stats.skipped++;
-          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-
-        if (validatePlace(place, PlaceCategory.RESTAURANT)) {
-          await processPlace(place, city, PlaceCategory.RESTAURANT, area, logger);
-          stats.added++;
-          stats.byType[PlaceCategory.RESTAURANT]++;
-          stats.byArea[area.name]++;
-        } else {
-          stats.skipped++;
-          logger.info(
-            `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
-          );
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      logger.error(`Error processing ${restaurantType} in ${area.name}:`, error as Error);
-      stats.errors++;
-    }
-  }
-}
-
-async function processHistoricPlacesInArea(
-  area: SearchArea,
-  city: City,
-  existingPlaceMap: Map<string, Date>,
-  processedPlaceIds: Set<string>,
-  stats: SyncStats,
-  logger: Logger
-): Promise<void> {
-  const historicTypes = CategoryMapping[PlaceCategory.HISTORIC];
-
-  for (const historicType of historicTypes.includedTypes) {
-    const request = {
-      locationRestriction: {
-        circle: {
-          center: area.location,
-          radius: area.radius,
-        },
-      },
-      includedTypes: [historicType],
-      excludedTypes: [...historicTypes.excludedTypes],
-      maxResultCount: 20,
-      languageCode: 'en',
-    };
-
-    try {
-      const response = await placesClient.searchNearby(request, {
-        otherArgs: {
-          headers: {
-            'X-Goog-FieldMask': fieldMask,
-          },
-        },
-      });
-
-      const places = response[0].places!;
-
-      for (const place of places) {
-        stats.processed++;
-
-        if (processedPlaceIds.has(place.id!)) {
-          stats.skipped++;
-          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-        processedPlaceIds.add(place.id!);
-
-        const lastSynced = existingPlaceMap.get(place.id!);
-        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-          stats.skipped++;
-          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-
-        if (validatePlace(place, PlaceCategory.HISTORIC)) {
-          await processPlace(place, city, PlaceCategory.HISTORIC, area, logger);
-          stats.added++;
-          stats.byType[PlaceCategory.HISTORIC]++;
-          stats.byArea[area.name]++;
-        } else {
-          stats.skipped++;
-          logger.info(
-            `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
-          );
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-
-      await new Promise(resolve => setTimeout(resolve, 500));
-    } catch (error) {
-      logger.error(`Error processing ${historicType} in ${area.name}:`, error as Error);
-      stats.errors++;
-    }
-  }
 }
 
 async function fetchAndUploadPhotos(
@@ -349,8 +119,7 @@ async function fetchAndUploadPhotos(
 
       const key = generateImageKey(photoId!, width, height);
 
-      const googleUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=${height}&maxWidthPx=${width}&key=${process
-        .env.GOOGLE_MAPS_API_KEY!}`;
+      const googleUrl = `https://places.googleapis.com/v1/${photo.name}/media?maxHeightPx=${height}&maxWidthPx=${width}&key=${process.env.GOOGLE_MAPS_API_KEY!}`;
 
       const exists = await checkImageExists(key);
       if (exists) {
@@ -397,6 +166,7 @@ async function fetchAndUploadPhotos(
   return results;
 }
 
+// Validation Functions
 function determineRatingTier(rating: number): RatingTier {
   if (rating >= 4.7) return 'EXCEPTIONAL';
   if (rating >= 4.3) return 'HIGH';
@@ -441,21 +211,10 @@ function determineDuration(
     NIGHTLIFE: 120,
     BEACH: 180,
     RESTAURANT: 90,
+    SPA: 180,
   };
 
   return durations[type];
-}
-
-function determinePlaceCategory(place: protos.google.maps.places.v1.IPlace): PlaceCategory | null {
-  for (const [category, config] of Object.entries(CategoryMapping)) {
-    const matchesIncluded = config.includedTypes.some(t => place.types!.includes(t));
-    const matchesExcluded = config.excludedTypes?.some(t => place.types!.includes(t)) || false;
-
-    if (matchesIncluded && !matchesExcluded) {
-      return category as PlaceCategory;
-    }
-  }
-  return null;
 }
 
 function isUpscaleRestaurant(place: protos.google.maps.places.v1.IPlace): boolean {
@@ -469,47 +228,13 @@ function isUpscaleRestaurant(place: protos.google.maps.places.v1.IPlace): boolea
   );
 }
 
-function hasBeachIndicators(place: protos.google.maps.places.v1.IPlace): boolean {
-  return place.types!.includes('beach') || place.displayName!.text!.toLowerCase().includes('beach');
-}
-
 function hasLateNightHours(place: protos.google.maps.places.v1.IPlace): boolean {
   if (!place.regularOpeningHours?.periods) return false;
 
-  return place.regularOpeningHours.periods.some(
-    (period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod) => {
-      const closeHour = period.close?.hour || 0;
-      return closeHour >= 21 || closeHour < 4;
-    }
-  );
-}
-
-function validatePlace(
-  place: protos.google.maps.places.v1.IPlace,
-  category: PlaceCategory
-): boolean {
-  if (!place.rating || !place.userRatingCount) return false;
-
-  const thresholds = {
-    rating: getBaseRatingThreshold(category, place),
-    reviews: getBaseReviewThreshold(category, place),
-  };
-
-  const meetsBaseThresholds =
-    place.rating >= thresholds.rating && place.userRatingCount >= thresholds.reviews;
-
-  if (!meetsBaseThresholds) return false;
-
-  switch (category) {
-    case PlaceCategory.RESTAURANT:
-      return validateRestaurant(place);
-    case PlaceCategory.NIGHTLIFE:
-      return validateNightlife(place);
-    case PlaceCategory.HISTORIC:
-      return validateHistoric(place);
-    default:
-      return true;
-  }
+  return place.regularOpeningHours.periods.some(period => {
+    const closeHour = period.close?.hour || 0;
+    return closeHour >= 21 || closeHour < 4;
+  });
 }
 
 function getBaseRatingThreshold(
@@ -539,13 +264,96 @@ function getBaseReviewThreshold(
       return 400;
     case PlaceCategory.NIGHTLIFE:
       return 300;
+    case PlaceCategory.SPA:
+      return 200;
     default:
       return 500;
   }
 }
 
-function validateRestaurant(place: protos.google.maps.places.v1.IPlace): boolean {
+function validatePlace(
+  place: protos.google.maps.places.v1.IPlace,
+  category: PlaceCategory
+): boolean {
+  // First check if we have the basic required fields
+  if (!place.rating || !place.userRatingCount) return false;
   if (place.businessStatus !== 'OPERATIONAL') return false;
+
+  const thresholds = {
+    rating: getBaseRatingThreshold(category, place),
+    reviews: getBaseReviewThreshold(category, place),
+  };
+
+  // Check base rating and review thresholds
+  if (place.rating < thresholds.rating || place.userRatingCount < thresholds.reviews) {
+    return false;
+  }
+
+  // Now check category-specific requirements
+  switch (category) {
+    case PlaceCategory.RESTAURANT:
+      return validateRestaurant(place);
+    case PlaceCategory.NIGHTLIFE:
+      return validateNightlife(place);
+    case PlaceCategory.HISTORIC:
+      return validateHistoric(place);
+    default:
+      return true;
+  }
+}
+
+function validateSpa(place: protos.google.maps.places.v1.IPlace): boolean {
+  if (place.businessStatus !== 'OPERATIONAL') return false;
+
+  // Must have operating hours
+  if (!place.regularOpeningHours?.periods?.length) return false;
+
+  // Medical spa indicators with word boundaries
+  const medicalTerms = [
+    /\bmed(?:ical)?\b/i,
+    /\bclinic\b/i,
+    /\bsurgery\b/i,
+    /\bmedispa\b/i,
+    /\bmedspa\b/i,
+    /\bdermatology\b/i,
+    /\bcosmetic surgery\b/i,
+    /\bplastic surgery\b/i,
+    /\baesthetic clinic\b/i,
+    /\bbeauty clinic\b/i,
+    /\bmedical center\b/i,
+    /\btreatment center\b/i,
+  ];
+
+  // Check name
+  const name = place.displayName?.text?.toLowerCase() || '';
+  if (medicalTerms.some(term => term.test(name))) return false;
+
+  // Check description
+  const description = place.editorialSummary?.text?.toLowerCase() || '';
+  if (medicalTerms.some(term => term.test(description))) return false;
+
+  // Check place types for medical indicators
+  const medicalTypes = new Set([
+    'doctor',
+    'health',
+    'medical_clinic',
+    'pharmacy',
+    'physiotherapist',
+    'hospital',
+  ]);
+  if (place.types?.some(type => medicalTypes.has(type))) return false;
+
+  // Higher quality threshold for spas
+  const minRating = 4.3;
+  const minReviews = 300;
+
+  if (!place.rating || !place.userRatingCount) return false;
+  if (place.rating < minRating || place.userRatingCount < minReviews) return false;
+
+  return true;
+}
+
+function validateRestaurant(place: protos.google.maps.places.v1.IPlace): boolean {
   if (place.dineIn === false) return false;
   if (place.servesLunch === false && place.servesDinner === false) return false;
   if (
@@ -559,7 +367,6 @@ function validateRestaurant(place: protos.google.maps.places.v1.IPlace): boolean
 }
 
 function validateNightlife(place: protos.google.maps.places.v1.IPlace): boolean {
-  if (place.businessStatus !== 'OPERATIONAL') return false;
   const hasLateHours = hasLateNightHours(place);
   if (!hasLateHours) return false;
   if (
@@ -574,8 +381,6 @@ function validateNightlife(place: protos.google.maps.places.v1.IPlace): boolean 
 }
 
 function validateHistoric(place: protos.google.maps.places.v1.IPlace): boolean {
-  if (place.businessStatus !== 'OPERATIONAL') return false;
-
   const summary = (place.editorialSummary?.text || '').toLowerCase();
   const hasHistoricalSummary =
     summary.includes('historic') ||
@@ -596,6 +401,48 @@ function validateHistoric(place: protos.google.maps.places.v1.IPlace): boolean {
   return hasHistoricalSummary || hasMultipleHistoricTypes;
 }
 
+// Stats Update Functions
+function updateRestaurantStats(place: protos.google.maps.places.v1.IPlace, stats: SyncStats): void {
+  stats.byType[PlaceCategory.RESTAURANT]++;
+
+  const isUpscale = isUpscaleRestaurant(place);
+  stats.restaurantSubtypes[isUpscale ? 'upscale' : 'standard']++;
+
+  // Fix: Type check before indexing
+  place.types!.forEach(type => {
+    if (type in RESTAURANT_TYPES) {
+      // Now TypeScript knows this is a valid key
+      stats.restaurantSubtypes.byType[type] = (stats.restaurantSubtypes.byType[type] || 0) + 1;
+    }
+  });
+}
+
+function updateNightlifeStats(place: protos.google.maps.places.v1.IPlace, stats: SyncStats): void {
+  stats.byType[PlaceCategory.NIGHTLIFE]++;
+
+  if (place.types!.includes('bar')) {
+    stats.nightlifeSubtypes.bars++;
+  } else if (place.types!.includes('night_club')) {
+    stats.nightlifeSubtypes.clubs++;
+  }
+}
+
+function updateCategoryStats(
+  place: protos.google.maps.places.v1.IPlace,
+  category: PlaceCategory,
+  stats: SyncStats
+): void {
+  stats.byType[category]++;
+
+  if (category === PlaceCategory.PARK) {
+    const isBotanical = place.types!.some(t =>
+      PLACE_INDICATORS.PARK.BOTANICAL.has(t.toLowerCase())
+    );
+    stats.parkSubtypes[isBotanical ? 'botanical' : 'urban']++;
+  }
+}
+
+// Place Processing
 async function processPlace(
   place: protos.google.maps.places.v1.IPlace,
   city: City,
@@ -655,10 +502,7 @@ async function processPlace(
       } as unknown as Prisma.InputJsonValue,
 
       openingHours: place.regularOpeningHours as unknown as Prisma.InputJsonValue,
-      availableDays:
-        place.regularOpeningHours?.periods?.map(
-          (p: protos.google.maps.places.v1.Place.OpeningHours.IPeriod) => p.open!.day!
-        ) || [],
+      availableDays: place.regularOpeningHours?.periods?.map(period => period.open!.day!) || [],
 
       googlePlaceId: place.id,
       lastSyncedAt: new Date(),
@@ -686,43 +530,7 @@ async function processPlace(
   }
 }
 
-async function searchNearbyPlaces(
-  area: SearchArea,
-  config: (typeof CategoryMapping)[keyof typeof CategoryMapping],
-  stats: SyncStats,
-  logger: Logger
-): Promise<protos.google.maps.places.v1.IPlace[]> {
-  stats.apiCalls.searchNearby++;
-  try {
-    const request = {
-      locationRestriction: {
-        circle: {
-          center: area.location,
-          radius: area.radius,
-        },
-      },
-      includedTypes: config.includedTypes,
-      excludedTypes: config.excludedTypes,
-      maxResultCount: 20,
-      languageCode: 'en',
-    };
-
-    const response = await placesClient.searchNearby(request, {
-      otherArgs: {
-        headers: {
-          'X-Goog-FieldMask': fieldMask,
-        },
-      },
-    });
-
-    return response[0].places!;
-  } catch (error) {
-    logger.error('Error in searchNearby:', error as Error);
-    return [];
-  }
-}
-
-async function processCityArea(
+async function processPlacesByType(
   area: SearchArea,
   city: City,
   existingPlaceMap: Map<string, Date>,
@@ -733,133 +541,116 @@ async function processCityArea(
   logger.info(`\nProcessing area: ${area.name}`);
   stats.byArea[area.name] = 0;
 
+  // Process each category's types individually
   for (const [category, config] of Object.entries(CategoryMapping)) {
-    if (category === PlaceCategory.RESTAURANT) {
-      await processRestaurantsInArea(
-        area,
-        city,
-        existingPlaceMap,
-        processedPlaceIds,
-        stats,
-        logger
-      );
-    } else if (category === PlaceCategory.HISTORIC) {
-      await processHistoricPlacesInArea(
-        area,
-        city,
-        existingPlaceMap,
-        processedPlaceIds,
-        stats,
-        logger
-      );
-    } else if (category === PlaceCategory.NIGHTLIFE) {
-      await processNightlifeInArea(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
-    } else {
-      logger.info(`\n🔍 Searching for ${category} in ${area.name}...`);
-      const places = await searchNearbyPlaces(area, config, stats, logger);
+    // Uncomment to only run this script for certain categories
+    if (category !== 'SPA') continue;
 
-      for (const place of places) {
-        stats.processed++;
+    logger.info(`\n🔍 Processing ${category} types in ${area.name}...`);
 
-        if (processedPlaceIds.has(place.id!)) {
-          stats.skipped++;
-          logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
-        processedPlaceIds.add(place.id!);
+    for (const placeType of config.includedTypes) {
+      logger.info(`\n  📍 Searching for type: ${placeType}`);
 
-        const lastSynced = existingPlaceMap.get(place.id!);
-        if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-          stats.skipped++;
-          logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
-          continue;
-        }
+      const request = {
+        locationRestriction: {
+          circle: {
+            center: area.location,
+            radius: area.radius,
+          },
+        },
+        includedTypes: [placeType],
+        excludedTypes: config.excludedTypes,
+        maxResultCount: 20,
+        languageCode: 'en',
+      };
 
-        try {
-          const placeCategory = determinePlaceCategory(place);
-          if (!placeCategory || !validatePlace(place, placeCategory)) {
+      try {
+        stats.apiCalls.searchNearby++;
+        const response = await placesClient.searchNearby(request, {
+          otherArgs: {
+            headers: {
+              'X-Goog-FieldMask': fieldMask,
+            },
+          },
+        });
+
+        const places = response[0].places || [];
+
+        for (const place of places) {
+          stats.processed++;
+
+          if (processedPlaceIds.has(place.id!)) {
             stats.skipped++;
-            logger.info(
-              `Skipped (invalid/failed validation): ${place.displayName!.text} in ${area.name}`
-            );
+            logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
+            continue;
+          }
+          processedPlaceIds.add(place.id!);
+
+          const lastSynced = existingPlaceMap.get(place.id!);
+          if (
+            lastSynced &&
+            new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)
+          ) {
+            stats.skipped++;
+            logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
             continue;
           }
 
-          await processPlace(place, city, placeCategory, area, logger);
-          stats.added++;
-          stats.byType[placeCategory]++;
-          stats.byArea[area.name]++;
+          try {
+            // Special handling for different categories
+            switch (category) {
+              case PlaceCategory.RESTAURANT:
+                if (validateRestaurant(place)) {
+                  await processPlace(place, city, PlaceCategory.RESTAURANT, area, logger);
+                  updateRestaurantStats(place, stats);
+                }
+                break;
 
+              case PlaceCategory.NIGHTLIFE:
+                if (validateNightlife(place)) {
+                  await processPlace(place, city, PlaceCategory.NIGHTLIFE, area, logger);
+                  updateNightlifeStats(place, stats);
+                }
+                break;
+
+              case PlaceCategory.HISTORIC:
+                if (validateHistoric(place)) {
+                  await processPlace(place, city, PlaceCategory.HISTORIC, area, logger);
+                  stats.byType[PlaceCategory.HISTORIC]++;
+                }
+                break;
+
+              case PlaceCategory.SPA:
+                if (validateSpa(place)) {
+                  await processPlace(place, city, PlaceCategory.SPA, area, logger);
+                  stats.byType[PlaceCategory.SPA]++;
+                }
+                break;
+
+              default:
+                if (validatePlace(place, category as PlaceCategory)) {
+                  await processPlace(place, city, category as PlaceCategory, area, logger);
+                  updateCategoryStats(place, category as PlaceCategory, stats);
+                }
+            }
+
+            stats.added++;
+            stats.byArea[area.name]++;
+          } catch (error) {
+            logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
+            stats.errors++;
+          }
+
+          // Rate limiting
           await new Promise(resolve => setTimeout(resolve, 200));
-        } catch (error) {
-          logger.error(`Error processing place ${place.displayName!.text}:`, error as Error);
-          stats.errors++;
         }
-      }
-    }
-  }
-
-  if (isCityCoastal(city)) {
-    await processCoastalFeatures(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
-  }
-}
-
-async function processCoastalFeatures(
-  area: SearchArea,
-  city: City,
-  existingPlaceMap: Map<string, Date>,
-  processedPlaceIds: Set<string>,
-  stats: SyncStats,
-  logger: Logger
-): Promise<void> {
-  logger.info(`\nSearching for coastal features in ${area.name}...`);
-
-  const places = await searchNearbyPlaces(
-    area,
-    {
-      includedTypes: ['beach'],
-      excludedTypes: [],
-      requiresValidation: true,
-    },
-    stats,
-    logger
-  );
-
-  for (const place of places) {
-    if (hasBeachIndicators(place)) {
-      stats.processed++;
-
-      if (processedPlaceIds.has(place.id!)) {
-        stats.skipped++;
-        logger.info(`Skipped (already processed): ${place.displayName!.text} in ${area.name}`);
-        continue;
-      }
-      processedPlaceIds.add(place.id!);
-
-      const lastSynced = existingPlaceMap.get(place.id!);
-      if (lastSynced && new Date() < new Date(lastSynced.getTime() + 30 * 24 * 60 * 60 * 1000)) {
-        stats.skipped++;
-        logger.info(`Skipped (recently synced): ${place.displayName!.text} in ${area.name}`);
-        continue;
-      }
-
-      try {
-        await processPlace(place, city, PlaceCategory.BEACH, area, logger);
-        stats.added++;
-        stats.byType[PlaceCategory.BEACH] = (stats.byType[PlaceCategory.BEACH] || 0) + 1;
-        stats.byArea[area.name] = (stats.byArea[area.name] || 0) + 1;
-
-        const isBeach = place.types!.includes('beach');
-        stats.beachSubtypes[isBeach ? 'beaches' : 'waterfront']++;
-
-        await new Promise(resolve => setTimeout(resolve, 200));
       } catch (error) {
-        logger.error(
-          `Error processing coastal feature ${place.displayName!.text}:`,
-          error as Error
-        );
+        logger.error(`Error processing type ${placeType} in ${area.name}:`, error as Error);
         stats.errors++;
       }
+
+      // Rate limiting between type searches
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
   }
 }
@@ -937,21 +728,17 @@ async function populateCityData(cityId: string, logger: Logger) {
 
     logger.info(`Starting comprehensive data sync for ${city.name}...`);
 
-    logger.info('\nFetching existing places...');
     const existingPlaces = await prisma.activityRecommendation.findMany({
       where: { cityId },
       select: { googlePlaceId: true, lastSyncedAt: true },
     });
-    logger.info(`Found ${existingPlaces.length} existing places`);
 
     const existingPlaceMap = new Map(existingPlaces.map(p => [p.googlePlaceId!, p.lastSyncedAt]));
     const processedPlaceIds = new Set<string>();
-
     const searchAreas = generateSearchAreas(city);
-    logger.info(`Generated ${searchAreas.length} search areas`);
 
     for (const area of searchAreas) {
-      await processCityArea(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
+      await processPlacesByType(area, city, existingPlaceMap, processedPlaceIds, stats, logger);
     }
 
     logger.success('\n✨ Sync completed!');
@@ -965,7 +752,16 @@ async function populateCityData(cityId: string, logger: Logger) {
 }
 
 // Main execution
-async function main() {
+async function main(cityId: string, logger: Logger) {
+  try {
+    await populateCityData(cityId, logger);
+  } catch (error) {
+    logger.error('Fatal error:', error as Error);
+    process.exit(1);
+  }
+}
+
+if (require.main === module) {
   const cityId = process.argv[2];
   if (!cityId) {
     throw new Error('Please provide a city ID as an argument');
@@ -995,16 +791,7 @@ async function main() {
     }`
   );
 
-  try {
-    await populateCityData(cityId, logger);
-  } catch (error) {
-    logger.error('Fatal error:', error as Error);
-    process.exit(1);
-  }
-}
-
-if (require.main === module) {
-  main();
+  main(cityId, logger);
 }
 
 export { populateCityData };

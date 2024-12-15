@@ -42,7 +42,6 @@ export const essentialExperiencesRecommendationService = {
         // Only show seasonally appropriate activities
         seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },
-      take: 100,
     });
 
     // 2. Score attractions

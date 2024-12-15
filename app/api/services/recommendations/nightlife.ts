@@ -23,16 +23,18 @@ export const nightlifeRecommendationService = {
       where: {
         cityId,
         businessStatus: 'OPERATIONAL',
-        placeTypes: {
-          hasSome: CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes,
+        primaryType: {
+          in: CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes,
         },
         NOT: {
           placeTypes: {
             hasSome: ['movie_theater', 'restaurant'], // Exclude restaurants
           },
         },
+        reviewCount: {
+          gte: 300,
+        },
       },
-      take: 50,
     });
 
     // 2. Score venues

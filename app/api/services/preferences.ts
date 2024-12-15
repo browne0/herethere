@@ -18,9 +18,7 @@ export const preferencesService = {
       energyLevel: preferences.energyLevel!,
       preferredStartTime: preferences.preferredStartTime!,
       transportPreferences: preferences.transportPreferences!,
-      dietaryRestrictions: preferences.dietaryRestrictions?.includes('none')
-        ? []
-        : preferences.dietaryRestrictions!,
+      dietaryRestrictions: preferences.dietaryRestrictions!,
       // Handle nested objects properly
       cuisinePreferences: preferences.cuisinePreferences
         ? {

@@ -30,7 +30,6 @@ export const museumRecommendationService = {
           },
         },
       },
-      take: 50,
     });
 
     // 2. Score museums

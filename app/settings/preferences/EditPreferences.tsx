@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import {
   Mountain,
@@ -34,8 +34,11 @@ import {
   StartTime,
   DietaryRestriction,
   CrowdPreference,
+  Cuisine,
 } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
+import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
+import { CUISINE_PREFERENCES } from '@/constants';
 
 const INTERESTS: Array<{ icon: React.ReactNode; label: string; value: InterestType }> = [
   { icon: <Mountain className="w-6 h-6" />, label: 'Nature & Outdoors', value: 'outdoors' },
@@ -153,6 +156,16 @@ export default function EditPreferences() {
     }
   };
 
+  const handleCuisineChange = useCallback(
+    (preferred: Cuisine[]) => {
+      preferences.setCuisinePreferences({
+        preferred,
+        avoided: preferences.cuisinePreferences.avoided,
+      });
+    },
+    [preferences.setCuisinePreferences, preferences.cuisinePreferences.avoided]
+  );
+
   return (
     <div className="min-h-screen bg-gray-50/50">
       <div className="flex-1 space-y-4 p-4 md:p-8">
@@ -195,6 +208,7 @@ export default function EditPreferences() {
               </TabsList>
 
               <TabsContent value="interests">
+                <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">Your Interests</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                   {INTERESTS.map(interest => (
                     <button
@@ -309,6 +323,20 @@ export default function EditPreferences() {
 
                   <div>
                     <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">
+                      Your Favorite Cuisines
+                    </h2>
+                    <ResponsiveMultiSelect<Cuisine>
+                      options={CUISINE_PREFERENCES}
+                      selected={preferences.cuisinePreferences.preferred}
+                      onChange={handleCuisineChange}
+                      placeholder="Select your favorite cuisines"
+                      title="Favorite Cuisines"
+                      searchPlaceholder="Search cuisines..."
+                    />
+                  </div>
+
+                  <div>
+                    <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">
                       Dietary Restrictions
                     </h2>
                     <div className="space-y-2">
@@ -352,6 +380,9 @@ export default function EditPreferences() {
               </TabsContent>
 
               <TabsContent value="transport">
+                <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">
+                  Preferred Transportation
+                </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   {TRANSPORT_PREFERENCES.map(transport => (
                     <button
@@ -377,6 +408,9 @@ export default function EditPreferences() {
               </TabsContent>
 
               <TabsContent value="crowd">
+                <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">
+                  Your Sightseeing Style
+                </h2>
                 <div className="space-y-3 md:space-y-4">
                   {CROWD_PREFERENCES.map(preference => (
                     <button

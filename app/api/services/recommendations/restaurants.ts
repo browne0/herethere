@@ -30,19 +30,15 @@ export const restaurantRecommendationService = {
         cityId,
         businessStatus: 'OPERATIONAL',
         primaryType: {
-          in: GOOGLE_RESTAURANT_TYPES,
+          in: [...GOOGLE_RESTAURANT_TYPES],
           notIn: excludedTypes,
         },
-        // Ensure no excluded types in the placeTypes array
-        ...(params.dietaryRestrictions.length > 0 && {
-          NOT: {
-            placeTypes: {
-              hasSome: excludedTypes,
-            },
+        NOT: {
+          placeTypes: {
+            hasSome: excludedTypes,
           },
-        }),
+        },
       },
-      take: 50,
     });
 
     // 2. Score restaurants (filtering already done by Prisma query)
@@ -61,8 +57,6 @@ export const restaurantRecommendationService = {
   },
 
   getExcludedTypes(restrictions: string[]): string[] {
-    if (restrictions.length === 0) return [];
-
     let excludedTypes = new Set<string>();
 
     if (restrictions.includes('vegetarian') || restrictions.includes('vegan')) {

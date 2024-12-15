@@ -88,7 +88,6 @@ export interface PreferencesState extends UserPreferences {
 
   setOnboardingCompleted: (completed: boolean) => void;
   setAllPreferences: (preferences: Partial<PreferencesState>) => void;
-  reset: () => void;
 }
 
 export const usePreferences = create<PreferencesState>()(
@@ -139,25 +138,6 @@ export const usePreferences = create<PreferencesState>()(
           crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
           transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
         })),
-      reset: () =>
-        set({
-          interests: [],
-          energyLevel: null,
-          preferredStartTime: null,
-          dietaryRestrictions: [],
-          cuisinePreferences: {
-            preferred: [],
-            avoided: [],
-          },
-          mealImportance: {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-          crowdPreference: null,
-          transportPreferences: [],
-          onboardingCompleted: false,
-        }),
     }),
     {
       name: 'user-preferences', // name of the item in localStorage

@@ -6,13 +6,10 @@ import { toast } from 'sonner';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import ActivityShelfComponent from './ActivityShelf';
+import { ActivityShelfType } from '../../types';
 
 interface RecommendationsViewProps {
-  shelves: {
-    title: string;
-    type: string;
-    activities: ActivityRecommendation[];
-  }[];
+  shelves: ActivityShelfType[];
 }
 
 export function RecommendationsView({ shelves }: RecommendationsViewProps) {
