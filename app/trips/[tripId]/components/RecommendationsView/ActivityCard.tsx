@@ -5,10 +5,11 @@ import { Heart, Loader2, Star, MapPin } from 'lucide-react';
 
 import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
+
 import { ActivityShelfType } from '../../types';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
@@ -186,7 +187,7 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
             <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
           </div>
 
-          <h3 className="font-medium text-base leading-tight mb-2 line-clamp-2">{activity.name}</h3>
+          <h3 className="font-medium text-sm leading-tight mb-2 line-clamp-2">{activity.name}</h3>
           <p className="text-sm gap-1 mb-2 ">{getPrimaryTypeDisplay(activity)}</p>
           <p className="flex items-center gap-1.5 text-sm text-gray-600 mb-2">
             <MapPin className="w-4 h-4 flex-shrink-0" />

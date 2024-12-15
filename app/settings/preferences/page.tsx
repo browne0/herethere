@@ -17,11 +17,12 @@ export default async function PreferencesPage() {
     where: { id: userId },
     select: {
       preferences: true,
+      onboardingCompleted: true,
     },
   });
 
-  if (!user) {
-    redirect('/sign-in');
+  if (!user?.onboardingCompleted) {
+    redirect('/onboarding/interests');
   }
 
   // Parse the preferences from the database

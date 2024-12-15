@@ -1,18 +1,18 @@
 // app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
-import { redirect } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
 import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
 import { nightlifeRecommendationService } from '@/app/api/services/recommendations/nightlife';
 import { restaurantRecommendationService } from '@/app/api/services/recommendations/restaurants';
+import { spaWellnessRecommendationService } from '@/app/api/services/recommendations/spas';
 import { touristAttractionService } from '@/app/api/services/recommendations/touristAttractions';
 import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
 import { ParsedTrip } from './types';
-import { spaWellnessRecommendationService } from '@/app/api/services/recommendations/spas';
 
 export default async function TripPage({ params }: { params: { tripId: string } }) {
   const { userId } = await auth();
@@ -46,7 +46,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
   ]);
 
   if (!trip) {
-    redirect('/trips');
+    notFound();
   }
 
   const recommendationsData = {
@@ -67,6 +67,8 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       },
     },
   };
+
+  console.log(recommendationsData);
 
   // Get restaurant recommendations directly using the service
   const restaurantRecommendations = await restaurantRecommendationService.getRecommendations(
@@ -116,7 +118,7 @@ export default async function TripPage({ params }: { params: { tripId: string } 
   const restaurantShelf = {
     type: 'restaurants',
     description: 'Curated dining picks just for you',
-    title: 'Top Restaurants',
+    title: 'Popular Restaurants & Foodie Spots',
     activities: restaurantRecommendations,
   };
 

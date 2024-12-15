@@ -10,15 +10,15 @@ const inter = Inter({ subsets: ['latin'] });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <ClerkProvider>
-      <html lang="en">
+    <html lang="en">
+      <ClerkProvider>
         <body className={`${inter.className} bg-gray-50 min-h-screen`}>
           <PageLayout>
             <GoogleMapsProvider>{children}</GoogleMapsProvider>
           </PageLayout>
           <Toaster richColors position="top-center" />
         </body>
-      </html>
-    </ClerkProvider>
+      </ClerkProvider>
+    </html>
   );
 }

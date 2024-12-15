@@ -1,6 +1,5 @@
 import { useState } from 'react';
 
-import { ItineraryActivity, Trip } from '@prisma/client';
 import { format } from 'date-fns';
 
 import {
@@ -16,12 +15,8 @@ import {
 
 import { ParsedTrip } from '../[tripId]/types';
 
-interface TripWithActivities extends Trip {
-  activities: Array<ItineraryActivity>;
-}
-
 interface DeleteTripDialogProps {
-  trip: TripWithActivities | ParsedTrip | null;
+  trip: ParsedTrip | null;
   isOpen: boolean;
   onClose: () => void;
   onDelete: (tripId: string) => Promise<void>;
@@ -37,7 +32,7 @@ export function DeleteTripDialog({ trip, isOpen, onClose, onDelete }: DeleteTrip
     try {
       await onDelete(trip.id);
       onClose();
-    } catch (error) {
+    } catch (_error) {
       // Error is handled in parent component
     } finally {
       setIsDeleting(false);
@@ -50,13 +45,13 @@ export function DeleteTripDialog({ trip, isOpen, onClose, onDelete }: DeleteTrip
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Trip</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete your trip to {trip.destination}?
+            Are you sure you want to delete your trip to {trip.city.name}?
           </AlertDialogDescription>
         </AlertDialogHeader>
         <div className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{trip.destination}</span>
+              <span className="text-sm font-medium">{trip.city.name}</span>
               <span className="text-sm text-gray-500">
                 {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
               </span>
