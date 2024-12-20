@@ -1,6 +1,8 @@
 // app/trips/[tripId]/types.ts
 import type { Trip, ActivityRecommendation, ItineraryActivity, City } from '@prisma/client';
 
+import { ActivityCategoryDetails } from '@/lib/types/activities';
+
 export interface Location {
   latitude: number;
   longitude: number;
@@ -27,11 +29,10 @@ export interface ActivityShelfType {
 
 // More specific budget and activity types
 export type TripBudget = 'budget' | 'moderate' | 'luxury';
-export type ActivityType = 'sightseeing' | 'museums' | 'outdoors' | 'nightlife';
 
 export interface TripPreferences {
   budget: TripBudget;
-  activities: ActivityType[];
+  activities: ActivityCategoryDetails[];
 }
 
 export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences'> {

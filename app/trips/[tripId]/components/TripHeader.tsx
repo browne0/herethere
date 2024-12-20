@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 
+import { User } from '@prisma/client';
 import { format } from 'date-fns';
 import { Calendar, Trash2 } from 'lucide-react';
 
@@ -8,16 +9,36 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { useTripView } from '../hooks/useTripView';
 import { ParsedTrip } from '../types';
+import TripPreferencesBar from './TripPreferencesBar';
 
 export default function TripHeader({
   trip,
   onDeleteClick,
+  onUpdateTrip,
+  user,
 }: {
   trip: ParsedTrip;
   onDeleteClick: () => void;
+  onUpdateTrip: (tripId: string, data: Partial<ParsedTrip>) => Promise<void>;
+  user: User;
 }) {
   const { view, setView } = useTripView();
   const { activities } = useActivitiesStore();
+
+  const handlePreferenceUpdate = async (key: string, value: any) => {
+    try {
+      const updatedPreferences = {
+        ...trip.preferences,
+        [key]: value,
+      };
+
+      await onUpdateTrip(trip.id, {
+        preferences: updatedPreferences,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
   return (
     <div className="sticky top-[73px] top-0 bg-white z-50">
       {/* Main Header */}
@@ -90,6 +111,7 @@ export default function TripHeader({
             ))}
           </div>
         </div>
+        <TripPreferencesBar trip={trip} user={user} onUpdatePreferences={handlePreferenceUpdate} />
       </div>
     </div>
   );

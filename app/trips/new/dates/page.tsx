@@ -39,7 +39,7 @@ export default function DatesPage() {
   if (!city) return null;
   return (
     <div className="relative p-4 sm:p-8 rounded-2xl bg-white shadow-xl border border-transparent">
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+      <h1 className="text-2xl sm:text-3xl md:text-3xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
         When would you like to visit {city.name}?
       </h1>
 

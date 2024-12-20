@@ -63,7 +63,7 @@ export default function ActivitiesPage() {
 
   const handleNext = () => {
     if (activities.length > 0) {
-      router.push('/trips/new/review');
+      router.push('/trips/new/food');
     }
   };
 
@@ -75,7 +75,7 @@ export default function ActivitiesPage() {
 
   return (
     <div className="relative p-4 sm:p-8 rounded-2xl bg-white shadow-xl border border-transparent">
-      <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
+      <h1 className="text-2xl sm:text-3xl md:text-3xl font-bold text-center mb-8 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
         What would you like to do in {city.name}?
       </h1>
 
@@ -107,21 +107,6 @@ export default function ActivitiesPage() {
               </div>
             </button>
           ))}
-        </div>
-
-        <div className="space-y-4">
-          <label className="block text-sm font-medium text-gray-700">
-            Anything specific you're looking forward to?
-          </label>
-          <Textarea
-            placeholder="E.g., 'Visit the famous night market' or 'Find the best local coffee shops'"
-            value={customInterests || ''}
-            onChange={e => setCustomInterests(e.target.value)}
-            className="h-24"
-          />
-          <p className="text-xs text-gray-500">
-            Tell us about any particular experiences or places you'd like to include in your trip.
-          </p>
         </div>
 
         <div className="flex justify-between mt-8">

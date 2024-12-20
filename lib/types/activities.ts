@@ -77,3 +77,5 @@ export type ActivityCategory = keyof typeof ACTIVITY_CATEGORIES;
 export type ActivityCategoryDetails = (typeof ACTIVITY_CATEGORIES)[ActivityCategory];
 
 export const ACTIVITY_CATEGORY_LIST = Object.values(ACTIVITY_CATEGORIES);
+
+export type ActivityCategoryId = (typeof ACTIVITY_CATEGORIES)[ActivityCategory]['id'];

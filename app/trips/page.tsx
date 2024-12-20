@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
 
+import { ParsedTrip } from './[tripId]/types';
 import { TripsList } from './components/TripsList';
 
 export default async function TripsPage() {
@@ -32,5 +33,5 @@ export default async function TripsPage() {
     },
   });
 
-  return <TripsList initialTrips={trips} />;
+  return <TripsList initialTrips={trips as unknown as ParsedTrip[]} />;
 }

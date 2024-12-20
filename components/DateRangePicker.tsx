@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import {
   addMonths,
@@ -35,6 +35,17 @@ const DateRangePicker = ({
 }: DateRangePickerProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
 
+  // Listen for sheet close events
+  useEffect(() => {
+    const handleSheetClose = () => {
+      // Reset the view to current month when sheet closes
+      setCurrentDate(new Date());
+    };
+
+    window.addEventListener('close-sheet', handleSheetClose);
+    return () => window.removeEventListener('close-sheet', handleSheetClose);
+  }, []);
+
   const getMonthDays = (date: Date) => {
     const start = startOfMonth(date);
     const end = endOfMonth(date);
@@ -44,12 +55,9 @@ const DateRangePicker = ({
   const handleDateClick = (date: Date) => {
     const normalizedDate = startOfDay(date);
 
-    // If no start date or we're starting a new selection
-    if (!startDate || endDate) {
+    if (!startDate || (startDate && endDate)) {
       onChange({ startDate: normalizedDate, endDate: null });
-    }
-    // If we have a start date and are selecting an end date
-    else {
+    } else {
       if (normalizedDate < startDate) {
         onChange({ startDate: normalizedDate, endDate: startDate });
       } else {
@@ -71,9 +79,6 @@ const DateRangePicker = ({
 
     return (
       <div className="select-none">
-        <div className="mb-2 text-sm font-medium text-gray-900 flex items-center justify-center hidden sm:flex">
-          {format(monthDate, 'MMMM yyyy')}
-        </div>
         <div className="grid grid-cols-7 gap-1 mb-1">
           {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, index) => (
             <div
@@ -86,7 +91,7 @@ const DateRangePicker = ({
         </div>
         <div className="grid grid-cols-7 gap-1">
           {[...Array(firstDay)].map((_, i) => (
-            <div key={`empty-${i}`} className="h-9 sm:h-8" />
+            <div key={`empty-${i}`} className="h-12 sm:h-8" />
           ))}
           {days.map(date => {
             const isSelected =
@@ -103,7 +108,7 @@ const DateRangePicker = ({
                 onClick={() => handleDateClick(date)}
                 disabled={date < minDate || date > maxDate}
                 className={cn(
-                  'h-9 sm:h-8 text-sm relative flex items-center justify-center rounded',
+                  'h-12 sm:h-8 text-sm relative flex items-center justify-center rounded',
                   'focus:outline-none',
                   {
                     'bg-indigo-600 text-white': isSelected,
@@ -125,29 +130,9 @@ const DateRangePicker = ({
 
   return (
     <div className="w-full">
-      {/* Selected dates display - Mobile Only */}
-      <div className="mb-4 sm:hidden space-y-2 px-2">
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <div className="text-xs text-gray-500">Start date</div>
-            <div className="text-sm font-medium">
-              {startDate ? format(startDate, 'EEE, MMM d') : 'Select date'}
-            </div>
-          </div>
-          <div className="h-8 w-px bg-gray-200" />
-          <div className="space-y-1">
-            <div className="text-xs text-gray-500">End date</div>
-            <div className="text-sm font-medium">
-              {endDate ? format(endDate, 'EEE, MMM d') : 'Select date'}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Calendar Section */}
       <div className="bg-white">
         {/* Month Navigation */}
-        <div className="flex items-center justify-between px-2 py-3 border-b">
+        <div className="flex items-center justify-between px-4 py-4 border-b">
           <Button
             variant="ghost"
             size="icon"
@@ -175,15 +160,15 @@ const DateRangePicker = ({
         </div>
 
         {/* Calendar Grid */}
-        <div className="p-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="p-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             {renderMonth(currentDate)}
             <div className="hidden sm:block">{renderMonth(addMonths(currentDate, 1))}</div>
           </div>
         </div>
 
-        {/* Selected dates display - Desktop Only */}
-        <div className="hidden sm:block border-t p-4">
+        {/* Selected dates display */}
+        <div className="border-t p-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1">
               <div className="text-xs text-gray-500">Start date</div>

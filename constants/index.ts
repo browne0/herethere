@@ -17,6 +17,7 @@ export enum PlaceCategory {
 export const RESTAURANT_TYPES = {
   afghani_restaurant: 'Afghani',
   african_restaurant: 'African',
+  asian_restaurant: 'Asian',
   american_restaurant: 'American',
   brazilian_restaurant: 'Brazilian',
   chinese_restaurant: 'Chinese',

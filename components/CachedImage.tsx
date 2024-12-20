@@ -12,19 +12,11 @@ export interface ImageUrl {
 
 interface CachedImageProps {
   photo: ImageUrl | null;
-  index?: number;
   alt: string;
   className?: string;
-  priority?: boolean;
 }
 
-export const CachedImage: React.FC<CachedImageProps> = ({
-  photo,
-  index = 0,
-  alt,
-  className = '',
-  priority = false,
-}) => {
+export const CachedImage: React.FC<CachedImageProps> = ({ photo, alt, className = '' }) => {
   if (!photo) {
     return (
       <div className={`bg-gray-100 flex items-center justify-center ${className}`}>

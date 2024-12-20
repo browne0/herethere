@@ -1,5 +1,7 @@
 import React, { useState, useCallback, memo, useEffect } from 'react';
+
 import { Check, ChevronsUpDown } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -97,9 +99,10 @@ const SelectionList = memo(SelectionListComponent) as typeof SelectionListCompon
 interface TriggerContentProps<T> {
   selected: T[];
   placeholder: string;
+  entity: string;
 }
 
-function TriggerContentComponent<T>({ selected, placeholder }: TriggerContentProps<T>) {
+function TriggerContentComponent<T>({ selected, placeholder, entity }: TriggerContentProps<T>) {
   return (
     <>
       <span className="truncate">
@@ -120,6 +123,7 @@ export interface MultiSelectProps<T> {
   title: string;
   searchPlaceholder?: string;
   type?: 'default' | 'dietary';
+  entity: string;
 }
 
 // SSR-safe media query hook
@@ -151,6 +155,7 @@ function ResponsiveMultiSelectComponent<T extends string>({
   title,
   searchPlaceholder = 'Search...',
   type = 'default',
+  entity = '',
 }: MultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const isDesktop = useSSRMediaQuery('(min-width: 768px)');
@@ -191,11 +196,11 @@ function ResponsiveMultiSelectComponent<T extends string>({
 
   if (isDesktop) {
     return (
-      <div className="flex items-center space-x-4 mt-4">
+      <div className="flex items-center space-x-4">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="sm" className="w-[275px] justify-between">
-              <TriggerContent<T> selected={selected} placeholder={placeholder} />
+            <Button variant="outline" size="sm" className=" justify-between">
+              <TriggerContent<T> selected={selected} entity={entity} placeholder={placeholder} />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="p-0 w-[275px]" align="start">
@@ -213,7 +218,6 @@ function ResponsiveMultiSelectComponent<T extends string>({
 
   return (
     <div className="flex flex-col space-y-2">
-      <p className="text-sm text-muted-foreground">{title}</p>
       <Drawer open={open} onOpenChange={setOpen}>
         <DrawerTrigger asChild>
           <Button variant="outline" size="sm" className="w-full justify-between">

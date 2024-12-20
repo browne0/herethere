@@ -1,4 +1,4 @@
-import { ActivityRecommendation, PriceLevel } from '@prisma/client';
+import { ActivityRecommendation, BusinessStatus, PriceLevel, Prisma } from '@prisma/client';
 import _ from 'lodash';
 
 import { TripBudget } from '@/app/trips/[tripId]/types';
@@ -19,26 +19,54 @@ interface Location {
   neighborhood: string;
 }
 
+const VEGETARIAN_RESTAURANT_TYPES = [
+  'indian_restaurant',
+  'chinese_restaurant',
+  'japanese_restaurant',
+  'thai_restaurant',
+  'vietnamese_restaurant',
+  'italian_restaurant',
+  'middle_eastern_restaurant',
+  'vegetarian_restaurant',
+];
+
 export const restaurantRecommendationService = {
   async getRecommendations(cityId: string, params: ScoringParams) {
-    // Get excluded types based on dietary restrictions
-    const excludedTypes = this.getExcludedTypes(params.dietaryRestrictions);
+    const isVegetarian = params.dietaryRestrictions.includes('vegetarian');
+
+    const baseQuery = {
+      cityId,
+      businessStatus: BusinessStatus.OPERATIONAL,
+    };
+
+    const queryConditions: Prisma.ActivityRecommendationWhereInput = isVegetarian
+      ? {
+          ...baseQuery,
+          AND: [
+            {
+              placeTypes: {
+                hasSome: VEGETARIAN_RESTAURANT_TYPES,
+              },
+            },
+            {
+              NOT: {
+                placeTypes: {
+                  hasSome: NON_VEGETARIAN_RESTAURANTS,
+                },
+              },
+            },
+          ],
+        }
+      : {
+          ...baseQuery,
+          primaryType: {
+            in: [...GOOGLE_RESTAURANT_TYPES],
+          },
+        };
 
     // 1. Get initial set of restaurants with dietary and type filtering
     const restaurants = await prisma.activityRecommendation.findMany({
-      where: {
-        cityId,
-        businessStatus: 'OPERATIONAL',
-        primaryType: {
-          in: [...GOOGLE_RESTAURANT_TYPES],
-          notIn: excludedTypes,
-        },
-        NOT: {
-          placeTypes: {
-            hasSome: excludedTypes,
-          },
-        },
-      },
+      where: queryConditions,
     });
 
     // 2. Score restaurants (filtering already done by Prisma query)
@@ -54,16 +82,6 @@ export const restaurantRecommendationService = {
       .slice(0, 20);
 
     return recommendations;
-  },
-
-  getExcludedTypes(restrictions: string[]): string[] {
-    let excludedTypes = new Set<string>();
-
-    if (restrictions.includes('vegetarian') || restrictions.includes('vegan')) {
-      excludedTypes = new Set([...NON_VEGETARIAN_RESTAURANTS]);
-    }
-
-    return Array.from(excludedTypes);
   },
 
   calculateScore(restaurant: ActivityRecommendation, params: ScoringParams): number {

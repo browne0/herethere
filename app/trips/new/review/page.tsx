@@ -7,8 +7,10 @@ import { CalendarDays, MapPin, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
+import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { BudgetLevel } from '@/lib/types';
+import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
 
 interface CreateTripRequest {
   title: string;
@@ -17,13 +19,31 @@ interface CreateTripRequest {
   preferences: {
     budget: BudgetLevel;
     activities: string[];
+    cuisinePreferences: { preferred: Cuisine[]; avoided: Cuisine[] };
+    dietaryRestrictions: DietaryRestriction[];
   };
   city: Prisma.CityCreateInput;
 }
 
+const ACTIVITY_ID_TO_LABEL = Object.values(ACTIVITY_CATEGORIES).reduce(
+  (acc, category) => ({
+    ...acc,
+    [category.id]: category.label,
+  }),
+  {} as Record<string, string>
+);
+
 export default function ReviewPage() {
   const router = useRouter();
-  const { city, dates, budget, activities, reset } = useTripFormStore();
+  const {
+    city,
+    dates,
+    budget,
+    activities,
+    tripCuisinePreferences,
+    tripDietaryRestrictions,
+    reset,
+  } = useTripFormStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const shouldCheckValidation = useRef(true);
@@ -59,6 +79,8 @@ export default function ReviewPage() {
         preferences: {
           budget,
           activities,
+          cuisinePreferences: tripCuisinePreferences,
+          dietaryRestrictions: tripDietaryRestrictions,
         },
         city,
       };
@@ -90,20 +112,21 @@ export default function ReviewPage() {
     }
   };
 
-  const handleEdit = (section: 'city' | 'dates' | 'budget' | 'activities') => {
+  const handleEdit = (section: 'city' | 'dates' | 'budget' | 'activities' | 'food') => {
     shouldCheckValidation.current = false;
     const routes = {
       city: '/trips/new',
       dates: '/trips/new/dates',
       budget: '/trips/new/budget',
       activities: '/trips/new/activities',
+      food: '/trips/new/food',
     };
     router.push(routes[section]);
   };
 
   const handleBack = () => {
     shouldCheckValidation.current = false;
-    router.push('/trips/new/activities');
+    router.push('/trips/new/food');
   };
 
   if (!city || !dates || !budget || !activities.length) return null;
@@ -185,7 +208,40 @@ export default function ReviewPage() {
                     key={activity}
                     className="px-3 py-1 rounded-full bg-white text-indigo-600 text-sm font-medium border border-indigo-100"
                   >
-                    {activity}
+                    {ACTIVITY_ID_TO_LABEL[activity] || activity}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="group">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-medium text-gray-900">Foods you enjoy</h3>
+                <button
+                  onClick={() => handleEdit('food')}
+                  className="text-sm text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  Edit
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {tripCuisinePreferences.preferred.map(cuisine => (
+                  <span
+                    key={cuisine}
+                    className="px-3 py-1 rounded-full bg-white text-indigo-600 text-sm font-medium border border-indigo-100 capitalize"
+                  >
+                    {cuisine}
+                  </span>
+                ))}
+              </div>
+              <h3 className="font-medium text-gray-900 mt-4 mb-2">Your dietary restrictions</h3>
+              <div className="flex flex-wrap gap-2">
+                {tripDietaryRestrictions.map(restriction => (
+                  <span
+                    key={restriction}
+                    className="px-3 py-1 rounded-full bg-white text-indigo-600 text-sm font-medium border border-indigo-100 capitalize"
+                  >
+                    {restriction}
                   </span>
                 ))}
               </div>

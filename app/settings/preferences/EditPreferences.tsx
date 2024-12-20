@@ -23,9 +23,11 @@ import {
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
+import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CUISINE_PREFERENCES } from '@/constants';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   usePreferences,
@@ -37,8 +39,6 @@ import {
   Cuisine,
 } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
-import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
-import { CUISINE_PREFERENCES } from '@/constants';
 
 const INTERESTS: Array<{ icon: React.ReactNode; label: string; value: InterestType }> = [
   { icon: <Mountain className="w-6 h-6" />, label: 'Nature & Outdoors', value: 'outdoors' },
@@ -332,6 +332,7 @@ export default function EditPreferences() {
                       placeholder="Select your favorite cuisines"
                       title="Favorite Cuisines"
                       searchPlaceholder="Search cuisines..."
+                      entity="cuisines"
                     />
                   </div>
 

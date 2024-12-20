@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
+import { GOOGLE_RESTAURANT_TYPES, MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
@@ -84,40 +84,68 @@ function getBestImageUrl(images: ActivityImages | null): ImageUrl | null {
   return scoredUrls.sort((a, b) => b.score - a.score)[0]?.imageUrl || null;
 }
 
-const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null => {
-  // First check primaryType
+export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null => {
+  if (!activity) return null;
+
+  const restaurantTypes = new Set(GOOGLE_RESTAURANT_TYPES);
+
+  // 1. First check primaryType if it exists
   if (activity.primaryType) {
-    // Handle restaurants
-    if (activity.primaryType.includes('restaurant') || activity.primaryType === 'steak_house') {
+    // Special case for ramen restaurant
+    if (activity.primaryType === 'ramen_restaurant') {
+      return RESTAURANT_TYPES['japanese_restaurant'];
+    }
+
+    // If primaryType ends with 'restaurant', look for cuisine-specific types in placeTypes
+    if (activity.primaryType.endsWith('restaurant') && activity.placeTypes?.length > 0) {
+      // Special case for ramen in place types
+      if (activity.placeTypes.includes('ramen_restaurant')) {
+        return RESTAURANT_TYPES['japanese_restaurant'];
+      }
+
+      // Look for a cuisine-specific restaurant type in placeTypes
+      const cuisineType = activity.placeTypes.find(
+        type => restaurantTypes.has(type) && RESTAURANT_TYPES[type as RestaurantType]
+      );
+      if (cuisineType) {
+        return RESTAURANT_TYPES[cuisineType as RestaurantType];
+      }
+    }
+
+    // If primaryType is in our restaurant types, use it
+    if (restaurantTypes.has(activity.primaryType)) {
       return RESTAURANT_TYPES[activity.primaryType as RestaurantType];
     }
 
-    // Handle museums
+    // Check if it's a museum type
     if (activity.primaryType in MUSEUM_TYPES) {
       return MUSEUM_TYPES[activity.primaryType as MuseumType];
     }
+
+    // If primary type exists but isn't in our mappings, format it nicely
+    return activity.primaryType
+      .replace(/_/g, ' ')
+      .split(' ')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
-  // If no primaryType or not found in constants, check placeTypes array
-  else if (activity.primaryType === '' && activity.placeTypes?.length > 0) {
-    // Check for restaurant types
-    const restaurantType = activity.placeTypes.find(
-      type => type.includes('restaurant') || type === 'steak_house'
-    );
+  // 2. If no primaryType, check placeTypes array
+  if (activity.placeTypes?.length > 0) {
+    // Look for restaurant types first
+    const restaurantType = activity.placeTypes.find(type => restaurantTypes.has(type));
     if (restaurantType) {
       return RESTAURANT_TYPES[restaurantType as RestaurantType];
     }
 
-    // Check for museum types
+    // Look for museum types next
     const museumType = activity.placeTypes.find(type => type in MUSEUM_TYPES);
     if (museumType) {
       return MUSEUM_TYPES[museumType as MuseumType];
     }
-  }
 
-  // If no matching types found, fall back to primaryType formatting
-  if (activity.primaryType) {
-    return activity.primaryType
+    // If no specific type found, format the first place type nicely
+    return activity.placeTypes[0]
       .replace(/_/g, ' ')
       .split(' ')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
@@ -126,7 +154,6 @@ const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null 
 
   return null;
 };
-
 export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { findActivityByRecommendationId, tripId, removeActivity } = useActivitiesStore();
@@ -178,7 +205,6 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
               photo={photoUrl}
               alt={activity.name}
               className="absolute inset-0 w-full h-full object-cover"
-              priority
             />
           ) : (
             <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
@@ -217,7 +243,7 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
           {/* Push button to bottom */}
           <div className="flex-grow" />
 
-          <div className="space-y-2">
+          <div className="space-y-2 mt-2">
             <Button
               onClick={() => handleAction('planned')}
               disabled={isLoading}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 
+import { User } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
@@ -17,9 +18,10 @@ import TripHeader from './components/TripHeader';
 interface TripPageClientProps {
   trip: ParsedTrip;
   shelves: ActivityShelfType[];
+  user: User;
 }
 
-export function TripPageClient({ trip, shelves }: TripPageClientProps) {
+export function TripPageClient({ trip, shelves, user }: TripPageClientProps) {
   const router = useRouter();
   const { view, initialize } = useTripView();
   const { setActivities, setTripId } = useActivitiesStore();
@@ -57,7 +59,7 @@ export function TripPageClient({ trip, shelves }: TripPageClientProps) {
 
   return (
     <main className="bg-white">
-      <TripHeader trip={trip} onDeleteClick={() => setIsDeleteDialogOpen(true)} />
+      <TripHeader trip={trip} user={user} onDeleteClick={() => setIsDeleteDialogOpen(true)} />
 
       {/* Views */}
       {view === 'recommendations' ? (

@@ -61,10 +61,10 @@ export default async function TripPage({ params }: { params: { tripId: string } 
       interests: user?.preferences?.interests,
       energyLevel: user?.preferences?.energyLevel,
       preferredStartTime: user?.preferences?.preferredStartTime,
-      currentLocation: {
-        lat: trip.city.latitude,
-        lng: trip.city.longitude,
-      },
+      // currentLocation: {
+      //   lat: trip.city.latitude,
+      //   lng: trip.city.longitude,
+      // },
     },
   };
 
@@ -165,5 +165,5 @@ export default async function TripPage({ params }: { params: { tripId: string } 
     spasAndWellnessShelf,
   ];
 
-  return <TripPageClient trip={trip as unknown as ParsedTrip} shelves={shelves} />;
+  return <TripPageClient trip={trip as unknown as ParsedTrip} user={user!} shelves={shelves} />;
 }

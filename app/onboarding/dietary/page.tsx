@@ -1,6 +1,8 @@
 'use client';
 import React, { useCallback, useState, useEffect } from 'react';
+
 import { Utensils, Coffee } from 'lucide-react';
+
 import { Card } from '@/components/ui/card';
 import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 import {
@@ -11,6 +13,7 @@ import {
 } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
 import ResponsiveMultiSelect from './ResponsiveMultiSelect';
 
 // SSR-safe media query hook
@@ -130,6 +133,7 @@ const DietaryPage = () => {
             title="Dietary Restrictions"
             searchPlaceholder="Search restrictions..."
             type="dietary"
+            entity="dietary restrictions"
           />
         </div>
 
@@ -144,6 +148,7 @@ const DietaryPage = () => {
             placeholder="Select your favorite cuisines"
             title="Favorite Cuisines"
             searchPlaceholder="Search cuisines..."
+            entity="cuisines"
           />
         </div>
 

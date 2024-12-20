@@ -24,7 +24,7 @@ export const spaWellnessRecommendationService = {
         cityId,
         businessStatus: 'OPERATIONAL',
         primaryType: {
-          in: ['spa', 'wellness_center'],
+          in: ['spa', 'wellness_center', 'sauna'],
         },
         seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },

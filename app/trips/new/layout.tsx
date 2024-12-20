@@ -8,6 +8,7 @@ const steps = [
   { label: 'Dates', path: '/trips/new/dates' },
   { label: 'Budget', path: '/trips/new/budget' },
   { label: 'Activities', path: '/trips/new/activities' },
+  { label: 'Food', path: '/trips/new/food' },
   { label: 'Review', path: '/trips/new/review' },
 ];
 

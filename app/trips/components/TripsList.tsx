@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 
-import { City, ItineraryActivity, Trip } from '@prisma/client';
 import { format, isAfter, isBefore, isToday } from 'date-fns';
 import {
   Calendar,
@@ -30,17 +29,13 @@ import {
 } from '@/components/ui/dropdown-menu';
 
 import { DeleteTripDialog } from './DeleteTripDialog';
-
-interface TripWithActivitiesAndCity extends Trip {
-  activities: Array<ItineraryActivity>;
-  city: City;
-}
+import { ParsedTrip } from '../[tripId]/types';
 
 interface TripsListProps {
-  initialTrips: TripWithActivitiesAndCity[];
+  initialTrips: ParsedTrip[];
 }
 
-function groupTripsByStatus(trips: TripWithActivitiesAndCity[]) {
+function groupTripsByStatus(trips: ParsedTrip[]) {
   const now = new Date();
   return {
     upcoming: trips.filter(trip => isAfter(new Date(trip.startDate), now)),
@@ -70,13 +65,7 @@ function formatTripDates(startDate: Date, endDate: Date, type: 'short' | 'long' 
   return `${format(start, 'MMMM d')} - ${format(end, 'MMMM d, yyyy')}`;
 }
 
-function TripActions({
-  trip,
-  onDeleteClick,
-}: {
-  trip: TripWithActivitiesAndCity;
-  onDeleteClick: () => void;
-}) {
+function TripActions({ trip, onDeleteClick }: { trip: ParsedTrip; onDeleteClick: () => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -109,7 +98,7 @@ function TripActions({
 }
 
 export function TripsList({ initialTrips }: TripsListProps) {
-  const [tripToDelete, setTripToDelete] = useState<TripWithActivitiesAndCity | null>(null);
+  const [tripToDelete, setTripToDelete] = useState<ParsedTrip | null>(null);
   const [trips, setTrips] = useState(initialTrips);
   const router = useRouter();
 
