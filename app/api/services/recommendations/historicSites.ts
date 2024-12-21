@@ -1,12 +1,12 @@
 import { ActivityRecommendation, PriceLevel, SeasonalAvailability } from '@prisma/client';
 import _ from 'lodash';
 
-import { TripBudget } from '@/app/trips/[tripId]/types';
+import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping, PLACE_INDICATORS } from '@/constants';
 import { prisma } from '@/lib/db';
 import { TransportMode } from '@/lib/stores/preferences';
 
-import { ScoringParams } from './types';
+import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
 interface Location {
   latitude: number;
@@ -17,7 +17,17 @@ interface Location {
 }
 
 export const historicSitesRecommendationService = {
-  async getRecommendations(cityId: string, params: ScoringParams) {
+  async getRecommendations(params: ScoringParams, pagination: PaginationParams) {
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
+    const { cityId } = params;
+
+    let locationContext = params.locationContext;
+
+    // Calculate activity clusters if we have selected activities and are in planning phase
+    if (params.phase === 'planning' && params.selectedActivities?.length > 0) {
+      locationContext.clusters = this.calculateActivityClusters(params.selectedActivities);
+    }
+
     // Get both historic and tourist attraction sites
     const sites = await prisma.activityRecommendation.findMany({
       where: {
@@ -44,19 +54,72 @@ export const historicSitesRecommendationService = {
       },
     });
 
-    // Score sites with our historically-focused algorithm
-    const scored = sites.map(site => ({
-      ...site,
-      score: this.calculateScore(site, params),
+    // Score and sort sites
+    const scoredAndSorted = sites
+      .map(site => ({
+        ...site,
+        score: this.calculateScore(site, params),
+      }))
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    // Calculate pagination
+    const total = scoredAndSorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePageNumber = Math.min(Math.max(1, page), totalPages);
+
+    // Get the correct slice of data
+    const startIndex = (safePageNumber - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+
+    return {
+      items: scoredAndSorted.slice(startIndex, endIndex),
+      total,
+      page: safePageNumber,
+      pageSize,
+      totalPages,
+      hasNextPage: safePageNumber < totalPages,
+      hasPreviousPage: safePageNumber > 1,
+    };
+  },
+
+  calculateActivityClusters(
+    activities: ParsedItineraryActivity[]
+  ): Array<{ center: { latitude: number; longitude: number }; radius: number }> {
+    if (activities.length < 2) return [];
+
+    // Get locations from activities
+    const locations = activities.map(a => ({
+      latitude: (a.recommendation.location as any).latitude,
+      longitude: (a.recommendation.location as any).longitude,
     }));
 
-    // Return top 8 scored sites
-    const recommendations = scored
-      .filter(r => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+    // Create a single cluster centered on the mean location
+    const center = {
+      latitude: _.meanBy(locations, 'latitude'),
+      longitude: _.meanBy(locations, 'longitude'),
+    };
 
-    return recommendations;
+    // Calculate radius based on standard deviation of distances
+    const distances = locations.map(loc =>
+      this.calculateDistance(center.latitude, center.longitude, loc.latitude, loc.longitude)
+    );
+
+    const mean = _.mean(distances);
+    const squareDiffs = distances.map(value => {
+      const diff = value - mean;
+      return diff * diff;
+    });
+    const standardDeviation = Math.sqrt(_.mean(squareDiffs));
+
+    // Historic sites often cluster in historic districts
+    // Use a slightly smaller minimum radius to favor tighter clusters
+    const radius = Math.max(
+      1500, // 1.5km minimum radius for historic districts
+      mean + standardDeviation
+    );
+
+    return [{ center, radius }];
   },
 
   calculateScore(site: ActivityRecommendation, params: ScoringParams): number {
@@ -68,8 +131,7 @@ export const historicSitesRecommendationService = {
     const priceScore = this.calculatePriceScore(site, params);
     const locationScore = this.calculateLocationScore(
       site.location as unknown as Location,
-      params.currentLocation,
-      params.transportPreferences
+      params.locationContext
     );
 
     return (
@@ -83,12 +145,18 @@ export const historicSitesRecommendationService = {
 
   calculateWeights(params: ScoringParams) {
     const weights = {
-      historicSignificance: 0.35, // Primary focus on historical value
-      popularity: 0.3, // Strong consideration of tourist appeal
-      accessibility: 0.15, // Ease of visiting
-      price: 0.1, // Price considerations
-      location: 0.1, // Location/accessibility
+      historicSignificance: 0.35,
+      popularity: 0.25, // Reduced from 0.3
+      accessibility: 0.15,
+      price: 0.1,
+      location: 0.15, // Increased from 0.1
     };
+
+    // Adjust weights based on phase
+    if (params.phase === 'active') {
+      weights.location += 0.05;
+      weights.popularity -= 0.05;
+    }
 
     // Boost historical significance for history buffs
     if (params.interests.includes('history')) {
@@ -100,7 +168,7 @@ export const historicSitesRecommendationService = {
     // Adjust for crowd preferences
     if (params.crowdPreference === 'popular') {
       weights.popularity += 0.05;
-      weights.historicSignificance -= 0.05;
+      weights.location -= 0.05;
     } else if (params.crowdPreference === 'hidden') {
       weights.popularity -= 0.05;
       weights.historicSignificance += 0.05;
@@ -247,30 +315,77 @@ export const historicSitesRecommendationService = {
     return score;
   },
 
-  calculateLocationScore(
-    location: Location,
-    currentLocation?: { lat: number; lng: number },
-    transportPreferences?: TransportMode[]
-  ): number {
-    if (!currentLocation || !transportPreferences) {
-      return 0.5;
+  calculateLocationScore(location: Location, context: LocationContext): number {
+    let score = 0;
+
+    switch (context.type) {
+      case 'city_center': {
+        // Historic sites often cluster in old town/city centers
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Higher scores for very close proximity to center
+        if (distance <= 1000)
+          score = 1.0; // Premium for core historic district
+        else if (distance <= 2500)
+          score = 0.85; // Strong score for inner city
+        else if (distance <= 4000)
+          score = 0.6; // Moderate score for wider area
+        else score = 0.3; // Base score for outlying areas
+        break;
+      }
+
+      case 'current_location': {
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Historic sites are destinations worth traveling to
+        // Use a gradual decay over a longer distance
+        score = Math.max(0, 1 - Math.pow(distance / 10000, 2)); // Quadratic decay over 10km
+        break;
+      }
+
+      case 'activity_cluster': {
+        if (!context.clusters?.length) {
+          score = 0.5; // Neutral score if no clusters
+          break;
+        }
+
+        // Find the closest cluster and score based on proximity
+        const clusterScores = context.clusters.map(cluster => {
+          const distanceToCluster = this.calculateDistance(
+            cluster.center.latitude,
+            cluster.center.longitude,
+            location.latitude,
+            location.longitude
+          );
+
+          // Historic sites often form natural clusters
+          // Use a steeper scoring curve within clusters
+          if (distanceToCluster <= cluster.radius * 0.5) {
+            return 1.0; // Premium for very close sites
+          } else if (distanceToCluster <= cluster.radius) {
+            return 0.8; // Strong score within radius
+          } else {
+            return Math.max(0, 1 - distanceToCluster / (cluster.radius * 1.5)); // Gradual decay outside
+          }
+        });
+
+        // Take the highest cluster score
+        score = Math.max(...clusterScores);
+        break;
+      }
     }
 
-    const distance = this.calculateDistance(
-      currentLocation.lat,
-      currentLocation.lng,
-      location.latitude,
-      location.longitude
-    );
-
-    let maxDistance = 1000; // Default 1km for walking
-    if (transportPreferences.includes('public-transit')) {
-      maxDistance = 5000;
-    } else if (transportPreferences.includes('driving')) {
-      maxDistance = 10000;
-    }
-
-    return Math.max(0, 1 - distance / maxDistance);
+    return score;
   },
 
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

@@ -11,17 +11,17 @@ interface ActivitiesStore {
   removeActivity: (activityId: string) => void;
   updateActivityStatus: (activityId: string, status: ActivityStatus) => void;
   findActivityByRecommendationId: (recommendationId: string) => ParsedItineraryActivity | undefined;
-  tripId: ParsedTrip['id'];
-  setTripId: (tripId: ParsedTrip['id']) => void;
+  trip: ParsedTrip | null;
+  setTrip: (trip: ParsedTrip | null) => void;
 }
 
 export const useActivitiesStore = create<ActivitiesStore>((set, get) => ({
   activities: [],
-  tripId: '',
+  trip: null,
 
   setActivities: activities => set({ activities }),
 
-  setTripId: tripId => set({ tripId }),
+  setTrip: trip => set({ trip }),
 
   addActivity: activity =>
     set(state => ({

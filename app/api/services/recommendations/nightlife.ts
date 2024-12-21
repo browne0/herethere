@@ -1,12 +1,12 @@
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 import _ from 'lodash';
 
-import { TripBudget } from '@/app/trips/[tripId]/types';
+import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { CategoryMapping, PlaceCategory } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
 
-import { ScoringParams } from './types';
+import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
 interface Location {
   latitude: number;
@@ -17,8 +17,18 @@ interface Location {
 }
 
 export const nightlifeRecommendationService = {
-  async getRecommendations(cityId: string, params: ScoringParams) {
-    // 1. Get initial set of nightlife venues
+  async getRecommendations(params: ScoringParams, pagination: PaginationParams) {
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
+    const { cityId } = params;
+
+    let locationContext = params.locationContext;
+
+    // Calculate activity clusters if we have selected activities and are in planning phase
+    if (params.phase === 'planning' && params.selectedActivities?.length > 0) {
+      locationContext.clusters = this.calculateActivityClusters(params.selectedActivities);
+    }
+
+    // Get initial set of nightlife venues
     const venues = await prisma.activityRecommendation.findMany({
       where: {
         cityId,
@@ -28,7 +38,7 @@ export const nightlifeRecommendationService = {
         },
         NOT: {
           placeTypes: {
-            hasSome: ['movie_theater', 'restaurant'], // Exclude restaurants
+            hasSome: ['movie_theater', 'restaurant'],
           },
         },
         reviewCount: {
@@ -37,19 +47,79 @@ export const nightlifeRecommendationService = {
       },
     });
 
-    // 2. Score venues
-    const scored = venues.map(venue => ({
-      ...venue,
-      score: this.calculateScore(venue, params),
+    // Score and sort venues
+    const scoredAndSorted = venues
+      .map(venue => ({
+        ...venue,
+        score: this.calculateScore(venue, params),
+      }))
+      .filter(r => r.score > 0.4) // Higher minimum threshold for nightlife
+      .sort((a, b) => b.score - a.score);
+
+    // Calculate pagination
+    const total = scoredAndSorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePageNumber = Math.min(Math.max(1, page), totalPages);
+
+    // Get the correct slice of data
+    const startIndex = (safePageNumber - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+
+    return {
+      items: scoredAndSorted.slice(startIndex, endIndex),
+      total,
+      page: safePageNumber,
+      pageSize,
+      totalPages,
+      hasNextPage: safePageNumber < totalPages,
+      hasPreviousPage: safePageNumber > 1,
+    };
+  },
+
+  calculateActivityClusters(
+    activities: ParsedItineraryActivity[]
+  ): Array<{ center: { latitude: number; longitude: number }; radius: number }> {
+    if (activities.length < 2) return [];
+
+    // Focus on evening activities for nightlife clustering
+    const eveningActivities = activities.filter(activity => {
+      const hour = new Date(activity.startTime).getHours();
+      return hour >= 17; // After 5 PM
+    });
+
+    if (eveningActivities.length < 2) return [];
+
+    // Get locations from evening activities
+    const locations = eveningActivities.map(a => ({
+      latitude: (a.recommendation.location as any).latitude,
+      longitude: (a.recommendation.location as any).longitude,
     }));
 
-    // 3. Sort by score and filter out low scores
-    const recommendations = scored
-      .filter(r => r.score > 0.4) // Higher minimum threshold for nightlife
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+    // Create a single cluster centered on evening activities
+    const center = {
+      latitude: _.meanBy(locations, 'latitude'),
+      longitude: _.meanBy(locations, 'longitude'),
+    };
 
-    return recommendations;
+    // Calculate radius based on standard deviation of distances
+    const distances = locations.map(loc =>
+      this.calculateDistance(center.latitude, center.longitude, loc.latitude, loc.longitude)
+    );
+
+    const mean = _.mean(distances);
+    const squareDiffs = distances.map(value => {
+      const diff = value - mean;
+      return diff * diff;
+    });
+    const standardDeviation = Math.sqrt(_.mean(squareDiffs));
+
+    // Use smaller radius for nightlife districts
+    const radius = Math.max(
+      800, // 800m minimum radius for nightlife areas
+      mean + standardDeviation * 0.8 // Tighter clustering for nightlife
+    );
+
+    return [{ center, radius }];
   },
 
   calculateScore(venue: ActivityRecommendation, params: ScoringParams): number {
@@ -60,8 +130,7 @@ export const nightlifeRecommendationService = {
     const priceScore = this.calculatePriceScore(venue, params);
     const locationScore = this.calculateLocationScore(
       venue.location as unknown as Location,
-      params.currentLocation,
-      params.transportPreferences
+      params.locationContext
     );
     const popularityScore = this.calculatePopularityScore(venue, params.crowdPreference);
 
@@ -76,12 +145,18 @@ export const nightlifeRecommendationService = {
 
   calculateWeights(params: ScoringParams) {
     const weights = {
-      venueType: 0.25, // Match to interests/preferences
-      atmosphere: 0.25, // Energy level and vibe
-      price: 0.2, // Budget alignment
-      location: 0.15, // Accessibility
-      popularity: 0.15, // Crowd levels
+      venueType: 0.25,
+      atmosphere: 0.25,
+      price: 0.15,
+      location: 0.2,
+      popularity: 0.15,
     };
+
+    // Increase location importance during active phase
+    if (params.phase === 'active') {
+      weights.location += 0.05;
+      weights.atmosphere -= 0.05;
+    }
 
     // Adjust for crowd preference
     if (params.crowdPreference === 'popular') {
@@ -90,12 +165,6 @@ export const nightlifeRecommendationService = {
     } else if (params.crowdPreference === 'hidden') {
       weights.popularity -= 0.05;
       weights.atmosphere += 0.05;
-    }
-
-    // Adjust for budget sensitivity
-    if (params.budget === 'budget') {
-      weights.price += 0.05;
-      weights.atmosphere -= 0.05;
     }
 
     return weights;
@@ -202,31 +271,84 @@ export const nightlifeRecommendationService = {
     return score;
   },
 
-  calculateLocationScore(
-    location: Location,
-    currentLocation?: { lat: number; lng: number },
-    transportPreferences?: TransportMode[]
-  ): number {
-    if (!currentLocation || !transportPreferences) {
-      return 0.5; // Neutral score if no location context
+  calculateLocationScore(location: Location, context: LocationContext): number {
+    let score = 0;
+
+    switch (context.type) {
+      case 'city_center': {
+        // Nightlife often clusters in entertainment districts near city centers
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Stricter distance tiers for nightlife
+        if (distance <= 1000)
+          score = 1.0; // Premium for core entertainment district
+        else if (distance <= 2000)
+          score = 0.8; // Strong score for nearby areas
+        else if (distance <= 3000)
+          score = 0.5; // Moderate score for wider area
+        else score = 0.2; // Lower score for distant venues
+        break;
+      }
+
+      case 'current_location': {
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Steeper distance decay for nightlife (safety and convenience)
+        if (distance <= 800)
+          score = 1.0; // Walking distance
+        else if (distance <= 3000) {
+          // Public transit distance with steep decay
+          score = Math.max(0, 0.8 * (1 - (distance - 800) / 2200));
+        } else {
+          // Longer distances with very steep decay
+          score = Math.max(0, 0.4 * (1 - (distance - 3000) / 2000));
+        }
+        break;
+      }
+
+      case 'activity_cluster': {
+        if (!context.clusters?.length) {
+          score = 0.5; // Neutral score if no clusters
+          break;
+        }
+
+        // Find the closest cluster and score based on proximity
+        const clusterScores = context.clusters.map(cluster => {
+          const distanceToCluster = this.calculateDistance(
+            cluster.center.latitude,
+            cluster.center.longitude,
+            location.latitude,
+            location.longitude
+          );
+
+          // Tighter clustering for nightlife venues
+          if (distanceToCluster <= cluster.radius * 0.3) {
+            return 1.0; // Premium for very close venues
+          } else if (distanceToCluster <= cluster.radius) {
+            return 0.7; // Good score within radius
+          } else {
+            // Steep decay outside cluster
+            return Math.max(0, 0.7 - (distanceToCluster - cluster.radius) / 500);
+          }
+        });
+
+        // Take the highest cluster score
+        score = Math.max(...clusterScores);
+        break;
+      }
     }
 
-    const distance = this.calculateDistance(
-      currentLocation.lat,
-      currentLocation.lng,
-      location.latitude,
-      location.longitude
-    );
-
-    // Nightlife venues should ideally be closer for safety
-    let maxDistance = 800; // Default 800m for walking
-    if (transportPreferences.includes('public-transit')) {
-      maxDistance = 3000; // 3km for public transit
-    } else if (transportPreferences.includes('driving')) {
-      maxDistance = 5000; // 5km for driving
-    }
-
-    return Math.max(0, 1 - distance / maxDistance);
+    return score;
   },
 
   calculatePopularityScore(

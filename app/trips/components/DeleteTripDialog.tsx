@@ -51,7 +51,7 @@ export function DeleteTripDialog({ trip, isOpen, onClose, onDelete }: DeleteTrip
         <div className="space-y-4">
           <div className="bg-gray-50 p-4 rounded-lg space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">{trip.city.name}</span>
+              <span className="text-sm font-medium">{trip.title}</span>
               <span className="text-sm text-gray-500">
                 {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
               </span>

@@ -1,7 +1,8 @@
 // app/trips/[tripId]/types.ts
-import type { Trip, ActivityRecommendation, ItineraryActivity, City } from '@prisma/client';
+import type { Trip, ItineraryActivity, City } from '@prisma/client';
 
 import { ActivityCategoryDetails } from '@/lib/types/activities';
+import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 export interface Location {
   latitude: number;
@@ -20,11 +21,18 @@ export interface ParsedItineraryActivity extends Omit<ItineraryActivity, 'custom
   };
 }
 
-export interface ActivityShelfType {
+export interface ActivityCategoryType {
+  type: string;
+  icon: React.ReactNode;
   title: string;
   description: string;
-  type: string;
   activities: ActivityRecommendation[];
+  pagination?: {
+    currentPage: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+  };
 }
 
 // More specific budget and activity types

@@ -11,14 +11,14 @@ const inter = Inter({ subsets: ['latin'] });
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <ClerkProvider>
-        <body className={`${inter.className} bg-gray-50 min-h-screen`}>
+      <body className={`${inter.className} bg-gray-50`}>
+        <ClerkProvider>
           <PageLayout>
             <GoogleMapsProvider>{children}</GoogleMapsProvider>
+            <Toaster richColors position="top-center" />
           </PageLayout>
-          <Toaster richColors position="top-center" />
-        </body>
-      </ClerkProvider>
+        </ClerkProvider>
+      </body>
     </html>
   );
 }

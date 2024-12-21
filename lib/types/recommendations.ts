@@ -4,6 +4,7 @@ import {
   RatingTier,
   ReviewCountTier,
   SeasonalAvailability,
+  BusinessStatus,
 } from '@prisma/client';
 
 export interface Location {
@@ -26,6 +27,22 @@ export interface OpeningHours {
     open: { day: number; time: string };
     close: { day: number; time: string };
   }>;
+  weekdayDescriptions: string[];
+}
+
+export interface ParkingFeatures {
+  freeParkingLot?: boolean;
+  paidParkingLot?: boolean;
+  streetParking?: boolean;
+  valetParking?: boolean;
+}
+
+export interface Features {
+  wheelchair?: boolean;
+  dineIn?: boolean;
+  takeout?: boolean;
+  delivery?: boolean;
+  parking?: ParkingFeatures;
 }
 
 export interface ActivityRecommendation {
@@ -47,7 +64,7 @@ export interface ActivityRecommendation {
 
   // Characteristics
   indoorOutdoor: IndoorOutdoor;
-  duration: number;
+  duration: number; // in minutes
   priceLevel: PriceLevel;
   seasonalAvailability: SeasonalAvailability;
 
@@ -57,24 +74,33 @@ export interface ActivityRecommendation {
 
   // Operating hours
   openingHours: OpeningHours | null;
-  availableDays: number[];
+  availableDays: number[]; // [0,1,2,3,4,5,6] for days of week
 
-  // External IDs
+  // Business status
+  businessStatus: BusinessStatus;
+  primaryType: string | null; // Direct from Places API primaryTypeDisplayName
+
+  // Features
+  features: Features | null;
+
+  // External IDs and metadata
   googlePlaceId: string | null;
+  googleTypes: string[]; // Raw place types from Google
   lastSyncedAt: Date;
 
-  // Restaurant-specific fields
+  // Viator integration
+  viatorProductId: string | null;
+  viatorData: any | null; // Store full Viator product data
+  lastViatorSync: Date | null;
+
+  // Restaurant-specific fields (optional)
   cuisineTypes?: string[];
   dietaryOptions?: string[];
   hasDietaryOptions?: boolean;
   bestTimes?: string[];
   walkingTime?: number;
 
+  // Timestamps
   createdAt: Date;
   updatedAt: Date;
-}
-
-export interface ScoredActivityRecommendation extends ActivityRecommendation {
-  score: number;
-  matchReasons: string[];
 }

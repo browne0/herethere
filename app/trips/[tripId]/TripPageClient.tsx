@@ -11,31 +11,25 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { ItineraryView } from './components/ItineraryView';
 import { RecommendationsView } from './components/RecommendationsView';
 import { useTripView } from './hooks/useTripView';
-import { ActivityShelfType, ParsedTrip } from './types';
+import { ActivityCategoryType, ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
 import TripHeader from './components/TripHeader';
 
 interface TripPageClientProps {
   trip: ParsedTrip;
-  shelves: ActivityShelfType[];
-  user: User;
+  categories: ActivityCategoryType[];
 }
 
-export function TripPageClient({ trip, shelves, user }: TripPageClientProps) {
+export function TripPageClient({ trip, categories }: TripPageClientProps) {
   const router = useRouter();
-  const { view, initialize } = useTripView();
-  const { setActivities, setTripId } = useActivitiesStore();
+  const { setActivities, setTrip } = useActivitiesStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
-  useEffect(() => {
-    initialize('recommendations');
-  }, [initialize]);
 
   // Initialize store with trip activities
   useEffect(() => {
     setActivities(trip.activities);
-    setTripId(trip.id);
-  }, [trip.activities, setActivities, setTripId, trip.id]);
+    setTrip(trip);
+  }, [trip.activities, setActivities, setTrip, trip.id]);
 
   const handleDeleteTrip = async (tripId: string) => {
     try {
@@ -59,14 +53,11 @@ export function TripPageClient({ trip, shelves, user }: TripPageClientProps) {
 
   return (
     <main className="bg-white">
-      <TripHeader trip={trip} user={user} onDeleteClick={() => setIsDeleteDialogOpen(true)} />
-
-      {/* Views */}
-      {view === 'recommendations' ? (
-        <RecommendationsView shelves={shelves} />
-      ) : (
-        <ItineraryView trip={trip} />
-      )}
+      {/* <TripHeader trip={trip} user={user} onDeleteClick={() => setIsDeleteDialogOpen(true)} /> */}
+      <RecommendationsView
+        categories={categories}
+        onDeleteClick={() => setIsDeleteDialogOpen(true)}
+      />
       <DeleteTripDialog
         trip={trip}
         isOpen={isDeleteDialogOpen}

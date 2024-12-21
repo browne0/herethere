@@ -1,11 +1,12 @@
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
 
-import { TripBudget } from '@/app/trips/[tripId]/types';
+import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode } from '@/lib/stores/preferences';
+import _ from 'lodash';
 
-import { ScoringParams } from './types';
+import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 interface Location {
   latitude: number;
   longitude: number;
@@ -15,8 +16,18 @@ interface Location {
 }
 
 export const museumRecommendationService = {
-  async getRecommendations(cityId: string, params: ScoringParams) {
-    // 1. Get initial set of museums
+  async getRecommendations(params: ScoringParams, pagination: PaginationParams) {
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
+    const { cityId } = params;
+
+    let locationContext = params.locationContext;
+
+    // Calculate activity clusters if we have selected activities and are in planning phase
+    if (params.phase === 'planning' && params.selectedActivities?.length > 0) {
+      locationContext.clusters = this.calculateActivityClusters(params.selectedActivities);
+    }
+
+    // Get initial set of museums
     const museums = await prisma.activityRecommendation.findMany({
       where: {
         cityId,
@@ -26,25 +37,76 @@ export const museumRecommendationService = {
         },
         NOT: {
           placeTypes: {
-            hasSome: ['restaurant', 'amusement_center'], // Exclude restaurants
+            hasSome: ['restaurant', 'amusement_center'],
           },
         },
       },
     });
 
-    // 2. Score museums
-    const scored = museums.map(museum => ({
-      ...museum,
-      score: this.calculateScore(museum, params),
+    // Score and sort museums
+    const scoredAndSorted = museums
+      .map(museum => ({
+        ...museum,
+        score: this.calculateScore(museum, params),
+      }))
+      .filter(m => m.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    // Calculate pagination
+    const total = scoredAndSorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePageNumber = Math.min(Math.max(1, page), totalPages);
+
+    // Get the correct slice of data
+    const startIndex = (safePageNumber - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+
+    return {
+      items: scoredAndSorted.slice(startIndex, endIndex),
+      total,
+      page: safePageNumber,
+      pageSize,
+      totalPages,
+      hasNextPage: safePageNumber < totalPages,
+      hasPreviousPage: safePageNumber > 1,
+    };
+  },
+
+  calculateActivityClusters(
+    activities: ParsedItineraryActivity[]
+  ): Array<{ center: { latitude: number; longitude: number }; radius: number }> {
+    if (activities.length < 2) return [];
+
+    // Get locations from activities
+    const locations = activities.map(a => ({
+      latitude: (a.recommendation.location as any).latitude,
+      longitude: (a.recommendation.location as any).longitude,
     }));
 
-    // 3. Sort by score and filter out low scores
-    const recommendations = scored
-      .filter(m => m.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+    // Create a single cluster centered on the mean location
+    const center = {
+      latitude: _.meanBy(locations, 'latitude'),
+      longitude: _.meanBy(locations, 'longitude'),
+    };
 
-    return recommendations;
+    // Calculate radius based on standard deviation of distances
+    const distances = locations.map(loc =>
+      this.calculateDistance(center.latitude, center.longitude, loc.latitude, loc.longitude)
+    );
+
+    const mean = _.mean(distances);
+    const squareDiffs = distances.map(value => {
+      const diff = value - mean;
+      return diff * diff;
+    });
+    const standardDeviation = Math.sqrt(_.mean(squareDiffs));
+
+    const radius = Math.max(
+      2000, // Minimum 2km radius
+      mean + standardDeviation
+    );
+
+    return [{ center, radius }];
   },
 
   getPlaceTypesFromInterests(interests: InterestType[]): string[] {
@@ -74,8 +136,7 @@ export const museumRecommendationService = {
     const priceScore = this.calculatePriceScore(museum, params);
     const locationScore = this.calculateLocationScore(
       museum.location as unknown as Location,
-      params.currentLocation,
-      params.transportPreferences
+      params.locationContext
     );
 
     return (
@@ -88,13 +149,20 @@ export const museumRecommendationService = {
   },
 
   calculateWeights(params: ScoringParams) {
+    // Adjusted base weights for museums
     const weights = {
-      quality: 0.3, // Base on reviews and ratings
-      interest: 0.25, // Match to user interests
-      activityFit: 0.2, // Energy level and crowd preference
-      price: 0.15, // Budget alignment
-      location: 0.1, // Accessibility
+      quality: 0.3,
+      interest: 0.25,
+      activityFit: 0.2,
+      price: 0.15,
+      location: 0.1,
     };
+
+    // Adjust weights based on phase
+    if (params.phase === 'active') {
+      weights.location += 0.05;
+      weights.quality -= 0.05;
+    }
 
     // Adjust weights based on crowd preference
     if (params.crowdPreference === 'popular') {
@@ -257,31 +325,66 @@ export const museumRecommendationService = {
     return Math.max(0, 1 - priceDiff * 0.25);
   },
 
-  calculateLocationScore(
-    location: Location,
-    currentLocation?: { lat: number; lng: number },
-    transportPreferences?: TransportMode[]
-  ): number {
-    if (!currentLocation || !transportPreferences) {
-      return 0.5; // Neutral score if no location context
+  calculateLocationScore(location: Location, context: LocationContext): number {
+    let score = 0;
+
+    switch (context.type) {
+      case 'city_center': {
+        // Museums often cluster near city centers
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Score based on zones with higher weights for museums near center
+        if (distance <= 2000) score = 1.0;
+        else if (distance <= 4000)
+          score = 0.8; // Higher mid-range score for museums
+        else if (distance <= 6000) score = 0.6;
+        else score = 0.3;
+        break;
+      }
+
+      case 'current_location': {
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Museums typically require dedicated trips, so use a gentler distance decay
+        score = Math.max(0, 1 - distance / 8000); // 8km radius for museums
+        break;
+      }
+
+      case 'activity_cluster': {
+        if (!context.clusters?.length) {
+          score = 0.5; // Neutral score if no clusters
+          break;
+        }
+
+        // Find the closest cluster and score based on proximity
+        const clusterScores = context.clusters.map(cluster => {
+          const distanceToCluster = this.calculateDistance(
+            cluster.center.latitude,
+            cluster.center.longitude,
+            location.latitude,
+            location.longitude
+          );
+          // Museums can be slightly further from clusters
+          return Math.max(0, 1 - distanceToCluster / (cluster.radius * 1.5));
+        });
+
+        // Take the highest cluster score
+        score = Math.max(...clusterScores);
+        break;
+      }
     }
 
-    const distance = this.calculateDistance(
-      currentLocation.lat,
-      currentLocation.lng,
-      location.latitude,
-      location.longitude
-    );
-
-    // Adjust acceptable distance based on transport preferences
-    let maxDistance = 1000; // Default 1km for walking
-    if (transportPreferences.includes('public-transit')) {
-      maxDistance = 3000; // 3km for public transit
-    } else if (transportPreferences.includes('driving')) {
-      maxDistance = 8000; // 8km for driving
-    }
-
-    return Math.max(0, 1 - distance / maxDistance);
+    return score;
   },
 
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

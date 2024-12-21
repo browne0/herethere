@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { format, isAfter, isBefore, isToday } from 'date-fns';
 import {
@@ -30,6 +30,7 @@ import {
 
 import { DeleteTripDialog } from './DeleteTripDialog';
 import { ParsedTrip } from '../[tripId]/types';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 interface TripsListProps {
   initialTrips: ParsedTrip[];
@@ -100,6 +101,7 @@ function TripActions({ trip, onDeleteClick }: { trip: ParsedTrip; onDeleteClick:
 export function TripsList({ initialTrips }: TripsListProps) {
   const [tripToDelete, setTripToDelete] = useState<ParsedTrip | null>(null);
   const [trips, setTrips] = useState(initialTrips);
+  const { setTrip } = useActivitiesStore();
   const router = useRouter();
 
   const { upcoming, ongoing, past } = groupTripsByStatus(trips);

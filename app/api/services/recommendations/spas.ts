@@ -1,12 +1,12 @@
 import { ActivityRecommendation, PriceLevel, SeasonalAvailability } from '@prisma/client';
 import _ from 'lodash';
 
-import { TripBudget } from '@/app/trips/[tripId]/types';
+import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode } from '@/lib/stores/preferences';
 
-import { ScoringParams } from './types';
+import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
 interface Location {
   latitude: number;
@@ -17,7 +17,18 @@ interface Location {
 }
 
 export const spaWellnessRecommendationService = {
-  async getRecommendations(cityId: string, params: ScoringParams) {
+  async getRecommendations(params: ScoringParams, pagination: PaginationParams) {
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
+
+    const { cityId } = params;
+
+    let locationContext = params.locationContext;
+
+    // Calculate activity clusters if we have selected activities and are in planning phase
+    if (params.phase === 'planning' && params.selectedActivities?.length > 0) {
+      locationContext.clusters = this.calculateActivityClusters(params.selectedActivities);
+    }
+
     // Get spa and wellness activities
     const activities = await prisma.activityRecommendation.findMany({
       where: {
@@ -30,19 +41,71 @@ export const spaWellnessRecommendationService = {
       },
     });
 
-    // Score activities
-    const scored = activities.map(activity => ({
-      ...activity,
-      score: this.calculateScore(activity, params),
+    // Score and sort activities
+    const scoredAndSorted = activities
+      .map(activity => ({
+        ...activity,
+        score: this.calculateScore(activity, params),
+      }))
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    // Calculate pagination
+    const total = scoredAndSorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePageNumber = Math.min(Math.max(1, page), totalPages);
+
+    // Get the correct slice of data
+    const startIndex = (safePageNumber - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+
+    return {
+      items: scoredAndSorted.slice(startIndex, endIndex),
+      total,
+      page: safePageNumber,
+      pageSize,
+      totalPages,
+      hasNextPage: safePageNumber < totalPages,
+      hasPreviousPage: safePageNumber > 1,
+    };
+  },
+
+  calculateActivityClusters(
+    activities: ParsedItineraryActivity[]
+  ): Array<{ center: { latitude: number; longitude: number }; radius: number }> {
+    if (activities.length < 2) return [];
+
+    // Get locations from activities
+    const locations = activities.map(a => ({
+      latitude: (a.recommendation.location as any).latitude,
+      longitude: (a.recommendation.location as any).longitude,
     }));
 
-    // Sort by score and return top recommendations
-    const recommendations = scored
-      .filter(r => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 10);
+    // Create a single cluster centered on the mean location
+    const center = {
+      latitude: _.meanBy(locations, 'latitude'),
+      longitude: _.meanBy(locations, 'longitude'),
+    };
 
-    return recommendations;
+    // Calculate radius based on standard deviation of distances
+    const distances = locations.map(loc =>
+      this.calculateDistance(center.latitude, center.longitude, loc.latitude, loc.longitude)
+    );
+
+    const mean = _.mean(distances);
+    const squareDiffs = distances.map(value => {
+      const diff = value - mean;
+      return diff * diff;
+    });
+    const standardDeviation = Math.sqrt(_.mean(squareDiffs));
+
+    // Larger radius for spas as they can be destination venues
+    const radius = Math.max(
+      3000, // 3km minimum radius
+      mean + standardDeviation
+    );
+
+    return [{ center, radius }];
   },
 
   calculateScore(activity: ActivityRecommendation, params: ScoringParams): number {
@@ -53,8 +116,7 @@ export const spaWellnessRecommendationService = {
     const priceScore = this.calculatePriceScore(activity, params);
     const locationScore = this.calculateLocationScore(
       activity.location as unknown as Location,
-      params.currentLocation,
-      params.transportPreferences
+      params.locationContext
     );
     const energyAlignmentScore = this.calculateEnergyAlignmentScore(activity, params.energyLevel);
 
@@ -68,15 +130,22 @@ export const spaWellnessRecommendationService = {
   },
 
   calculateWeights(params: ScoringParams) {
+    // Adjusted base weights
     const weights = {
-      quality: 0.3, // Rating and review quality
-      luxury: 0.2, // Luxury indicators and amenities
-      price: 0.2, // Price alignment
-      location: 0.15, // Accessibility
-      energyAlignment: 0.15, // Match with energy preferences
+      quality: 0.3,
+      luxury: 0.2,
+      price: 0.15, // Reduced from 0.2
+      location: 0.2, // Increased from 0.15
+      energyAlignment: 0.15,
     };
 
-    // Adjust weights based on budget preference
+    // Phase-based adjustments
+    if (params.phase === 'active') {
+      weights.location += 0.05;
+      weights.luxury -= 0.05;
+    }
+
+    // Budget-based adjustments
     if (params.budget === 'luxury') {
       weights.luxury += 0.05;
       weights.price -= 0.05;
@@ -85,7 +154,7 @@ export const spaWellnessRecommendationService = {
       weights.price += 0.05;
     }
 
-    // Adjust for crowd preference
+    // Crowd preference adjustments
     if (params.crowdPreference === 'hidden') {
       weights.quality -= 0.05;
       weights.location += 0.05;
@@ -193,31 +262,84 @@ export const spaWellnessRecommendationService = {
     return score;
   },
 
-  calculateLocationScore(
-    location: Location,
-    currentLocation?: { lat: number; lng: number },
-    transportPreferences?: TransportMode[]
-  ): number {
-    if (!currentLocation || !transportPreferences) {
-      return 0.5; // Neutral score if no location context
+  calculateLocationScore(location: Location, context: LocationContext): number {
+    let score = 0;
+
+    switch (context.type) {
+      case 'city_center': {
+        // Spas can be well-distributed throughout the city
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // More forgiving distance tiers for spas
+        if (distance <= 2000)
+          score = 1.0; // Core area
+        else if (distance <= 5000)
+          score = 0.8; // Urban accessible
+        else if (distance <= 10000)
+          score = 0.6; // Wider city area
+        else score = 0.4; // Remote but still viable
+        break;
+      }
+
+      case 'current_location': {
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Gentler distance decay for spas
+        if (distance <= 2000) {
+          score = 1.0; // Very convenient
+        } else if (distance <= 10000) {
+          // Gradual decay over longer distance
+          score = 0.8 * (1 - (distance - 2000) / 8000);
+        } else {
+          // Long distance but still accessible
+          score = Math.max(0.2, 0.4 * (1 - (distance - 10000) / 10000));
+        }
+        break;
+      }
+
+      case 'activity_cluster': {
+        if (!context.clusters?.length) {
+          score = 0.5; // Neutral score if no clusters
+          break;
+        }
+
+        // Find the closest cluster and score based on proximity
+        const clusterScores = context.clusters.map(cluster => {
+          const distanceToCluster = this.calculateDistance(
+            cluster.center.latitude,
+            cluster.center.longitude,
+            location.latitude,
+            location.longitude
+          );
+
+          // More forgiving cluster proximity for spas
+          if (distanceToCluster <= cluster.radius * 0.5) {
+            return 1.0; // Premium for close proximity
+          } else if (distanceToCluster <= cluster.radius) {
+            return 0.8; // Strong score within radius
+          } else {
+            // Gradual decay outside cluster
+            return Math.max(0.3, 0.8 - (distanceToCluster - cluster.radius) / 5000);
+          }
+        });
+
+        // Take the highest cluster score
+        score = Math.max(...clusterScores);
+        break;
+      }
     }
 
-    const distance = this.calculateDistance(
-      currentLocation.lat,
-      currentLocation.lng,
-      location.latitude,
-      location.longitude
-    );
-
-    // Adjust acceptable distance based on transport preferences
-    let maxDistance = 1000; // Default 1km for walking
-    if (transportPreferences.includes('public-transit')) {
-      maxDistance = 5000; // 5km for public transit
-    } else if (transportPreferences.includes('driving')) {
-      maxDistance = 10000; // 10km for driving
-    }
-
-    return Math.max(0, 1 - distance / maxDistance);
+    return score;
   },
 
   calculateEnergyAlignmentScore(activity: ActivityRecommendation, energyLevel: number): number {

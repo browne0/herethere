@@ -1,17 +1,14 @@
 import { useState } from 'react';
-
-import { ActivityRecommendation } from '@prisma/client';
 import { Heart, Loader2, Star, MapPin, CalendarPlus, Check } from 'lucide-react';
 import { toast } from 'sonner';
-
 import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GOOGLE_RESTAURANT_TYPES, MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
-
-import { ActivityShelfType } from '../../types';
+import { ActivityCategoryType } from '../../types';
+import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -21,7 +18,9 @@ type MuseumType = keyof MuseumTypes;
 interface ActivityCardProps {
   activity: ActivityRecommendation;
   onAdd: (activity: ActivityRecommendation, status: ActivityStatus) => Promise<void>;
-  shelf: ActivityShelfType;
+  category: ActivityCategoryType;
+  isHighlighted?: boolean;
+  onHover: (activityId: string | null) => void;
 }
 
 interface ActivityImages {
@@ -154,9 +153,16 @@ export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string 
 
   return null;
 };
-export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
+
+export function ActivityCard({
+  activity,
+  onAdd,
+  category,
+  isHighlighted,
+  onHover,
+}: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { findActivityByRecommendationId, tripId, removeActivity } = useActivitiesStore();
+  const { findActivityByRecommendationId, trip, removeActivity } = useActivitiesStore();
 
   const existingActivity = findActivityByRecommendationId(activity.id);
   const currentStatus = existingActivity?.status || 'none';
@@ -168,7 +174,7 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
     try {
       // If clicking the same status, remove the activity
       if (existingActivity && currentStatus === newStatus) {
-        const response = await fetch(`/api/trips/${tripId}/activities/${existingActivity.id}`, {
+        const response = await fetch(`/api/trips/${trip!.id}/activities/${existingActivity.id}`, {
           method: 'DELETE',
         });
 
@@ -195,9 +201,15 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
   const photoUrl = getBestImageUrl(images);
 
   return (
-    <div className="w-72 bg-white shadow-md hover:shadow-lg transition-shadow rounded-xl overflow-hidden flex-shrink-0">
+    <div
+      className={`bg-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden ${
+        isHighlighted ? 'ring-2 ring-primary' : ''
+      }`}
+      onMouseEnter={() => onHover(activity.id)}
+      onMouseLeave={() => onHover(null)}
+    >
       {/* Fixed height container for consistent card sizing */}
-      <div className="h-96 flex flex-col">
+      <div className="h-[330px] flex flex-col">
         {/* Image container with fixed aspect ratio */}
         <div className="relative w-full h-40">
           {photoUrl ? (
@@ -211,7 +223,7 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
               <MapPin className="w-8 h-8 text-gray-400" />
             </div>
           )}
-          {activity.isMustSee && shelf.type !== 'must-see' && (
+          {activity.isMustSee && category.type !== 'must-see' && (
             <div className="absolute top-3 left-3">
               <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
                 Must See
@@ -243,25 +255,25 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
           {/* Push button to bottom */}
           <div className="flex-grow" />
 
-          <div className="space-y-2 mt-2">
+          <div className="flex gap-2 mt-2">
             <Button
               onClick={() => handleAction('planned')}
               disabled={isLoading}
               variant={currentStatus === 'planned' ? 'default' : 'outline'}
-              className={`w-full ${
+              className={`flex-1 text-xs ${
                 currentStatus === 'planned'
                   ? 'bg-primary hover:bg-primary/90'
                   : 'border-primary/20 hover:bg-primary/10'
               }`}
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="w-2.5 h-2.5 animate-spin" />
               ) : (
                 <>
                   {currentStatus === 'planned' ? (
-                    <Check className="w-4 h-4 mr-2" />
+                    <Check className="w-2.5 h-2.5" />
                   ) : (
-                    <CalendarPlus className="w-4 h-4 mr-2" />
+                    <CalendarPlus className="w-2.5 h-2.5" />
                   )}
                 </>
               )}
@@ -271,20 +283,18 @@ export function ActivityCard({ activity, onAdd, shelf }: ActivityCardProps) {
             <Button
               onClick={() => handleAction('interested')}
               disabled={isLoading}
-              variant={currentStatus === 'interested' ? 'secondary' : 'outline'}
-              className={`w-full ${
+              variant="outline"
+              className={`flex-1 text-xs ${
                 currentStatus === 'interested'
-                  ? 'bg-purple-100 text-purple-900 hover:bg-purple-200'
-                  : 'hover:bg-purple-50'
+                  ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-primary/20 hover:bg-primary/10'
+                  : 'border-primary/20 hover:bg-primary/10'
               }`}
             >
               {isLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                <Loader2 className="w-2.5 h-2.5 animate-spin" />
               ) : (
                 <Heart
-                  className={`w-4 h-4 mr-2 ${
-                    currentStatus === 'interested' ? 'fill-purple-900' : ''
-                  }`}
+                  className={`w-2.5 h-2.5 ${currentStatus === 'interested' ? 'fill-gray-900' : ''}`}
                 />
               )}
               Interested

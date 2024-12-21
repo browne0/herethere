@@ -1,12 +1,12 @@
 import { ActivityRecommendation, PriceLevel, SeasonalAvailability } from '@prisma/client';
 import _ from 'lodash';
 
-import { TripBudget } from '@/app/trips/[tripId]/types';
+import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode } from '@/lib/stores/preferences';
 
-import { ScoringParams } from './types';
+import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
 interface Location {
   latitude: number;
@@ -17,17 +17,26 @@ interface Location {
 }
 
 export const essentialExperiencesRecommendationService = {
-  async getRecommendations(cityId: string, params: ScoringParams) {
+  async getRecommendations(params: ScoringParams, pagination: PaginationParams) {
+    const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
+    const { cityId } = params;
     const relevantTypes = this.getPlaceTypesFromInterests(params.interests);
 
-    // 1. Get initial set of must-see attractions
+    let locationContext = params.locationContext;
+
+    // Calculate activity clusters if we have selected activities
+    if (params.phase === 'planning' && params.selectedActivities?.length > 0) {
+      locationContext.clusters = this.calculateActivityClusters(params.selectedActivities);
+    }
+
+    // 1. Get ALL attractions first
     const attractions = await prisma.activityRecommendation.findMany({
       where: {
         cityId,
         businessStatus: 'OPERATIONAL',
         NOT: {
           placeTypes: {
-            has: 'restaurant', // Exclude restaurants
+            has: 'restaurant',
           },
         },
         OR: [
@@ -39,24 +48,80 @@ export const essentialExperiencesRecommendationService = {
             },
           },
         ],
-        // Only show seasonally appropriate activities
         seasonalAvailability: SeasonalAvailability.ALL_YEAR,
       },
     });
 
-    // 2. Score attractions
-    const scored = attractions.map(attraction => ({
-      ...attraction,
-      score: this.calculateScore(attraction, params),
+    // 2. Score and sort ALL attractions
+    const scoredAndSorted = attractions
+      .map(attraction => ({
+        ...attraction,
+        score: this.calculateScore(attraction, params),
+      }))
+      .filter(r => r.score > 0)
+      .sort((a, b) => b.score - a.score);
+
+    // 3. Calculate pagination
+    const total = scoredAndSorted.length;
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const safePageNumber = Math.min(Math.max(1, page), totalPages);
+
+    // 4. Get the correct slice of data for the requested page
+    const startIndex = (safePageNumber - 1) * pageSize;
+    const endIndex = Math.min(startIndex + pageSize, total);
+
+    return {
+      items: scoredAndSorted.slice(startIndex, endIndex),
+      total,
+      page: safePageNumber,
+      pageSize,
+      totalPages,
+      hasNextPage: safePageNumber < totalPages,
+      hasPreviousPage: safePageNumber > 1,
+    };
+  },
+
+  calculateActivityClusters(
+    activities: ParsedItineraryActivity[]
+  ): Array<{ center: { latitude: number; longitude: number }; radius: number }> {
+    if (activities.length < 2) return [];
+
+    // Simple clustering implementation
+    // In practice, you might want to use a more sophisticated algorithm like DBSCAN
+    const locations = activities.map(a => ({
+      latitude: (a.recommendation.location as any).latitude,
+      longitude: (a.recommendation.location as any).longitude,
     }));
 
-    // 3. Sort by score and filter out low scores
-    const recommendations = scored
-      .filter(r => r.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 20);
+    // For now, create a single cluster centered on the mean location
+    const center = {
+      latitude: _.meanBy(locations, 'latitude'),
+      longitude: _.meanBy(locations, 'longitude'),
+    };
 
-    return recommendations;
+    // Calculate radius based on standard deviation of distances
+    const distances = locations.map(loc =>
+      this.calculateDistance(center.latitude, center.longitude, loc.latitude, loc.longitude)
+    );
+
+    const mean = _.mean(distances);
+    const squareDiffs = distances.map(value => {
+      const diff = value - mean;
+      return diff * diff;
+    });
+    const standardDeviation = Math.sqrt(_.mean(squareDiffs));
+
+    const radius = Math.max(
+      2000, // Minimum 2km radius
+      mean + standardDeviation
+    );
+
+    return [
+      {
+        center,
+        radius,
+      },
+    ];
   },
 
   getPlaceTypesFromInterests(interests: InterestType[]): string[] {
@@ -143,8 +208,7 @@ export const essentialExperiencesRecommendationService = {
     const priceScore = this.calculatePriceScore(attraction, params);
     const locationScore = this.calculateLocationScore(
       attraction.location as unknown as Location,
-      params.currentLocation,
-      params.transportPreferences
+      params.locationContext
     );
 
     return (
@@ -311,31 +375,63 @@ export const essentialExperiencesRecommendationService = {
     return score;
   },
 
-  calculateLocationScore(
-    location: Location,
-    currentLocation?: { lat: number; lng: number },
-    transportPreferences?: TransportMode[]
-  ): number {
-    if (!currentLocation || !transportPreferences) {
-      return 0.5; // Neutral score if no location context
+  calculateLocationScore(location: Location, context: LocationContext): number {
+    let score = 0;
+
+    switch (context.type) {
+      case 'city_center': {
+        // Calculate distance from city center
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Score based on zones (0-2km: 1.0, 2-5km: 0.7, 5km+: 0.4)
+        if (distance <= 2000) score = 1.0;
+        else if (distance <= 5000) score = 0.7;
+        else score = 0.4;
+        break;
+      }
+
+      case 'current_location': {
+        const distance = this.calculateDistance(
+          context.reference.latitude,
+          context.reference.longitude,
+          location.latitude,
+          location.longitude
+        );
+
+        // Higher weight for nearby locations during active phase
+        score = Math.max(0, 1 - distance / 5000);
+        break;
+      }
+
+      case 'activity_cluster': {
+        if (!context.clusters?.length) {
+          score = 0.5; // Neutral score if no clusters
+          break;
+        }
+
+        // Find the closest cluster and score based on proximity
+        const clusterScores = context.clusters.map(cluster => {
+          const distanceToCluster = this.calculateDistance(
+            cluster.center.latitude,
+            cluster.center.longitude,
+            location.latitude,
+            location.longitude
+          );
+          return Math.max(0, 1 - distanceToCluster / cluster.radius);
+        });
+
+        // Take the highest cluster score
+        score = Math.max(...clusterScores);
+        break;
+      }
     }
 
-    const distance = this.calculateDistance(
-      currentLocation.lat,
-      currentLocation.lng,
-      location.latitude,
-      location.longitude
-    );
-
-    // Adjust acceptable distance based on transport preferences
-    let maxDistance = 1000; // Default 1km for walking
-    if (transportPreferences.includes('public-transit')) {
-      maxDistance = 5000; // 5km for public transit
-    } else if (transportPreferences.includes('driving')) {
-      maxDistance = 10000; // 10km for driving
-    }
-
-    return Math.max(0, 1 - distance / maxDistance);
+    return score;
   },
 
   calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {

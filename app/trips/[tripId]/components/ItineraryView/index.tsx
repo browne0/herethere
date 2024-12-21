@@ -10,7 +10,7 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { DailyRouteSummary } from './DailyRouteSummary';
-import { TripMapView } from './TripMapView';
+import { RecommendationsMapView } from '../RecommendationsView/RecommendationsMapView';
 import { ParsedTrip } from '../../types';
 
 interface ItineraryViewProps {
@@ -42,7 +42,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
         </div>
         {/* Map Panel - Fixed */}
         <div className="hidden md:block relative h-full">
-          <TripMapView
+          <RecommendationsMapView
             activities={activities}
             onMarkerHover={setHoveredActivityId}
             onMarkerSelect={setSelectedActivityId}
@@ -77,7 +77,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <TripMapView
+            <RecommendationsMapView
               activities={activities}
               onMarkerHover={setHoveredActivityId}
               onMarkerSelect={id => {

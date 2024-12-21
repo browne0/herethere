@@ -32,13 +32,7 @@ export type Cuisine =
   | 'thai'
   | 'turkish'
   | 'vietnamese';
-export type DietaryRestriction =
-  | 'vegetarian'
-  | 'vegan'
-  | 'halal'
-  | 'kosher'
-  | 'gluten-free'
-  | 'none';
+export type DietaryRestriction = 'vegetarian' | 'vegan';
 export type CrowdPreference = 'popular' | 'hidden' | 'mixed' | null;
 export type MealImportance = {
   breakfast: boolean;

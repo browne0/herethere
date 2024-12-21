@@ -42,13 +42,13 @@ export function ActivityTimelineItem({
   isLastActivity,
 }: ActivityTimelineItemProps) {
   const { recommendation } = activity;
-  const { removeActivity, tripId } = useActivitiesStore();
+  const { removeActivity, trip } = useActivitiesStore();
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/trips/${tripId}/activities/${activity.id}`, {
+      const response = await fetch(`/api/trips/${trip.id}/activities/${activity.id}`, {
         method: 'DELETE',
       });
 
