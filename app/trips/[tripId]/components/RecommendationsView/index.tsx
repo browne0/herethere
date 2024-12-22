@@ -6,15 +6,16 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 import ActivityCard from './ActivityCard';
-import { ActivityCategoryType } from '../../types';
+import { ActivityCategoryType, ParsedTrip } from '../../types';
 import RecommendationsMapView from './RecommendationsMapView';
 
 interface RecommendationsViewProps {
   categories: ActivityCategoryType[];
   onDeleteClick: () => void;
+  trip: ParsedTrip;
 }
 
-export function RecommendationsView({ categories, onDeleteClick }: RecommendationsViewProps) {
+export function RecommendationsView({ categories, onDeleteClick, trip }: RecommendationsViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -26,7 +27,7 @@ export function RecommendationsView({ categories, onDeleteClick }: Recommendatio
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
 
   // Global state
-  const { addActivity, trip, updateActivityStatus, findActivityByRecommendationId } =
+  const { addActivity, updateActivityStatus, findActivityByRecommendationId } =
     useActivitiesStore();
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);

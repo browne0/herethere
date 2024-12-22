@@ -5,7 +5,7 @@
   "scripts": {
     "dev:iso": "next dev",
     "ngrok": "ngrok http --domain=frequently-fitting-redfish.ngrok-free.app 3000 --log=stdout",
-    "dev": "concurrently -n \"next,ngrok\" -c \"blue,yellow\" \"npm run dev\" \"npm run ngrok\"",
+    "dev": "concurrently -n \"next,ngrok\" -c \"blue,yellow\" \"npm run dev:iso\" \"npm run ngrok\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",

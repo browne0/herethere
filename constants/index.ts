@@ -32,11 +32,9 @@ export const RESTAURANT_TYPES = {
   middle_eastern_restaurant: 'Middle Eastern',
   seafood_restaurant: 'Seafood',
   spanish_restaurant: 'Spanish',
-  steak_house: 'Steak House',
   thai_restaurant: 'Thai',
   turkish_restaurant: 'Turkish',
   vietnamese_restaurant: 'Vietnamese',
-  fine_dining_restaurant: 'Fine Dining',
 };
 
 export const MUSEUM_TYPES = {
@@ -50,12 +48,10 @@ export const GOOGLE_RESTAURANT_TYPES = Object.keys(RESTAURANT_TYPES);
 
 export const CUISINE_PREFERENCES: Array<{ label: string; value: Cuisine }> = Object.entries(
   RESTAURANT_TYPES
-)
-  .filter(([key]) => !key.includes('steak_house') && !key.includes('fine_dining'))
-  .map(([key, label]) => ({
-    label,
-    value: key.replace('_restaurant', '') as Cuisine,
-  }));
+).map(([key, label]) => ({
+  label,
+  value: key.replace('_restaurant', '') as Cuisine,
+}));
 
 // Place type indicators consolidated
 export const PLACE_INDICATORS = {
@@ -179,7 +175,15 @@ export const CategoryMapping = {
     requiresValidation: true,
   },
   [PlaceCategory.RESTAURANT]: {
-    includedTypes: Object.keys(RESTAURANT_TYPES),
+    includedTypes: [
+      ...Object.keys(RESTAURANT_TYPES),
+      'pizza_restaurant',
+      'ramen_restaurant',
+      'sandwich_shop',
+      'sushi_restaurant',
+      'fine_dining_restaurant',
+      'steak_house',
+    ],
     excludedTypes: ['fast_food_restaurant', 'cafeteria', 'grocery_store'],
     requiresValidation: true,
   },

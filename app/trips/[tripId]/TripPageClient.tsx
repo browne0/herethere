@@ -57,6 +57,7 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
       <RecommendationsView
         categories={categories}
         onDeleteClick={() => setIsDeleteDialogOpen(true)}
+        trip={trip}
       />
       <DeleteTripDialog
         trip={trip}

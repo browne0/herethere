@@ -54,7 +54,7 @@ export interface UserPreferences {
     preferred: Cuisine[];
     avoided: Cuisine[];
   };
-  mealImportance: MealImportance | null;
+  mealImportance: MealImportance;
 
   // Transportation Requirements
   transportPreferences: TransportMode[];
@@ -82,6 +82,7 @@ export interface PreferencesState extends UserPreferences {
 
   setOnboardingCompleted: (completed: boolean) => void;
   setAllPreferences: (preferences: Partial<PreferencesState>) => void;
+  reset: () => void;
 }
 
 export const usePreferences = create<PreferencesState>()(
@@ -100,7 +101,11 @@ export const usePreferences = create<PreferencesState>()(
         preferred: [],
         avoided: [],
       },
-      mealImportance: null,
+      mealImportance: {
+        breakfast: false,
+        lunch: false,
+        dinner: false,
+      },
 
       crowdPreference: null,
 
@@ -132,6 +137,36 @@ export const usePreferences = create<PreferencesState>()(
           crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
           transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
         })),
+      reset: () => {
+        set(() => ({
+          // Initial Interest States
+          interests: [],
+
+          // Initial Pace States
+          energyLevel: null,
+          preferredStartTime: null,
+
+          // Initial Dietary States
+          dietaryRestrictions: [],
+          cuisinePreferences: {
+            preferred: [],
+            avoided: [],
+          },
+          mealImportance: {
+            breakfast: false,
+            lunch: false,
+            dinner: false,
+          },
+
+          crowdPreference: null,
+
+          // Initial Requirement States
+          transportPreferences: [],
+
+          // Initial Onboarding State
+          onboardingCompleted: false,
+        }));
+      },
     }),
     {
       name: 'user-preferences', // name of the item in localStorage

@@ -161,52 +161,60 @@ export function TripsList({ initialTrips }: TripsListProps) {
         {/* Quick Actions */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {/* Active Trip Card */}
-          <Link href={ongoing[0]?.id ? `/trips/${ongoing[0].id}` : '/trips/new'}>
-            <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
-              <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                <div className="bg-blue-50 p-2 sm:p-3 rounded-lg shrink-0">
-                  <Plane className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm sm:text-base">Active Trip</h3>
-                  {ongoing[0] ? (
-                    <>
-                      <p className="text-lg sm:text-2xl font-bold truncate">
-                        {ongoing[0].city.name}
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500">
-                        {formatTripDates(ongoing[0].startDate, ongoing[0].endDate, 'short')}
-                      </p>
-                      <p className="text-xs sm:text-sm text-blue-600 mt-1">View current trip →</p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-base sm:text-xl text-muted-foreground">No active trips</p>
-                      <p className="text-xs sm:text-sm text-blue-600">Plan your next adventure →</p>
-                    </>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {ongoing.length > 0 && (
+            <Link href={ongoing[0]?.id ? `/trips/${ongoing[0].id}` : '/trips/new'}>
+              <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
+                <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
+                  <div className="bg-blue-50 p-2 sm:p-3 rounded-lg shrink-0">
+                    <Plane className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium text-sm sm:text-base">Active Trip</h3>
+                    {ongoing[0] ? (
+                      <>
+                        <p className="text-lg sm:text-2xl font-bold truncate">
+                          {ongoing[0].city.name}
+                        </p>
+                        <p className="text-xs sm:text-sm text-gray-500">
+                          {formatTripDates(ongoing[0].startDate, ongoing[0].endDate, 'short')}
+                        </p>
+                        <p className="text-xs sm:text-sm text-blue-600 mt-1">View current trip →</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-base sm:text-xl text-muted-foreground">
+                          No active trips
+                        </p>
+                        <p className="text-xs sm:text-sm text-blue-600">
+                          Plan your next adventure →
+                        </p>
+                      </>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
 
           {/* Your Adventures Card */}
-          <Link href={past.length > 0 ? '/trips?filter=past' : '#'}>
-            <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
-              <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
-                <div className="bg-purple-50 p-2 sm:p-3 rounded-lg shrink-0">
-                  <Map className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-medium text-sm sm:text-base">Your Adventures</h3>
-                  <p className="text-lg sm:text-2xl font-bold">{uniqueDestinations} Places</p>
-                  <p className="text-xs sm:text-sm text-purple-600">
-                    {totalActivities} activities planned →
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+          {uniqueDestinations > 0 && (
+            <Link href="#">
+              <Card className="hover:shadow-lg transition-all cursor-pointer h-full">
+                <CardContent className="p-4 sm:p-6 flex items-start sm:items-center gap-3 sm:gap-4">
+                  <div className="bg-purple-50 p-2 sm:p-3 rounded-lg shrink-0">
+                    <Map className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-medium text-sm sm:text-base">Your Adventures</h3>
+                    <p className="text-lg sm:text-2xl font-bold">{uniqueDestinations} Places</p>
+                    <p className="text-xs sm:text-sm text-purple-600">
+                      {totalActivities} activities planned →
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          )}
         </div>
 
         <div className="max-w-7xl mx-auto px-4 space-y-8">

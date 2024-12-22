@@ -5,6 +5,7 @@ import { prisma } from '@/lib/db';
 
 import { ParsedTrip } from './[tripId]/types';
 import { TripsList } from './components/TripsList';
+import { usePreferences } from '@/lib/stores/preferences';
 
 export default async function TripsPage() {
   const { userId } = await auth();
@@ -21,6 +22,8 @@ export default async function TripsPage() {
   });
 
   if (!user?.onboardingCompleted) {
+    const { reset } = usePreferences();
+    reset();
     redirect('/onboarding/interests');
   }
 

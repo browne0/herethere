@@ -93,6 +93,8 @@ export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string 
     // Special case for ramen restaurant
     if (activity.primaryType === 'ramen_restaurant') {
       return RESTAURANT_TYPES['japanese_restaurant'];
+    } else if (activity.primaryType === 'pizza_restaurant') {
+      return 'Pizza Restaurant';
     }
 
     // If primaryType ends with 'restaurant', look for cuisine-specific types in placeTypes
@@ -100,6 +102,8 @@ export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string 
       // Special case for ramen in place types
       if (activity.placeTypes.includes('ramen_restaurant')) {
         return RESTAURANT_TYPES['japanese_restaurant'];
+      } else if (activity.primaryType === 'pizza_restaurant') {
+        return 'Pizza Restaurant';
       }
 
       // Look for a cuisine-specific restaurant type in placeTypes

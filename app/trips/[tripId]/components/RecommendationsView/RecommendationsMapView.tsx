@@ -30,6 +30,7 @@ interface RecommendationsMapViewProps {
 interface CustomMarkerProps {
   activity: ActivityRecommendation;
   isHighlighted: boolean;
+  isInTrip: boolean;
   categoryType: string;
   onClick: () => void;
   onMouseEnter: () => void;
@@ -82,6 +83,7 @@ const CustomMarker = React.memo(
     activity,
     categoryType,
     isHighlighted,
+    isInTrip,
     onClick,
     onMouseEnter,
     onMouseLeave,
@@ -111,9 +113,14 @@ const CustomMarker = React.memo(
           >
             <div
               className={`flex h-7 min-w-7 items-center justify-center rounded-full 
-            border border-foreground/10 px-1.5 shadow-md 
-            transition-colors duration-300
-            ${isHighlighted ? 'bg-foreground text-background' : 'bg-background text-foreground hover:bg-foreground hover:text-background'}`}
+              border transition-colors duration-300
+              ${
+                isInTrip
+                  ? 'border-primary bg-primary text-background hover:bg-primary/90'
+                  : isHighlighted
+                    ? 'border-foreground/10 bg-foreground text-background'
+                    : 'border-foreground/10 bg-background text-foreground hover:bg-foreground hover:text-background'
+              }`}
             >
               <IconComponent className="w-5 h-5" />
             </div>
@@ -215,21 +222,28 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   }
 
   const markers = useMemo(() => {
-    return activities.map(activity => (
-      <CustomMarker
-        key={activity.id}
-        activity={activity}
-        categoryType={currentCategory}
-        isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
-        onClick={() => {
-          setSelectedActivity(activity);
-          onMarkerSelect(activity.id);
-        }}
-        onMouseEnter={() => onMarkerHover(activity.id)}
-        onMouseLeave={() => onMarkerHover(null)}
-        labelPosition={getLabelPosition(activity.location.longitude)}
-      />
-    ));
+    return activities.map(activity => {
+      const isInTrip = trip!.activities.some(
+        tripActivity => tripActivity.recommendationId === activity.id
+      );
+
+      return (
+        <CustomMarker
+          key={activity.id}
+          activity={activity}
+          categoryType={currentCategory}
+          isInTrip={isInTrip}
+          isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
+          onClick={() => {
+            setSelectedActivity(activity);
+            onMarkerSelect(activity.id);
+          }}
+          onMouseEnter={() => onMarkerHover(activity.id)}
+          onMouseLeave={() => onMarkerHover(null)}
+          labelPosition={getLabelPosition(activity.location.longitude)}
+        />
+      );
+    });
   }, [activities, currentCategory, hoveredActivityId, selectedActivityId, getLabelPosition]);
 
   return (

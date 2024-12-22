@@ -544,7 +544,7 @@ async function processPlacesByType(
   // Process each category's types individually
   for (const [category, config] of Object.entries(CategoryMapping)) {
     // Uncomment to only run this script for certain categories
-    if (category !== 'SPA') continue;
+    // if (category !== 'SPA') continue;
 
     logger.info(`\n🔍 Processing ${category} types in ${area.name}...`);
 

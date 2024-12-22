@@ -44,6 +44,7 @@ export default function ReviewPage() {
     tripDietaryRestrictions,
     reset,
   } = useTripFormStore();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const shouldCheckValidation = useRef(true);
@@ -171,7 +172,8 @@ export default function ReviewPage() {
                   </button>
                 </div>
                 <p className="text-gray-600">
-                  {dates.from?.toLocaleDateString()} - {dates.to?.toLocaleDateString()}
+                  {new Date(dates.from!).toLocaleDateString()} -{' '}
+                  {new Date(dates.to!).toLocaleDateString()}
                 </p>
               </div>
             </div>

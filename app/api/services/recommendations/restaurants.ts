@@ -3,9 +3,11 @@ import _ from 'lodash';
 
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import {
+  CategoryMapping,
   CUISINE_PREFERENCES,
   GOOGLE_RESTAURANT_TYPES,
   NON_VEGETARIAN_RESTAURANTS,
+  PlaceCategory,
 } from '@/constants';
 import { prisma } from '@/lib/db';
 import {
@@ -97,7 +99,7 @@ export const restaurantRecommendationService = {
       : {
           ...baseQuery,
           primaryType: {
-            in: [...GOOGLE_RESTAURANT_TYPES],
+            in: [...CategoryMapping[PlaceCategory.RESTAURANT].includedTypes],
           },
         };
 

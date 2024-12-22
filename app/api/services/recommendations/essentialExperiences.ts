@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
-import { InterestType, TransportMode } from '@/lib/stores/preferences';
+import { InterestType } from '@/lib/stores/preferences';
 
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
@@ -22,7 +22,7 @@ export const essentialExperiencesRecommendationService = {
     const { cityId } = params;
     const relevantTypes = this.getPlaceTypesFromInterests(params.interests);
 
-    let locationContext = params.locationContext;
+    const locationContext = params.locationContext;
 
     // Calculate activity clusters if we have selected activities
     if (params.phase === 'planning' && params.selectedActivities?.length > 0) {
