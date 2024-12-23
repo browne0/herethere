@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { GoogleMap, InfoWindow, OVERLAY_MOUSE_TARGET, OverlayViewF } from '@react-google-maps/api';
 import {
   Camera,
@@ -12,10 +13,12 @@ import {
   Palette,
   Flower2,
 } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
-import { type ParsedTrip } from '../../types';
+
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
+import { Card, CardContent } from '@/components/ui/card';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
+
+import { type ParsedTrip } from '../../types';
 
 interface RecommendationsMapViewProps {
   activities: ActivityRecommendation[];
@@ -198,29 +201,6 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     [map]
   );
 
-  if (!isLoaded) {
-    return (
-      <div className="h-full flex items-center justify-center bg-muted/20">
-        <div className="flex flex-col items-center gap-2">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">Loading map...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (loadError) {
-    return (
-      <div className="h-full flex items-center justify-center bg-destructive/10">
-        <Card>
-          <CardContent>
-            <p className="text-destructive">Failed to load map</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   const markers = useMemo(() => {
     return activities.map(activity => {
       const isInTrip = trip!.activities.some(
@@ -244,10 +224,46 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
         />
       );
     });
-  }, [activities, currentCategory, hoveredActivityId, selectedActivityId, getLabelPosition]);
+  }, [
+    activities,
+    currentCategory,
+    hoveredActivityId,
+    selectedActivityId,
+    getLabelPosition,
+    onMarkerSelect,
+    onMarkerHover,
+    trip,
+  ]);
+
+  if (!isLoaded) {
+    return (
+      <div className="h-full flex items-center justify-center bg-muted/20">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading map...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <div className="h-full flex items-center justify-center bg-destructive/10">
+        <Card>
+          <CardContent>
+            <p className="text-destructive">Failed to load map</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
-    <GoogleMap mapContainerClassName="w-full h-full" options={mapOptions} onLoad={handleMapLoad}>
+    <GoogleMap
+      mapContainerClassName="w-full h-full relative"
+      options={mapOptions}
+      onLoad={handleMapLoad}
+    >
       {markers}
 
       {selectedActivity && (

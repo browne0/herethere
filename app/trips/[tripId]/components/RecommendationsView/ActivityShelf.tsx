@@ -7,7 +7,6 @@ import { useInView } from 'react-intersection-observer';
 import { ActivityStatus } from '@/lib/stores/activitiesStore';
 
 import { ActivityCard } from './ActivityCard';
-import { ActivityShelfType } from '../../types';
 
 // Memoized navigation button
 const NavButton = React.memo(

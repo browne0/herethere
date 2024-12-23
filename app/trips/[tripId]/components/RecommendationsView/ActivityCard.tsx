@@ -1,14 +1,17 @@
 import { useState } from 'react';
+
 import { Heart, Loader2, Star, MapPin, CalendarPlus, Check } from 'lucide-react';
 import { toast } from 'sonner';
+
 import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GOOGLE_RESTAURANT_TYPES, MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { formatNumberIntl } from '@/lib/utils';
-import { ActivityCategoryType } from '../../types';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
+import { formatNumberIntl } from '@/lib/utils';
+
+import { ActivityCategoryType } from '../../types';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -207,7 +210,7 @@ export function ActivityCard({
   return (
     <div
       className={`bg-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden ${
-        isHighlighted ? 'ring-2 ring-primary' : ''
+        isHighlighted ? 'ring-[1.15px] ring-primary' : ''
       }`}
       onMouseEnter={() => onHover(activity.id)}
       onMouseLeave={() => onHover(null)}
@@ -259,12 +262,12 @@ export function ActivityCard({
           {/* Push button to bottom */}
           <div className="flex-grow" />
 
-          <div className="flex gap-2 mt-2">
+          <div className="flex gap-2">
             <Button
               onClick={() => handleAction('planned')}
               disabled={isLoading}
               variant={currentStatus === 'planned' ? 'default' : 'outline'}
-              className={`flex-1 text-xs ${
+              className={`w-1/2 text-xs ${
                 currentStatus === 'planned'
                   ? 'bg-primary hover:bg-primary/90'
                   : 'border-primary/20 hover:bg-primary/10'
@@ -288,7 +291,7 @@ export function ActivityCard({
               onClick={() => handleAction('interested')}
               disabled={isLoading}
               variant="outline"
-              className={`flex-1 text-xs ${
+              className={`w-1/2 text-xs ${
                 currentStatus === 'interested'
                   ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-primary/20 hover:bg-primary/10'
                   : 'border-primary/20 hover:bg-primary/10'

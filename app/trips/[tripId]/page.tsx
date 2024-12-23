@@ -1,7 +1,7 @@
 // app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
-import { notFound, redirect } from 'next/navigation';
 import { Camera, Flower2, HandPlatter, Landmark, Martini, Palette, Star } from 'lucide-react';
+import { notFound, redirect } from 'next/navigation';
 
 import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
 import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
@@ -144,19 +144,6 @@ export default async function TripPage({
       },
     },
     {
-      type: 'restaurants',
-      icon: <HandPlatter className="w-5 h-5 mb-2" />,
-      description: 'Curated dining picks just for you',
-      title: 'Popular Restaurants & Foodie Spots',
-      activities: restaurantRecommendations.items,
-      pagination: {
-        currentPage: restaurantRecommendations.page,
-        totalPages: restaurantRecommendations.totalPages,
-        hasNextPage: restaurantRecommendations.hasNextPage,
-        hasPreviousPage: restaurantRecommendations.hasPreviousPage,
-      },
-    },
-    {
       type: 'tourist-attractions',
       icon: <Camera className="w-5 h-5 mb-2" />,
       title: 'Popular Tourist Attractions',
@@ -193,6 +180,19 @@ export default async function TripPage({
         totalPages: historicSitesRecommendations.totalPages,
         hasNextPage: historicSitesRecommendations.hasNextPage,
         hasPreviousPage: historicSitesRecommendations.hasPreviousPage,
+      },
+    },
+    {
+      type: 'restaurants',
+      icon: <HandPlatter className="w-5 h-5 mb-2" />,
+      description: 'Curated dining picks just for you',
+      title: 'Popular Restaurants & Foodie Spots',
+      activities: restaurantRecommendations.items,
+      pagination: {
+        currentPage: restaurantRecommendations.page,
+        totalPages: restaurantRecommendations.totalPages,
+        hasNextPage: restaurantRecommendations.hasNextPage,
+        hasPreviousPage: restaurantRecommendations.hasPreviousPage,
       },
     },
     {
