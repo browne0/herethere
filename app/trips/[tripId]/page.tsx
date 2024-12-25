@@ -93,8 +93,8 @@ export default async function TripPage({
 
   const recommendationsData: ScoringParams = {
     cityId: trip.city.id,
-    dietaryRestrictions: user?.preferences?.dietaryRestrictions,
-    cuisinePreferences: user?.preferences?.cuisinePreferences,
+    dietaryRestrictions: trip?.preferences?.dietaryRestrictions,
+    cuisinePreferences: trip?.preferences?.cuisinePreferences,
     mealImportance: user?.preferences?.mealImportance,
     transportPreferences: user?.preferences?.transportPreferences,
     crowdPreference: user?.preferences?.crowdPreference,

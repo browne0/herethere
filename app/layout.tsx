@@ -5,6 +5,7 @@ import { PageLayout } from '@/components/layout/PageLayout';
 import { GoogleMapsProvider } from '@/components/maps/GoogleMapsProvider';
 import './globals.css';
 import { Toaster } from '@/components/ui/sonner';
+import QueryProvider from '@/components/QueryProvider';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -13,10 +14,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body className={`${inter.className} bg-gray-50`}>
         <ClerkProvider afterSignOutUrl="/">
-          <PageLayout>
-            <GoogleMapsProvider>{children}</GoogleMapsProvider>
-            <Toaster richColors position="top-center" />
-          </PageLayout>
+          <QueryProvider>
+            <PageLayout>
+              <GoogleMapsProvider>{children}</GoogleMapsProvider>
+              <Toaster closeButton richColors position="top-center" />
+            </PageLayout>
+          </QueryProvider>
         </ClerkProvider>
       </body>
     </html>

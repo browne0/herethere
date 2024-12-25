@@ -1,4 +1,4 @@
-import { MapPin, Utensils, Calendar, Heart } from 'lucide-react';
+import { ListPlus, Sparkles, Clock, Map } from 'lucide-react';
 
 interface StepProps {
   icon: React.ComponentType<{ className?: string }>;
@@ -37,24 +37,26 @@ const Step = ({ icon: Icon, title, description, index }: StepProps) => {
 export function HowItWorks() {
   const steps = [
     {
-      icon: MapPin,
-      title: 'Choose Destination',
-      description: 'Select your dream destination and travel dates for your next adventure',
+      icon: ListPlus,
+      title: 'Add Your Wishlist',
+      description:
+        "Pick the places and experiences you're excited about - no need to worry about the details yet",
     },
     {
-      icon: Utensils,
-      title: 'Set Preferences',
-      description: 'Tell us about your dietary needs and travel style preferences',
+      icon: Sparkles,
+      title: 'Get Smart Suggestions',
+      description: 'Discover perfect-for-you spots based on your interests and travel style',
     },
     {
-      icon: Calendar,
-      title: 'Get Itinerary',
-      description: 'Receive an AI-powered personalized travel plan perfectly crafted for you',
+      icon: Clock,
+      title: 'Watch It Come Together',
+      description:
+        'Your wishlist transforms into a perfectly timed daily plan that adapts to traffic, weather and crowds',
     },
     {
-      icon: Heart,
-      title: 'Enjoy Your Trip',
-      description: 'Experience your journey with confidence, knowing every detail is taken care of',
+      icon: Map,
+      title: 'Explore With Confidence',
+      description: "Follow your custom route knowing you'll hit everything at the perfect time",
     },
   ];
 
@@ -66,9 +68,7 @@ export function HowItWorks() {
           <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
             How It Works
           </h2>
-          <p className="text-lg text-gray-600">
-            Create your perfect trip in just a few simple steps
-          </p>
+          <p className="text-lg text-gray-600">From wishlist to perfect daily plan in minutes</p>
         </div>
 
         {/* Steps Grid */}

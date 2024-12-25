@@ -49,4 +49,4 @@ export interface PaginationParams {
   pageSize: number;
 }
 
-export const DEFAULT_PAGE_SIZE = 18;
+export const DEFAULT_PAGE_SIZE = 24;

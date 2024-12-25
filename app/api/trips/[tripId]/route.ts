@@ -33,6 +33,70 @@ export async function GET(request: NextRequest, { params }: { params: { tripId: 
   }
 }
 
+export async function PATCH(request: NextRequest, { params }: { params: { tripId: string } }) {
+  try {
+    const { userId } = await auth();
+    const { tripId } = await params;
+
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const searchParams = new URL(request.url).searchParams;
+    const include = searchParams.get('include')?.split(',') || [];
+
+    const body = await request.json();
+    const { startDate, endDate, cityId, preferences } = body;
+
+    const updatedTrip = await tripService.updateTrip({
+      userId,
+      tripId,
+      data: {
+        startDate: startDate ? new Date(startDate) : undefined,
+        endDate: endDate ? new Date(endDate) : undefined,
+        cityId,
+        preferences,
+      },
+      include,
+    });
+
+    return NextResponse.json({
+      message: 'Trip updated successfully',
+      data: updatedTrip,
+      activitiesCleared: cityId && cityId !== updatedTrip.cityId,
+    });
+  } catch (error) {
+    console.error('[TRIP_UPDATE]', error);
+
+    if (error instanceof Error) {
+      switch (error.message) {
+        case 'Trip not found':
+          return NextResponse.json({ error: 'Trip not found' }, { status: 404 });
+        case 'Invalid date format':
+          return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
+        case 'Start date must be before end date':
+          return NextResponse.json(
+            { error: 'Start date must be before end date' },
+            { status: 400 }
+          );
+      }
+    }
+
+    if (error instanceof PrismaClientKnownRequestError) {
+      switch (error.code) {
+        case 'P2025':
+          return NextResponse.json({ error: 'Record not found' }, { status: 404 });
+        case 'P2003':
+          return NextResponse.json({ error: 'Invalid city ID' }, { status: 400 });
+        default:
+          return NextResponse.json({ error: 'Database operation failed' }, { status: 400 });
+      }
+    }
+
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 export async function DELETE(_req: Request, { params }: { params: { tripId: string } }) {
   try {
     const { userId } = await auth();

@@ -3,6 +3,7 @@ import type { Trip, ItineraryActivity, City } from '@prisma/client';
 
 import { ActivityCategoryDetails } from '@/lib/types/activities';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
+import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 
 export interface Location {
   latitude: number;
@@ -41,6 +42,11 @@ export type TripBudget = 'budget' | 'moderate' | 'luxury';
 export interface TripPreferences {
   budget: TripBudget;
   activities: ActivityCategoryDetails[];
+  dietaryRestrictions: DietaryRestriction[];
+  cuisinePreferences: {
+    preferred: Cuisine[];
+    avoided: Cuisine[];
+  };
 }
 
 export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences'> {

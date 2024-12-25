@@ -1,19 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-import { User } from '@prisma/client';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-
-import { ItineraryView } from './components/ItineraryView';
 import { RecommendationsView } from './components/RecommendationsView';
-import { useTripView } from './hooks/useTripView';
 import { ActivityCategoryType, ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
 import TripHeader from './components/TripHeader';
+import TripEditModal from './components/TripEditModal';
 
 interface TripPageClientProps {
   trip: ParsedTrip;
@@ -24,6 +19,7 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
   const router = useRouter();
   const { setActivities, setTrip } = useActivitiesStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Initialize store with trip activities
   useEffect(() => {
@@ -51,13 +47,25 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
     }
   };
 
+  const handleTripUpdate = (updatedTrip: Partial<ParsedTrip>) => {
+    // Update local store
+    setTrip({ ...trip, ...updatedTrip });
+    // Refresh the page data
+    router.refresh();
+  };
+
   return (
-    <main className="bg-white">
-      {/* <TripHeader trip={trip} user={user} onDeleteClick={() => setIsDeleteDialogOpen(true)} /> */}
+    <div className="bg-white">
+      <TripHeader
+        trip={trip}
+        onDeleteClick={() => setIsDeleteDialogOpen(true)}
+        onEditClick={() => setIsEditModalOpen(true)}
+      />
       <RecommendationsView
         categories={categories}
         onDeleteClick={() => setIsDeleteDialogOpen(true)}
         trip={trip}
+        isEditModalOpen={isEditModalOpen}
       />
       <DeleteTripDialog
         trip={trip}
@@ -65,6 +73,13 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
         onClose={() => setIsDeleteDialogOpen(false)}
         onDelete={handleDeleteTrip}
       />
-    </main>
+
+      <TripEditModal
+        trip={trip}
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onUpdateTrip={handleTripUpdate}
+      />
+    </div>
   );
 }

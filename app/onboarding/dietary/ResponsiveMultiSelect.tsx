@@ -99,10 +99,9 @@ const SelectionList = memo(SelectionListComponent) as typeof SelectionListCompon
 interface TriggerContentProps<T> {
   selected: T[];
   placeholder: string;
-  entity: string;
 }
 
-function TriggerContentComponent<T>({ selected, placeholder, entity }: TriggerContentProps<T>) {
+function TriggerContentComponent<T>({ selected, placeholder }: TriggerContentProps<T>) {
   return (
     <>
       <span className="truncate">
@@ -155,7 +154,6 @@ function ResponsiveMultiSelectComponent<T extends string>({
   title,
   searchPlaceholder = 'Search...',
   type = 'default',
-  entity = '',
 }: MultiSelectProps<T>) {
   const [open, setOpen] = useState(false);
   const isDesktop = useSSRMediaQuery('(min-width: 768px)');
@@ -200,7 +198,7 @@ function ResponsiveMultiSelectComponent<T extends string>({
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className=" justify-between">
-              <TriggerContent<T> selected={selected} entity={entity} placeholder={placeholder} />
+              <TriggerContent<T> selected={selected} placeholder={placeholder} />
             </Button>
           </PopoverTrigger>
           <PopoverContent className="p-0 w-[275px]" align="start">

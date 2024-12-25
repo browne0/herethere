@@ -1,6 +1,7 @@
 import { City } from '@prisma/client';
 
 import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
+import { TripBudget } from '@/app/trips/[tripId]/types';
 
 export enum PlaceCategory {
   MUSEUM = 'MUSEUM',
@@ -35,6 +36,8 @@ export const RESTAURANT_TYPES = {
   thai_restaurant: 'Thai',
   turkish_restaurant: 'Turkish',
   vietnamese_restaurant: 'Vietnamese',
+  pizza_restaurant: 'Pizza',
+  barbecue_restaurant: 'Barbecue',
 };
 
 export const MUSEUM_TYPES = {
@@ -48,10 +51,12 @@ export const GOOGLE_RESTAURANT_TYPES = Object.keys(RESTAURANT_TYPES);
 
 export const CUISINE_PREFERENCES: Array<{ label: string; value: Cuisine }> = Object.entries(
   RESTAURANT_TYPES
-).map(([key, label]) => ({
-  label,
-  value: key.replace('_restaurant', '') as Cuisine,
-}));
+)
+  .map(([key, label]) => ({
+    label,
+    value: key.replace('_restaurant', '') as Cuisine,
+  }))
+  .sort((a, b) => a.label.localeCompare(b.label));
 
 // Place type indicators consolidated
 export const PLACE_INDICATORS = {
@@ -183,6 +188,7 @@ export const CategoryMapping = {
       'sushi_restaurant',
       'fine_dining_restaurant',
       'steak_house',
+      'barbecue_restaurant',
     ],
     excludedTypes: ['fast_food_restaurant', 'cafeteria', 'grocery_store'],
     requiresValidation: true,
@@ -401,6 +407,12 @@ export const DIETARY_RESTRICTIONS: Array<{ label: string; value: DietaryRestrict
   { label: 'No dietary restrictions', value: 'none' },
   { label: 'Vegetarian', value: 'vegetarian' },
   { label: 'Vegan', value: 'vegan' },
+];
+
+export const BUDGET_OPTIONS: { label: string; value: TripBudget }[] = [
+  { label: 'Budget', value: 'budget' },
+  { label: 'Moderate', value: 'moderate' },
+  { label: 'Luxury', value: 'luxury' },
 ];
 
 export const NON_VEGETARIAN_RESTAURANTS = ['seafood_restaurant', 'steak_house'];

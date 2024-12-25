@@ -209,22 +209,16 @@ export function ActivityCard({
 
   return (
     <div
-      className={`bg-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden ${
-        isHighlighted ? 'ring-[1.15px] ring-primary' : ''
-      }`}
+      className={`bg-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden`}
       onMouseEnter={() => onHover(activity.id)}
       onMouseLeave={() => onHover(null)}
     >
       {/* Fixed height container for consistent card sizing */}
-      <div className="h-[330px] flex flex-col">
-        {/* Image container with fixed aspect ratio */}
-        <div className="relative w-full h-40">
+      <div className="h-[370px] flex flex-col">
+        {/* Image container */}
+        <div className="relative w-full h-full md:h-[200px]">
           {photoUrl ? (
-            <CachedImage
-              photo={photoUrl}
-              alt={activity.name}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
+            <CachedImage photo={photoUrl} alt={activity.name} className="" />
           ) : (
             <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
               <MapPin className="w-8 h-8 text-gray-400" />
@@ -262,7 +256,7 @@ export function ActivityCard({
           {/* Push button to bottom */}
           <div className="flex-grow" />
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 mt-2.5">
             <Button
               onClick={() => handleAction('planned')}
               disabled={isLoading}

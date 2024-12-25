@@ -11,18 +11,21 @@ export function MainCTA() {
 
           <div className="relative text-center max-w-3xl mx-auto">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">
-              Start Planning Your Next Adventure Today
+              Ready to Turn Your Travel Dreams Into Reality?
             </h2>
             <p className="text-lg text-indigo-100 mb-8">
-              Join thousands of happy travelers who have discovered the ease of AI-powered trip
-              planning
+              Create your perfect daily plan, all in one place. No more endless research or
+              complicated spreadsheets & docs.
             </p>
-            <a
-              href="#hero"
-              className="px-8 py-4 bg-white text-indigo-600 rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
-            >
-              Get Started for Free
-            </a>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <a
+                href="#hero"
+                className="px-8 py-4 bg-white text-indigo-600 rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
+              >
+                Start Planning Your Dream Trip Today
+              </a>
+              <p className="text-sm text-indigo-100">No credit card required</p>
+            </div>
           </div>
         </div>
       </div>

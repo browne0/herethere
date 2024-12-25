@@ -33,12 +33,10 @@ export const Hero = () => {
         {/* Primary CTA Section */}
         <div className="mb-8">
           <h1 className="inline-block text-5xl md:text-6xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 mb-6">
-            Your Personalized NYC Trip,
-            <br />
-            Planned in Minutes.
+            Plan Less, Travel More.
           </h1>
           <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-2xl mx-auto">
-            Forget the research and planning—just pack and go.
+            Turn your travel wishlist into perfect daily plans.
           </p>
           <Button
             onClick={handleGetStarted}

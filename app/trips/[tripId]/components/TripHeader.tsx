@@ -1,64 +1,84 @@
 'use client';
 import React from 'react';
-
-import { User } from '@prisma/client';
-import { format } from 'date-fns';
-import { Calendar, Trash2 } from 'lucide-react';
-
+import Link from 'next/link';
+import { ChevronLeft } from 'lucide-react';
+import { HereThereUserButton } from '@/components/nav';
 import { ParsedTrip } from '../types';
+import { Button } from '@/components/ui/button';
 
-export default function TripHeader({
-  trip,
-  onDeleteClick,
-  user,
-}: {
+interface TripHeaderProps {
   trip: ParsedTrip;
   onDeleteClick: () => void;
-  user: User;
-}) {
+  onEditClick: () => void;
+}
+
+export const TripHeader = ({ trip, onDeleteClick, onEditClick }: TripHeaderProps) => {
+  const formatDate = (date: Date | string) => {
+    if (!date) return '';
+    const d = new Date(date);
+    return d.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
   return (
-    <div className="sticky top-[73px] top-0 bg-white z-50">
-      {/* Main Header */}
-      <div className="border-b border-gray-100">
+    <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
+      <div className="mx-auto px-4">
         {/* Mobile Header */}
-        <div className="flex flex-col md:hidden">
-          {/* Trip Info */}
-          <div className="px-4 py-3">
-            <h1 className="text-lg font-medium">{trip.title}</h1>
-            <div className="flex items-center mt-1 text-sm text-gray-600">
-              <Calendar className="w-4 h-4 mr-1.5" />
-              <span>
-                {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
-              </span>
+        <div className="flex sm:hidden items-center justify-between h-16">
+          <Link href="/trips" className="p-2 -ml-2">
+            <ChevronLeft className="w-6 h-6" />
+          </Link>
+
+          <button
+            onClick={onEditClick}
+            className="flex-1 mx-4 py-1 text-center rounded-full border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
+          >
+            <div className="text-sm">{trip.city.name}</div>
+            <div className="text-xs text-gray-500">
+              {formatDate(trip.startDate)} – {formatDate(trip.endDate)} · 1 guest
             </div>
-          </div>
+          </button>
+          <HereThereUserButton />
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden md:block">
-          <div className="p-4 md:px-[80px]">
-            <div className="flex items-center justify-between">
-              {/* Trip Info */}
-              <div>
-                <h1 className="text-2xl font-semibold mb-1">Trip to {trip.city.name}</h1>
-                <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
-                </div>
-              </div>
+        <div className="hidden sm:flex items-center justify-between h-16">
+          <Link href="/" className="flex items-center flex-shrink-0">
+            <span className="text-2xl font-bold">HereThere</span>
+          </Link>
 
-              {/* Delete Button */}
-              <button
-                onClick={onDeleteClick}
-                className="flex text-sm text-red-600 hover:text-red-700 hover:bg-red-50 px-3 py-2 rounded-md transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-                Delete Trip
-              </button>
+          <div className="flex justify-center">
+            <div
+              onClick={onEditClick}
+              className="flex items-center px-4 py-2 rounded-full border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-pointer max-w-xs"
+            >
+              <div className="text-sm font-medium">{trip.city.name}</div>
+              <span className="mx-2 text-gray-300">|</span>
+              <div className="text-sm font-medium">
+                {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
+              </div>
+              <span className="mx-2 text-gray-300">|</span>
+              <div className="text-sm font-medium">1 guest</div>
             </div>
+          </div>
+
+          <div className="flex gap-4 items-center">
+            <Link href="/trips">
+              <Button
+                variant="ghost"
+                className="hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-300 text-sm px-2 md:px-4"
+              >
+                My Trips
+              </Button>
+            </Link>
+            <HereThereUserButton />
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
-}
+};
+
+export default TripHeader;

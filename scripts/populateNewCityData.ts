@@ -248,6 +248,8 @@ function getBaseRatingThreshold(
       return 4.3;
     case PlaceCategory.NIGHTLIFE:
       return 4.0;
+    case PlaceCategory.MUSEUM:
+      return 4.1;
     default:
       return 4.2;
   }

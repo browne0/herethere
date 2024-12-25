@@ -35,7 +35,7 @@ export const touristAttractionService = {
         businessStatus: 'OPERATIONAL',
         NOT: {
           placeTypes: {
-            has: 'restaurant',
+            hasSome: ['restaurant', 'event_venue'],
           },
         },
         placeTypes: {

@@ -1,13 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+
 import { UserButton, SignedIn, SignedOut, SignInButton, SignUpButton } from '@clerk/nextjs';
-import { Menu, Sliders, X, ChevronLeft, Calendar } from 'lucide-react';
+import { Menu, Sliders, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import { Button } from '@/components/ui/button';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { format } from 'date-fns';
 
 // Constants for navigation links and configuration
 const LANDING_PAGE_LINKS = [
@@ -33,7 +33,7 @@ const Logo = () => (
   </Link>
 );
 
-const CustomUserButton = () => (
+export const HereThereUserButton = () => (
   <UserButton
     appearance={{
       elements: {
@@ -51,28 +51,21 @@ const CustomUserButton = () => (
   </UserButton>
 );
 
-const AuthenticatedNav = ({
-  isOnboardingPage,
-}: {
-  isOnboardingPage: boolean;
-  isTripDetails: boolean;
-}) => {
-  return (
-    <div className="flex items-center space-x-4 md:space-x-8">
-      {!isOnboardingPage && (
-        <Link href="/trips">
-          <Button
-            variant="ghost"
-            className="hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-300 text-sm px-2 md:px-4"
-          >
-            My Trips
-          </Button>
-        </Link>
-      )}
-      <CustomUserButton />
-    </div>
-  );
-};
+const AuthenticatedNav = ({ isOnboardingPage }: { isOnboardingPage: boolean }) => (
+  <div className="flex items-center space-x-4 md:space-x-8">
+    {!isOnboardingPage && (
+      <Link href="/trips">
+        <Button
+          variant="ghost"
+          className="hover:bg-indigo-50 hover:text-indigo-600 transition-colors duration-300 text-sm px-2 md:px-4"
+        >
+          My Trips
+        </Button>
+      </Link>
+    )}
+    <HereThereUserButton />
+  </div>
+);
 
 const LandingPageNav = ({ pathname }: { pathname: string }) => (
   <div className="hidden md:flex items-center space-x-8">
@@ -133,34 +126,22 @@ export function Nav() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const isLandingPage = pathname === '/';
-  const isTripDetails = isTripDetailsPage(pathname);
+
   const isOnboardingPage = /\/onboarding(\/|$)/.test(pathname);
-  const { trip } = useActivitiesStore();
+
+  if (isTripDetailsPage(pathname)) {
+    return null;
+  }
 
   return (
-    <header className="sticky top-0 bg-white border-b border-gray-100 z-50 transition-all duration-300">
-      <div className="px-4 md:px-[40px]">
-        <div className="flex items-center h-18">
-          <div className="flex items-center justify-between flex-1">
-            <Logo />
-            <SignedIn>
-              {isTripDetails && trip && (
-                <div className="mx-auto">
-                  <p className="text-md text-center font-medium">{trip.title}</p>
-                  <div className="flex items-center mt-1 text-sm text-gray-600">
-                    <Calendar className="w-4 h-4 mr-1.5" />
-                    <span>
-                      {format(trip.startDate, 'MMM d')} - {format(trip.endDate, 'MMM d, yyyy')}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </SignedIn>
-          </div>
+    <header className="sticky top-0 bg-white border-b border-gray-100 w-full z-50 transition-all duration-300">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-18">
+          <Logo />
 
           <nav className="flex items-center space-x-8">
             <SignedIn>
-              <AuthenticatedNav isOnboardingPage={isOnboardingPage} isTripDetails={isTripDetails} />
+              <AuthenticatedNav isOnboardingPage={isOnboardingPage} />
             </SignedIn>
 
             <SignedOut>{isLandingPage && <LandingPageNav pathname={pathname} />}</SignedOut>

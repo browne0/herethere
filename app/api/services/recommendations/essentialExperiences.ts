@@ -36,7 +36,7 @@ export const essentialExperiencesRecommendationService = {
         businessStatus: 'OPERATIONAL',
         NOT: {
           placeTypes: {
-            has: 'restaurant',
+            hasSome: ['restaurant', 'event_venue'],
           },
         },
         OR: [

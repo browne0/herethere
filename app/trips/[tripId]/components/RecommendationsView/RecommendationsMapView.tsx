@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 
 import { GoogleMap, InfoWindow, OVERLAY_MOUSE_TARGET, OverlayViewF } from '@react-google-maps/api';
 import {
@@ -54,32 +54,6 @@ const ACTIVITY_ICONS: Record<string, LucideIcon> = {
   default: MapPin,
 };
 
-// Map styling to hide unnecessary elements
-const mapOptions: google.maps.MapOptions = {
-  disableDefaultUI: false,
-  clickableIcons: false,
-  streetViewControl: false,
-  mapTypeControl: false,
-  fullscreenControl: false,
-  styles: [
-    {
-      featureType: 'poi',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }],
-    },
-    {
-      featureType: 'transit',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }],
-    },
-    {
-      featureType: 'road.highway',
-      elementType: 'labels',
-      stylers: [{ visibility: 'off' }],
-    },
-  ],
-};
-
 // Custom Marker Component
 const CustomMarker = React.memo(
   ({
@@ -112,7 +86,7 @@ const CustomMarker = React.memo(
             onMouseEnter={onMouseEnter}
             onMouseLeave={onMouseLeave}
             className={`group/marker relative block cursor-pointer rounded-full
-            ${isHighlighted ? 'z-50' : 'hover:z-40 z-30'}`}
+            ${isHighlighted || isInTrip ? 'z-50' : 'hover:z-40 z-30'}`}
           >
             <div
               className={`flex h-7 min-w-7 items-center justify-center rounded-full 
@@ -160,6 +134,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecommendation | null>(null);
   const { isLoaded, loadError } = useGoogleMapsStatus();
+  const [isMobile, setIsMobile] = useState(false);
 
   const boundsSet = useRef<boolean>(false);
 
@@ -191,6 +166,21 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     boundsSet.current = true;
   }, [map, activities, trip, fitBoundsToActivities]);
 
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    // Check initially
+    checkMobile();
+
+    // Add resize listener
+    window.addEventListener('resize', checkMobile);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const getLabelPosition = useCallback(
     (lng: number): 'left' | 'right' => {
       if (!map) return 'right';
@@ -200,40 +190,6 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     },
     [map]
   );
-
-  const markers = useMemo(() => {
-    return activities.map(activity => {
-      const isInTrip = trip!.activities.some(
-        tripActivity => tripActivity.recommendationId === activity.id
-      );
-
-      return (
-        <CustomMarker
-          key={activity.id}
-          activity={activity}
-          categoryType={currentCategory}
-          isInTrip={isInTrip}
-          isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
-          onClick={() => {
-            setSelectedActivity(activity);
-            onMarkerSelect(activity.id);
-          }}
-          onMouseEnter={() => onMarkerHover(activity.id)}
-          onMouseLeave={() => onMarkerHover(null)}
-          labelPosition={getLabelPosition(activity.location.longitude)}
-        />
-      );
-    });
-  }, [
-    activities,
-    currentCategory,
-    hoveredActivityId,
-    selectedActivityId,
-    getLabelPosition,
-    onMarkerSelect,
-    onMarkerHover,
-    trip,
-  ]);
 
   if (!isLoaded) {
     return (
@@ -258,9 +214,62 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     );
   }
 
+  const markers = activities.map(activity => {
+    const isInTrip = trip!.activities.some(
+      tripActivity => tripActivity.recommendationId === activity.id
+    );
+
+    return (
+      <CustomMarker
+        key={activity.id}
+        activity={activity}
+        categoryType={currentCategory}
+        isInTrip={isInTrip}
+        isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
+        onClick={() => {
+          setSelectedActivity(activity);
+          onMarkerSelect(activity.id);
+        }}
+        onMouseEnter={() => onMarkerHover(activity.id)}
+        onMouseLeave={() => onMarkerHover(null)}
+        labelPosition={getLabelPosition(activity.location.longitude)}
+      />
+    );
+  });
+
+  // Map styling to hide unnecessary elements
+  const mapOptions: google.maps.MapOptions = {
+    disableDefaultUI: isMobile,
+    clickableIcons: false,
+    streetViewControl: false,
+    mapTypeControl: false,
+    keyboardShortcuts: false,
+    fullscreenControl: false,
+    zoomControlOptions: {
+      position: google.maps.ControlPosition.TOP_RIGHT,
+    },
+    styles: [
+      {
+        featureType: 'poi',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'transit',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+      {
+        featureType: 'road.highway',
+        elementType: 'labels',
+        stylers: [{ visibility: 'off' }],
+      },
+    ],
+  };
+
   return (
     <GoogleMap
-      mapContainerClassName="w-full h-full relative"
+      mapContainerClassName="w-full h-full overflow-hidden"
       options={mapOptions}
       onLoad={handleMapLoad}
     >
