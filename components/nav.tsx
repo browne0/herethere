@@ -33,23 +33,25 @@ const Logo = () => (
   </Link>
 );
 
-export const HereThereUserButton = () => (
-  <UserButton
-    appearance={{
-      elements: {
-        avatarBox: 'w-8 h-8 hover:scale-110 transition-transform duration-300',
-      },
-    }}
-  >
-    <UserButton.MenuItems>
-      <UserButton.Link
-        label="Preferences"
-        labelIcon={<Sliders className="h-4 w-4" />}
-        href="/settings/preferences"
-      />
-    </UserButton.MenuItems>
-  </UserButton>
-);
+export const HereThereUserButton = () => {
+  return (
+    <UserButton
+      appearance={{
+        elements: {
+          avatarBox: 'w-8 h-8 hover:scale-110 transition-transform duration-300',
+        },
+      }}
+    >
+      <UserButton.MenuItems>
+        <UserButton.Link
+          label="Preferences"
+          labelIcon={<Sliders className="h-4 w-4" />}
+          href="/settings/preferences"
+        />
+      </UserButton.MenuItems>
+    </UserButton>
+  );
+};
 
 const AuthenticatedNav = ({ isOnboardingPage }: { isOnboardingPage: boolean }) => (
   <div className="flex items-center space-x-4 md:space-x-8">

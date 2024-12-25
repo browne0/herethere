@@ -206,10 +206,11 @@ export const restaurantRecommendationService = {
   },
 
   calculateWeights(params: ScoringParams) {
+    // Base weights with increased emphasis on match (cuisine preferences)
     const weights = {
-      quality: 0.35,
-      price: 0.25,
-      match: 0.2,
+      quality: 0.25,
+      price: 0.2,
+      match: 0.35,
       location: 0.15,
       mustSee: 0.05,
     };
@@ -223,10 +224,12 @@ export const restaurantRecommendationService = {
 
     // Adjust weights based on meal importance
     if (isCurrentMealImportant) {
-      weights.quality += 0.05;
+      // For important meals, increase match weight even further
+      weights.match += 0.05;
       weights.location -= 0.05;
     } else {
-      weights.quality -= 0.05;
+      // For less important meals, be more lenient with cuisine matching
+      weights.match -= 0.05;
       weights.location += 0.05;
     }
 
@@ -321,26 +324,25 @@ export const restaurantRecommendationService = {
   calculateMatchScore(restaurant: ActivityRecommendation, params: ScoringParams): number {
     const types = restaurant.placeTypes || [];
 
-    // Calculate cuisine match (now weighted more heavily since location is handled separately)
+    // Calculate cuisine match with enhanced scoring
     const cuisineScore = this.calculateCuisineScore(
       types,
       params.cuisinePreferences,
       params.crowdPreference!
     );
 
-    // Get current meal type for additional context
     const currentHour = new Date().getHours();
     const currentMealType = this.getCurrentMealType(currentHour);
     const isMealImportant = params.mealImportance?.[currentMealType] ?? true;
 
-    // Adjust cuisine score based on meal importance
+    // Enhanced cuisine score adjustment
     let finalScore = cuisineScore;
     if (isMealImportant) {
-      // If this meal is important, strict cuisine matching
-      finalScore *= 1.0;
+      // For important meals, be even stricter with cuisine matching
+      finalScore = Math.pow(cuisineScore, 0.8); // Less penalty for slight mismatches
     } else {
-      // If meal isn't important, be more lenient with cuisine matching
-      finalScore = finalScore * 0.7 + 0.3; // Boost base score to be more permissive
+      // For less important meals, be more lenient but still maintain preference
+      finalScore = cuisineScore * 0.8 + 0.2; // Higher base score but still respects preferences
     }
 
     return finalScore;
@@ -352,8 +354,6 @@ export const restaurantRecommendationService = {
     crowdPreference: CrowdPreference
   ): number {
     let score = 0;
-
-    // Create a set of cuisine preference values for quick lookup
     const cuisineValues = new Set(CUISINE_PREFERENCES.map(cuisine => cuisine.value));
 
     const cuisineTypes = types.filter(item => {
@@ -361,27 +361,27 @@ export const restaurantRecommendationService = {
       return cuisineValues.has(normalizedItem as Cuisine);
     });
 
-    // Handle no cuisine types
-    if (cuisineTypes.length === 0) return 0.5;
+    // No cuisine types identified
+    if (cuisineTypes.length === 0) return 0.3; // Reduced from 0.5 to favor known cuisines
 
-    // Check for avoided cuisines
+    // Strict avoidance of disliked cuisines
     if (preferences.avoided.some(avoided => cuisineTypes.some(t => t.includes(avoided)))) {
       return 0;
     }
 
-    // Calculate preferred cuisine matches
+    // Enhanced preferred cuisine matching
     const preferredMatches = preferences.preferred.filter(preferred =>
       cuisineTypes.some(t => t.includes(preferred))
     ).length;
 
     if (preferredMatches > 0) {
-      score = preferredMatches / preferences.preferred.length;
+      // Enhanced scoring for preferred matches
+      score = (preferredMatches / preferences.preferred.length) * 1.2; // 20% bonus for matching preferences
+      score = Math.min(1, score); // Cap at 1.0
 
-      // Adjust based on crowd preference (if specified)
       if (crowdPreference === 'hidden') {
-        score *= 0.8;
+        score *= 0.9; // Reduced penalty for hidden gems
       }
-      // For null or 'mixed' crowd preference, keep original score
     }
 
     return score;

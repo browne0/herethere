@@ -32,7 +32,7 @@ export const RESTAURANT_TYPES = {
   mexican_restaurant: 'Mexican',
   middle_eastern_restaurant: 'Middle Eastern',
   seafood_restaurant: 'Seafood',
-  spanish_restaurant: 'Spanish',
+  spanish_restaurant: 'Latin',
   thai_restaurant: 'Thai',
   turkish_restaurant: 'Turkish',
   vietnamese_restaurant: 'Vietnamese',

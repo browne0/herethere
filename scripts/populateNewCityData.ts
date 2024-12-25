@@ -109,7 +109,7 @@ async function fetchAndUploadPhotos(
   placeId: string
 ): Promise<ImageUploadResult[]> {
   const results: ImageUploadResult[] = [];
-  const maxPhotos = 5;
+  const maxPhotos = 7;
 
   for (const photo of photos.slice(0, maxPhotos)) {
     try {

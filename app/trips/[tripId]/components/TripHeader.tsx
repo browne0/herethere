@@ -5,6 +5,7 @@ import { ChevronLeft } from 'lucide-react';
 import { HereThereUserButton } from '@/components/nav';
 import { ParsedTrip } from '../types';
 import { Button } from '@/components/ui/button';
+import { SignedIn } from '@clerk/nextjs';
 
 interface TripHeaderProps {
   trip: ParsedTrip;
@@ -73,7 +74,9 @@ export const TripHeader = ({ trip, onDeleteClick, onEditClick }: TripHeaderProps
                 My Trips
               </Button>
             </Link>
-            <HereThereUserButton />
+            <SignedIn>
+              <HereThereUserButton />
+            </SignedIn>
           </div>
         </div>
       </div>

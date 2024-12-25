@@ -268,7 +268,7 @@ export default function ReviewPage() {
           size="lg"
           className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white hover:from-indigo-700 hover:to-purple-700"
         >
-          {isSubmitting ? 'Generating Trip...' : 'Generate My Trip'}
+          {isSubmitting ? 'Setting things up...' : 'Start Planning Your Trip'}
         </Button>
       </div>
     </div>

@@ -1,24 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { GoogleMap, InfoWindow, OVERLAY_MOUSE_TARGET, OverlayViewF } from '@react-google-maps/api';
-import {
-  Camera,
-  MapPin,
-  Loader2,
-  type LucideIcon,
-  Martini,
-  Landmark,
-  Star,
-  HandPlatter,
-  Palette,
-  Flower2,
-} from 'lucide-react';
+import { GoogleMap, InfoWindow } from '@react-google-maps/api';
+import { MapPin, Loader2 } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import { type ParsedTrip } from '../../types';
+import CustomMarker from './CustomMarker';
+import { MapLegend } from './MapLegend';
 
 interface RecommendationsMapViewProps {
   activities: ActivityRecommendation[];
@@ -29,98 +20,6 @@ interface RecommendationsMapViewProps {
   selectedActivityId: string | null;
   trip: ParsedTrip | null;
 }
-
-interface CustomMarkerProps {
-  activity: ActivityRecommendation;
-  isHighlighted: boolean;
-  isInTrip: boolean;
-  categoryType: string;
-  onClick: () => void;
-  onMouseEnter: () => void;
-  onMouseLeave: () => void;
-  labelPosition: 'left' | 'right';
-}
-
-// Activity type icons mapping
-const ACTIVITY_ICONS: Record<string, LucideIcon> = {
-  'must-see': Star,
-  restaurants: HandPlatter,
-  'tourist-attractions': Camera,
-  culture: Palette,
-  'historic-sites': Landmark,
-  nightlife: Martini,
-  'spas-&-wellness': Flower2,
-  // Default icon for any unmapped categories
-  default: MapPin,
-};
-
-// Custom Marker Component
-const CustomMarker = React.memo(
-  ({
-    activity,
-    categoryType,
-    isHighlighted,
-    isInTrip,
-    onClick,
-    onMouseEnter,
-    onMouseLeave,
-    labelPosition,
-  }: CustomMarkerProps) => {
-    const IconComponent = ACTIVITY_ICONS[categoryType] || ACTIVITY_ICONS.default;
-
-    return (
-      <OverlayViewF
-        position={{
-          lat: activity.location.latitude,
-          lng: activity.location.longitude,
-        }}
-        mapPaneName={OVERLAY_MOUSE_TARGET}
-        getPixelPositionOffset={(width, height) => ({
-          x: -(width / 2),
-          y: -(height / 2),
-        })}
-      >
-        <div className="relative">
-          <button
-            onClick={onClick}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
-            className={`group/marker relative block cursor-pointer rounded-full
-            ${isHighlighted || isInTrip ? 'z-50' : 'hover:z-40 z-30'}`}
-          >
-            <div
-              className={`flex h-7 min-w-7 items-center justify-center rounded-full 
-              border transition-colors duration-300
-              ${
-                isInTrip
-                  ? 'border-primary bg-primary text-background hover:bg-primary/90'
-                  : isHighlighted
-                    ? 'border-foreground/10 bg-foreground text-background'
-                    : 'border-foreground/10 bg-background text-foreground hover:bg-foreground hover:text-background'
-              }`}
-            >
-              <IconComponent className="w-5 h-5" />
-            </div>
-            {/* Only show label when highlighted */}
-            {isHighlighted && (
-              <div
-                className={`pointer-events-none absolute w-40 text-xs font-medium leading-tight text-foreground
-              ${labelPosition === 'right' ? 'left-full ml-1' : 'right-full mr-1'} 
-              top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? 'text-left' : 'text-right'}`}
-              >
-                <span className="rounded-sm bg-background/95 px-2 py-1 shadow-sm">
-                  {activity.name}
-                </span>
-              </div>
-            )}
-          </button>
-        </div>
-      </OverlayViewF>
-    );
-  }
-);
-
-CustomMarker.displayName = 'CustomMarker';
 
 const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   activities,
@@ -215,9 +114,11 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   }
 
   const markers = activities.map(activity => {
-    const isInTrip = trip!.activities.some(
+    const tripActivity = trip!.activities.find(
       tripActivity => tripActivity.recommendationId === activity.id
     );
+    const isInTrip = !!tripActivity;
+    const tripStatus = tripActivity?.status as 'planned' | 'interested' | undefined;
 
     return (
       <CustomMarker
@@ -225,6 +126,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
         activity={activity}
         categoryType={currentCategory}
         isInTrip={isInTrip}
+        tripStatus={tripStatus}
         isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
         onClick={() => {
           setSelectedActivity(activity);
@@ -273,6 +175,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
       options={mapOptions}
       onLoad={handleMapLoad}
     >
+      <MapLegend />
       {markers}
 
       {selectedActivity && (

@@ -18,7 +18,7 @@ import {
 import { prisma } from '@/lib/db';
 
 import { TripPageClient } from './TripPageClient';
-import { ParsedItineraryActivity, ParsedTrip } from './types';
+import { ActivityCategoryType, ParsedItineraryActivity, ParsedTrip } from './types';
 
 export default async function TripPage({
   params,
@@ -227,7 +227,7 @@ export default async function TripPage({
     <TripPageClient
       key={`${currentCategory}-${currentPage}`}
       trip={trip as unknown as ParsedTrip}
-      categories={categories}
+      categories={categories as unknown as ActivityCategoryType[]}
     />
   );
 }

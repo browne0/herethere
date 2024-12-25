@@ -375,32 +375,34 @@ export function RecommendationsView({
             trip={trip}
           />
         </div>
-        <Drawer.Root
-          open
-          snapPoints={snapPoints}
-          activeSnapPoint={snap}
-          setActiveSnapPoint={setSnap}
-          modal={false}
-          dismissible={false}
-        >
-          <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-          <Drawer.Content className="fixed flex flex-col bg-white border border-gray-200 border-b-none rounded-t-[10px] top-0 right-0 left-0 outline-none h-full">
-            <Drawer.Handle
-              aria-hidden
-              className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 my-4"
-            />
-            <Drawer.Title />
-            <Drawer.Description />
-            <div
-              className={cn('px-4 pb-8', {
-                'overflow-y-auto': snap === snapPoints[1],
-                'overflow-hidden': snap !== snapPoints[1],
-              })}
-            >
-              <ActivityList />
-            </div>
-          </Drawer.Content>
-        </Drawer.Root>
+        {typeof window !== 'undefined' && (
+          <Drawer.Root
+            open
+            snapPoints={snapPoints}
+            activeSnapPoint={snap}
+            setActiveSnapPoint={setSnap}
+            modal={false}
+            dismissible={false}
+          >
+            <Drawer.Overlay className="fixed inset-0 bg-black/40" />
+            <Drawer.Content className="fixed flex flex-col bg-white border border-gray-200 border-b-none rounded-t-[10px] top-0 right-0 left-0 outline-none h-full">
+              <Drawer.Handle
+                aria-hidden
+                className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300 my-4"
+              />
+              <Drawer.Title />
+              <Drawer.Description />
+              <div
+                className={cn('px-4 pb-8', {
+                  'overflow-y-auto': snap === snapPoints[1],
+                  'overflow-hidden': snap !== snapPoints[1],
+                })}
+              >
+                <ActivityList />
+              </div>
+            </Drawer.Content>
+          </Drawer.Root>
+        )}
       </div>
     </div>
   );

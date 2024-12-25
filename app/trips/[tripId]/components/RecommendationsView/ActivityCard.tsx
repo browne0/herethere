@@ -1,9 +1,8 @@
 import { useState } from 'react';
 
-import { Heart, Loader2, Star, MapPin, CalendarPlus, Check } from 'lucide-react';
+import { Heart, Loader2, Star, MapPin, CalendarPlus, Check, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 
-import { CachedImage, ImageUrl } from '@/components/CachedImage';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GOOGLE_RESTAURANT_TYPES, MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
@@ -12,6 +11,7 @@ import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { formatNumberIntl } from '@/lib/utils';
 
 import { ActivityCategoryType } from '../../types';
+import ImageSlider from '@/components/ImageSlider';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -37,53 +37,6 @@ function getDurationDisplay(minutes: number): string {
   return remainingMinutes > 0
     ? `${hours}h ${remainingMinutes}m`
     : `${hours} ${hours === 1 ? 'hour' : 'hours'}`;
-}
-
-function getDimensionsFromUrl(url: string): { width: number; height: number } | null {
-  const match = url.match(/-(\d+)x(\d+)\.[a-zA-Z]+$/);
-  if (match) {
-    return {
-      width: parseInt(match[1]),
-      height: parseInt(match[2]),
-    };
-  }
-  return null;
-}
-
-function getBestImageUrl(images: ActivityImages | null): ImageUrl | null {
-  if (!images?.urls?.length) return null;
-
-  const scoredUrls = images.urls.map(imageUrl => {
-    let score = 0;
-
-    // Prefer CDN URLs as they're likely optimized
-    if (imageUrl.cdnUrl) score += 5;
-
-    // Score based on dimensions if available
-    const dimensions = getDimensionsFromUrl(imageUrl.cdnUrl || imageUrl.url);
-    if (dimensions) {
-      const { width, height } = dimensions;
-      const aspectRatio = width / height;
-
-      // Prefer landscape orientation for activity cards
-      if (aspectRatio > 1) score += 5;
-
-      // Prefer reasonable aspect ratios (not too wide or tall)
-      if (aspectRatio > 0.5 && aspectRatio < 2) score += 5;
-
-      // Prefer high resolution but not excessive
-      if (width >= 1200 && width <= 2000) score += 10;
-      else if (width > 2000) score += 5;
-      else if (width < 800) score -= 5;
-
-      // Penalize extremely large images
-      if (width > 3000 || height > 3000) score -= 5;
-    }
-
-    return { imageUrl, score };
-  });
-
-  return scoredUrls.sort((a, b) => b.score - a.score)[0]?.imageUrl || null;
 }
 
 export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string | null => {
@@ -161,13 +114,7 @@ export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string 
   return null;
 };
 
-export function ActivityCard({
-  activity,
-  onAdd,
-  category,
-  isHighlighted,
-  onHover,
-}: ActivityCardProps) {
+export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCardProps) {
   const [isLoading, setIsLoading] = useState(false);
   const { findActivityByRecommendationId, trip, removeActivity } = useActivitiesStore();
 
@@ -205,7 +152,6 @@ export function ActivityCard({
 
   // Parse the images JSON to get the photo reference
   const images = activity.images as unknown as ActivityImages;
-  const photoUrl = getBestImageUrl(images);
 
   return (
     <div
@@ -217,13 +163,12 @@ export function ActivityCard({
       <div className="h-[370px] flex flex-col">
         {/* Image container */}
         <div className="relative w-full h-full md:h-[200px]">
-          {photoUrl ? (
-            <CachedImage photo={photoUrl} alt={activity.name} className="" />
-          ) : (
-            <div className="absolute inset-0 bg-gray-200 flex items-center justify-center">
-              <MapPin className="w-8 h-8 text-gray-400" />
-            </div>
-          )}
+          <ImageSlider
+            images={[...images?.urls, ...images.urls]}
+            alt={activity.name}
+            className="rounded-t-xl"
+            activityId={activity.id}
+          />
           {activity.isMustSee && category.type !== 'must-see' && (
             <div className="absolute top-3 left-3">
               <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
@@ -236,7 +181,7 @@ export function ActivityCard({
         {/* Content container */}
         <div className="flex flex-col flex-grow p-3">
           <div className="flex items-center gap-1 text-sm mb-2">
-            <Star className="w-4 h-4 text-yellow-500" />
+            <Star className="w-3.5 h-3.5 text-black-500 fill-black" />
             <span className="font-medium">{activity.rating?.toFixed(1)}</span>
             <span className="text-gray-600">({formatNumberIntl(activity.reviewCount)})</span>
             <span className="text-gray-600 mx-1">·</span>
@@ -272,7 +217,9 @@ export function ActivityCard({
               ) : (
                 <>
                   {currentStatus === 'planned' ? (
-                    <Check className="w-2.5 h-2.5" />
+                    <div className="inline-flex items-center justify-center bg-green-500 rounded-full p-[1.5px]">
+                      <Check className="text-background p-[0.5px]" />
+                    </div>
                   ) : (
                     <CalendarPlus className="w-2.5 h-2.5" />
                   )}
@@ -294,8 +241,10 @@ export function ActivityCard({
               {isLoading ? (
                 <Loader2 className="w-2.5 h-2.5 animate-spin" />
               ) : (
-                <Heart
-                  className={`w-2.5 h-2.5 ${currentStatus === 'interested' ? 'fill-gray-900' : ''}`}
+                <Bookmark
+                  className={`w-2.5 h-2.5 ${currentStatus === 'interested' ? 'text-yellow-300 fill-yellow-300' : ''}`}
+                  strokeWidth={1.5}
+                  stroke="black"
                 />
               )}
               Interested
