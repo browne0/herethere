@@ -431,24 +431,20 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden mt-14">
+      <div className="flex-1 overflow-hidden mt-[57px] pb-[54px] h-full">
         <TabsContent value="discover" className="h-full mt-0">
+          <MobileCategoryNavigation
+            categories={categories}
+            selectedCategory={currentCategory}
+            onCategoryChange={onCategoryChange}
+          />
           <div className="h-full flex flex-col">
-            <div className="fixed top-20 left-0 right-0 bg-white z-10 border-b">
-              <MobileCategoryNavigation
-                categories={categories}
-                selectedCategory={currentCategory}
-                onCategoryChange={onCategoryChange}
-              />
-            </div>
-            <div className="flex-1 overflow-y-auto pt-12 mt-4">
-              <ActivityList
-                currentCategory={currentCategory}
-                onPageChange={onPageChange}
-                onHover={onHover}
-                onAdd={onAdd}
-              />
-            </div>
+            <ActivityList
+              currentCategory={currentCategory}
+              onPageChange={onPageChange}
+              onHover={onHover}
+              onAdd={onAdd}
+            />
           </div>
         </TabsContent>
 

@@ -65,7 +65,6 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
         categories={categories}
         onDeleteClick={() => setIsDeleteDialogOpen(true)}
         trip={trip}
-        isEditModalOpen={isEditModalOpen}
       />
       <DeleteTripDialog
         trip={trip}

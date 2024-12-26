@@ -23,12 +23,12 @@ interface ActivityListProps {
 
 const ActivityList = ({ currentCategory, onPageChange, onHover, onAdd }: ActivityListProps) => {
   const PaginationComponent = () => {
-    if (!currentCategory?.pagination) return null;
+    if (!currentCategory) return null;
 
     const { currentPage, totalPages } = currentCategory.pagination;
 
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-4 px-2">
+      <div className="bg-white border-t py-4 px-2 h-full relative">
         <Pagination>
           <PaginationContent className="flex justify-center items-center gap-2">
             <PaginationItem>
@@ -93,7 +93,7 @@ const ActivityList = ({ currentCategory, onPageChange, onHover, onAdd }: Activit
           <p className="text-gray-500 text-lg">No activities found for this category.</p>
         </div>
       ) : (
-        <div className="px-4 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 pb-20">
+        <div className="px-4 grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 pb-8">
           {currentCategory.activities.map(activity => (
             <ActivityCard
               key={activity.id}

@@ -20,15 +20,48 @@ interface RecommendationsViewProps {
   categories: ActivityCategoryType[];
   onDeleteClick: () => void;
   trip: ParsedTrip;
-  isEditModalOpen: boolean;
 }
 
-export function RecommendationsView({
-  categories,
-  onDeleteClick,
-  trip,
-  isEditModalOpen,
-}: RecommendationsViewProps) {
+interface ResponsiveMapContainerProps {
+  /** The React children to render inside the container */
+  children: React.ReactNode;
+  /** Current snap point value between 0 and 1 */
+  snap: number;
+  /** Array of available snap points */
+  snapPoints: number[];
+  /** Optional className for additional styling */
+  className?: string;
+}
+
+const ResponsiveMapContainer = ({ children, snap, className }: ResponsiveMapContainerProps) => {
+  // Calculate height based on snap point
+  const getMapHeight = (): string => {
+    if (snap > 0.5) {
+      return '90dvh';
+    }
+
+    // Convert snap points to viewport percentages
+    const snapPercent = snap * 100;
+
+    // Calculate remaining viewport height
+    const remainingHeight = 100 - snapPercent;
+
+    return `${remainingHeight}vh`;
+  };
+
+  return (
+    <div
+      className={cn('relative w-full transition-all duration-300 ease-in-out', className)}
+      style={{
+        height: getMapHeight(),
+      }}
+    >
+      {children}
+    </div>
+  );
+};
+
+export function RecommendationsView({ categories, onDeleteClick, trip }: RecommendationsViewProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -38,8 +71,8 @@ export function RecommendationsView({
   const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [snap, setSnap] = useState<number | string | null>(0.5);
-  const snapPoints = [0.25, 0.5, 1];
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const snapPoints = [0.15, 0.5, 0.905];
+  const activeSnapPercentage = typeof snap === 'number' ? snap : 0.5;
 
   // Global state
   const { addActivity, updateActivityStatus, findActivityByRecommendationId } =
@@ -53,11 +86,6 @@ export function RecommendationsView({
       const newURL = `${pathname}${query}`;
 
       router.push(newURL);
-
-      // Maintain scroll behavior
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTo({ top: 0, behavior: 'smooth' });
-      }
     },
     [pathname, router]
   );
@@ -169,7 +197,7 @@ export function RecommendationsView({
           </div>
         </div>
 
-        <div className="flex flex-1 overflow-hidden">
+        <div className="flex overflow-hidden">
           <div className="w-7/12 mt-[144px]">
             <ActivityList
               currentCategory={currentCategory}
@@ -189,22 +217,28 @@ export function RecommendationsView({
               trip={trip}
             />
           </div>
+          {/* {!isEditModalOpen && <SelectedActivities tripId={trip.id} />} */}
         </div>
-        {!isEditModalOpen && <SelectedActivities tripId={trip.id} />}
       </div>
 
       {/* Mobile Layout */}
       <div className="lg:hidden flex flex-col h-[100dvh]">
         {/* Map */}
-        <RecommendationsMapView
-          activities={currentCategory?.activities || []}
-          currentCategory={selectedCategory}
-          onMarkerHover={setHoveredActivityId}
-          onMarkerSelect={setSelectedActivityId}
-          hoveredActivityId={hoveredActivityId}
-          selectedActivityId={selectedActivityId}
-          trip={trip}
-        />
+        <ResponsiveMapContainer
+          className="pt-[64px]"
+          snap={activeSnapPercentage}
+          snapPoints={snapPoints}
+        >
+          <RecommendationsMapView
+            activities={currentCategory?.activities || []}
+            currentCategory={selectedCategory}
+            onMarkerHover={setHoveredActivityId}
+            onMarkerSelect={setSelectedActivityId}
+            hoveredActivityId={hoveredActivityId}
+            selectedActivityId={selectedActivityId}
+            trip={trip}
+          />
+        </ResponsiveMapContainer>
 
         {/* Drawer */}
         <Drawer.Root
@@ -213,9 +247,10 @@ export function RecommendationsView({
           snapPoints={snapPoints}
           activeSnapPoint={snap}
           setActiveSnapPoint={setSnap}
+          dismissible={false}
         >
           <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-          <Drawer.Content className="bg-white flex flex-col rounded-t-[10px] fixed bottom-0 left-0 right-0 min-h-[25dvh] max-h-[90dvh]">
+          <Drawer.Content className="bg-white flex flex-col rounded-t-[10px] fixed top-0 left-0 right-0 min-h-[25dvh] max-h-[100dvh] z-50">
             <div className="p-4 flex-none">
               <Drawer.Handle className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300" />
             </div>
@@ -223,10 +258,7 @@ export function RecommendationsView({
             <Drawer.Title className="sr-only">Selected Activities</Drawer.Title>
             <Drawer.Description className="sr-only">Activities for {trip.title}</Drawer.Description>
 
-            <div
-              className={cn('flex-1', { 'overflow-y-auto': snap === 1 })}
-              ref={scrollContainerRef}
-            >
+            <div className={cn({ 'overflow-y-auto': snap === snapPoints[2] })}>
               <MobileActivityView
                 categories={categories}
                 currentCategory={currentCategory}

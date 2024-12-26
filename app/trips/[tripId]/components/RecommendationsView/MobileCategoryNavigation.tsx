@@ -12,7 +12,7 @@ import { ActivityCategoryType } from '../../types';
 
 interface MobileCategoryNavigationProps {
   categories: ActivityCategoryType[];
-  selectedCategory: ActivityCategoryType;
+  selectedCategory: ActivityCategoryType | undefined;
   onCategoryChange: (categoryType: string) => void;
 }
 
@@ -21,6 +21,7 @@ const MobileCategoryNavigation = ({
   selectedCategory,
   onCategoryChange,
 }: MobileCategoryNavigationProps) => {
+  if (!selectedCategory) return null;
   // Find current category for title/description display
   const currentCategory = categories.find(cat => cat.type === selectedCategory.type);
 

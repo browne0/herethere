@@ -28,7 +28,7 @@ export interface ActivityCategoryType {
   title: string;
   description: string;
   activities: ActivityRecommendation[];
-  pagination?: {
+  pagination: {
     currentPage: number;
     totalPages: number;
     hasNextPage: boolean;
