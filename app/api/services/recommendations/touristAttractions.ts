@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
-import { InterestType, TransportMode } from '@/lib/stores/preferences';
+import { EnergyLevel, InterestType } from '@/lib/stores/preferences';
 
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 interface Location {
@@ -84,8 +84,8 @@ export const touristAttractionService = {
 
     // Get locations from activities
     const locations = activities.map(a => ({
-      latitude: (a.recommendation.location as any).latitude,
-      longitude: (a.recommendation.location as any).longitude,
+      latitude: a.recommendation.location.latitude,
+      longitude: a.recommendation.location.longitude,
     }));
 
     // Create a single cluster centered on the mean location
@@ -156,7 +156,7 @@ export const touristAttractionService = {
     return Array.from(placeTypes);
   },
 
-  getMaxDurationForEnergy(energyLevel: 1 | 2 | 3): number {
+  getMaxDurationForEnergy(energyLevel: EnergyLevel): number {
     // Base duration is 3 hours (180 minutes)
     const baseDuration = 180;
 
@@ -167,7 +167,7 @@ export const touristAttractionService = {
       3: 1.3, // High energy = max ~4 hours
     };
 
-    return baseDuration * energyMultiplier[energyLevel];
+    return baseDuration * energyMultiplier[energyLevel ?? 1];
   },
 
   calculateScore(attraction: ActivityRecommendation, params: ScoringParams): number {

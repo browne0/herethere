@@ -2,6 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
+import { UserPreferences } from '@/lib/stores/preferences';
 
 import EditPreferencesClient from './EditPreferencesClient';
 
@@ -25,16 +26,24 @@ export default async function PreferencesPage() {
     redirect('/onboarding/interests');
   }
 
-  // Parse the preferences from the database
-  const initialPreferences = {
-    interests: user.preferences!.interests,
-    energyLevel: user.preferences!.energyLevel,
-    preferredStartTime: user.preferences!.preferredStartTime,
-    dietaryRestrictions: user.preferences!.dietaryRestrictions,
-    cuisinePreferences: user.preferences!.cuisinePreferences,
-    mealImportance: user.preferences!.mealImportance,
-    transportPreferences: user.preferences!.transportPreferences,
-    crowdPreference: user.preferences!.crowdPreference,
+  // Ensure preferences exist and have the correct shape
+  if (!user.preferences || typeof user.preferences !== 'object') {
+    throw new Error('User preferences not properly initialized');
+  }
+
+  // Type assert the preferences as UserPreferences
+  const preferences = user.preferences as unknown as UserPreferences;
+
+  // Create the initial preferences object with type safety
+  const initialPreferences: UserPreferences = {
+    interests: preferences.interests,
+    energyLevel: preferences.energyLevel,
+    preferredStartTime: preferences.preferredStartTime,
+    dietaryRestrictions: preferences.dietaryRestrictions,
+    cuisinePreferences: preferences.cuisinePreferences,
+    mealImportance: preferences.mealImportance,
+    transportPreferences: preferences.transportPreferences,
+    crowdPreference: preferences.crowdPreference,
   };
 
   return <EditPreferencesClient initialPreferences={initialPreferences} />;

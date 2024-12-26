@@ -45,6 +45,7 @@ async function testDestinationSync() {
           data: {
             viatorDestId: nyDest.destinationId,
             viatorLookupId: nyDest.lookupId,
+            // @ts-expect-error the type is not correct
             viatorData: nyDest,
             lastViatorSync: new Date(),
           },

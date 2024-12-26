@@ -11,7 +11,6 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { DailyRouteSummary } from './DailyRouteSummary';
 import { ParsedTrip } from '../../types';
-import { RecommendationsMapView } from '../RecommendationsView/RecommendationsMapView';
 
 interface ItineraryViewProps {
   trip: ParsedTrip;
@@ -41,16 +40,7 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
           </div>
         </div>
         {/* Map Panel - Fixed */}
-        <div className="hidden md:block relative h-full">
-          <RecommendationsMapView
-            activities={activities}
-            onMarkerHover={setHoveredActivityId}
-            onMarkerSelect={setSelectedActivityId}
-            hoveredActivityId={hoveredActivityId}
-            selectedActivityId={selectedActivityId}
-            trip={trip}
-          />
-        </div>
+        <div className="hidden md:block relative h-full"></div>
       </div>
       {/* Mobile Map Button */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-10 md:hidden">
@@ -77,18 +67,6 @@ export function ItineraryView({ trip }: ItineraryViewProps) {
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            <RecommendationsMapView
-              activities={activities}
-              onMarkerHover={setHoveredActivityId}
-              onMarkerSelect={id => {
-                setSelectedActivityId(id);
-                // Close map when activity is selected on mobile
-                if (id) setIsMapOpen(false);
-              }}
-              hoveredActivityId={hoveredActivityId}
-              selectedActivityId={selectedActivityId}
-              trip={trip}
-            />
           </div>
         </SheetContent>
       </Sheet>

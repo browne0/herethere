@@ -16,9 +16,53 @@ import {
   ScoringParams,
 } from '@/app/api/services/recommendations/types';
 import { prisma } from '@/lib/db';
+import { UserPreferences } from '@/lib/stores/preferences';
+import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import { TripPageClient } from './TripPageClient';
-import { ActivityCategoryType, ParsedItineraryActivity, ParsedTrip } from './types';
+import {
+  ActivityCategoryType,
+  ParsedItineraryActivity,
+  ParsedTrip,
+  TripPreferences,
+} from './types';
+
+export function isUserPreferences(obj: unknown): obj is UserPreferences {
+  return obj !== null && typeof obj === 'object';
+}
+
+export function isTripPreferences(obj: unknown): obj is TripPreferences {
+  return obj !== null && typeof obj === 'object';
+}
+
+// Update your database calls
+const getUserPreferences = (preferences: unknown): UserPreferences => {
+  if (!isUserPreferences(preferences)) {
+    return {
+      interests: [],
+      energyLevel: null,
+      preferredStartTime: null,
+      dietaryRestrictions: [],
+      cuisinePreferences: { preferred: [], avoided: [] },
+      mealImportance: { breakfast: false, lunch: false, dinner: false },
+      transportPreferences: [],
+      crowdPreference: null,
+    };
+  }
+  return preferences;
+};
+
+const getTripPreferences = (preferences: unknown): TripPreferences => {
+  if (!isTripPreferences(preferences)) {
+    return {
+      budget: 'moderate',
+      activities: [],
+      dietaryRestrictions: [],
+      cuisinePreferences: { preferred: [], avoided: [] },
+    };
+  }
+  return preferences;
+};
 
 export default async function TripPage({
   params,
@@ -89,19 +133,12 @@ export default async function TripPage({
   const phase: ScoringParams['phase'] =
     today >= tripStart && today <= tripEnd ? 'active' : 'planning';
 
-  const recommendationsData: ScoringParams = {
+  const recommendationsData = {
     cityId: trip.city.id,
-    dietaryRestrictions: trip?.preferences?.dietaryRestrictions,
-    cuisinePreferences: trip?.preferences?.cuisinePreferences,
-    mealImportance: user?.preferences?.mealImportance,
-    transportPreferences: user?.preferences?.transportPreferences,
-    crowdPreference: user?.preferences?.crowdPreference,
-    budget: trip.preferences?.budget,
-    interests: user?.preferences?.interests,
-    energyLevel: user?.preferences?.energyLevel,
-    preferredStartTime: user?.preferences?.preferredStartTime,
+    ...getTripPreferences(trip?.preferences),
+    ...getUserPreferences(user?.preferences),
     locationContext,
-    phase: phase,
+    phase,
     selectedActivities: trip.activities as unknown as ParsedItineraryActivity[],
   };
 
@@ -140,7 +177,9 @@ export default async function TripPage({
       icon: <Star className="w-5 h-5" />,
       title: `Must See in ${trip.city.name}`,
       description: 'Essential experiences and notable attractions',
-      activities: currentCategory === 'must-see' ? recommendations.items : [],
+      activities: (currentCategory === 'must-see'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'must-see'
           ? {
@@ -149,14 +188,16 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
     {
       type: 'tourist-attractions',
       icon: <Camera className="w-5 h-5" />,
       title: 'Popular Tourist Attractions',
       description: `Famous spots in ${trip.city.name} that are loved by visitors`,
-      activities: currentCategory === 'tourist-attractions' ? recommendations.items : [],
+      activities: (currentCategory === 'tourist-attractions'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'tourist-attractions'
           ? {
@@ -165,14 +206,16 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
     {
       type: 'culture',
       title: 'Museums & Cultural Spaces',
       icon: <Palette className="w-5 h-5" />,
       description: `Art, history, and cultural treasures in ${trip.city.name} to explore`,
-      activities: currentCategory === 'culture' ? recommendations.items : [],
+      activities: (currentCategory === 'culture'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'culture'
           ? {
@@ -181,14 +224,16 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
     {
       type: 'historic-sites',
       icon: <Landmark className="w-5 h-5" />,
       title: 'Historic & Cultural Landmarks',
       description: `Iconic institutions and landmarks that define ${trip.city.name}'s character`,
-      activities: currentCategory === 'historic-sites' ? recommendations.items : [],
+      activities: (currentCategory === 'historic-sites'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'historic-sites'
           ? {
@@ -197,14 +242,16 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
     {
       type: 'restaurants',
       icon: <HandPlatter className="w-5 h-5" />,
       description: 'Curated dining picks just for you',
       title: 'Popular Restaurants & Foodie Spots',
-      activities: currentCategory === 'restaurants' ? recommendations.items : [],
+      activities: (currentCategory === 'restaurants'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'restaurants'
           ? {
@@ -213,14 +260,16 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
     {
       type: 'nightlife',
       title: 'Nightlife & Entertainment',
       icon: <Martini className="w-5 h-5" />,
       description: `From stylish rooftop bars to legendary music venues`,
-      activities: currentCategory === 'nightlife' ? recommendations.items : [],
+      activities: (currentCategory === 'nightlife'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'nightlife'
           ? {
@@ -229,14 +278,16 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
     {
       type: 'spas-&-wellness',
       title: 'Spas & Wellness',
       icon: <Flower2 className="w-5 h-5" />,
       description: `From luxury day spas to premium wellness experiences`,
-      activities: currentCategory === 'spas-&-wellness' ? recommendations.items : [],
+      activities: (currentCategory === 'spas-&-wellness'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
       pagination:
         currentCategory === 'spas-&-wellness'
           ? {
@@ -245,7 +296,7 @@ export default async function TripPage({
               hasNextPage: recommendations.hasNextPage,
               hasPreviousPage: recommendations.hasPreviousPage,
             }
-          : undefined,
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
     },
   ];
 

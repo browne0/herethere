@@ -1,9 +1,32 @@
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 
+interface APICallStats {
+  searchNearby: number;
+  placeDetails: number;
+}
+
+interface RestaurantSubtypes {
+  upscale: number;
+  standard: number;
+  byType: Record<string, number>;
+}
+
+interface LoggerStats {
+  processed: number;
+  added: number;
+  skipped: number;
+  errors: number;
+  imageErrors: number;
+  apiCalls: APICallStats;
+  byType: Record<string, number>;
+  byArea: Record<string, number>;
+  restaurantSubtypes: RestaurantSubtypes;
+}
+
 export class Logger {
-  private logFile: string;
-  private logDir: string = './logs';
+  private readonly logFile: string;
+  private readonly logDir: string = './logs';
 
   constructor(filename: string) {
     // Ensure logs directory exists
@@ -19,53 +42,54 @@ export class Logger {
     this.info('='.repeat(50));
   }
 
-  private writeToFile(message: string) {
+  private writeToFile(message: string): void {
     appendFileSync(this.logFile, message + '\n', 'utf8');
   }
 
-  info(message: string | object) {
-    const formattedMessage =
-      typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+  private formatMessage(message: string | object): string {
+    return typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
+  }
+
+  info(message: string | object): void {
+    const formattedMessage = this.formatMessage(message);
     console.log(formattedMessage);
     this.writeToFile(`[INFO] ${formattedMessage}`);
   }
 
-  error(message: string | object, error?: Error) {
-    const formattedMessage =
-      typeof message === 'object' ? JSON.stringify(message, null, 2) : message;
-
+  error(message: string | object, error?: Error): void {
+    const formattedMessage = this.formatMessage(message);
     const errorDetails = error ? `\nError: ${error.message}\nStack: ${error.stack}` : '';
 
     console.error(formattedMessage + errorDetails);
     this.writeToFile(`[ERROR] ${formattedMessage}${errorDetails}`);
   }
 
-  success(message: string) {
+  success(message: string): void {
     const formattedMessage = `✅ ${message}`;
     console.log(formattedMessage);
     this.writeToFile(`[SUCCESS] ${message}`);
   }
 
-  warn(message: string) {
+  warn(message: string): void {
     const formattedMessage = `⚠️ ${message}`;
     console.warn(formattedMessage);
     this.writeToFile(`[WARNING] ${message}`);
   }
 
-  skip(message: string) {
+  skip(message: string): void {
     const formattedMessage = `⏭️ ${message}`;
     console.log(formattedMessage);
     this.writeToFile(`[SKIP] ${message}`);
   }
 
-  progress(message: string) {
+  progress(message: string): void {
     const formattedMessage = `🔄 ${message}`;
     console.log(formattedMessage);
     this.writeToFile(`[PROGRESS] ${message}`);
   }
 
-  stats(stats: Record<string, any>) {
-    const messages = [
+  stats(stats: LoggerStats): void {
+    const messages: string[] = [
       '\nSync Statistics:',
       '-'.repeat(30),
       `Total processed: ${stats.processed}`,
@@ -78,22 +102,22 @@ export class Logger {
       `Place Details: ${stats.apiCalls.placeDetails}`,
       '\nBy Type:',
       ...Object.entries(stats.byType)
-        .sort(([, a], [, b]) => b - a)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
         .map(([type, count]) => `${type}: ${count}`),
       '\nBy Area:',
       ...Object.entries(stats.byArea)
-        .sort(([, a], [, b]) => b - a)
+        .sort(([, a], [, b]) => (b as number) - (a as number))
         .map(([area, count]) => `${area}: ${count}`),
     ];
 
-    if (stats.byType.RESTAURANT > 0) {
+    if ((stats.byType.RESTAURANT ?? 0) > 0) {
       messages.push(
         '\nRestaurant Types:',
         `Upscale: ${stats.restaurantSubtypes.upscale}`,
         `Standard: ${stats.restaurantSubtypes.standard}`,
         '\nCuisine Types:',
         ...Object.entries(stats.restaurantSubtypes.byType)
-          .sort(([, a], [, b]) => b - a)
+          .sort(([, a], [, b]) => (b as number) - (a as number))
           .map(([cuisine, count]) => `${cuisine}: ${count}`)
       );
     }

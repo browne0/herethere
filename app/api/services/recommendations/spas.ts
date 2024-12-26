@@ -2,9 +2,8 @@ import { ActivityRecommendation, PriceLevel, SeasonalAvailability } from '@prism
 import _ from 'lodash';
 
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
-import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
-import { InterestType, TransportMode } from '@/lib/stores/preferences';
+import { EnergyLevel } from '@/lib/stores/preferences';
 
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
@@ -77,8 +76,8 @@ export const spaWellnessRecommendationService = {
 
     // Get locations from activities
     const locations = activities.map(a => ({
-      latitude: (a.recommendation.location as any).latitude,
-      longitude: (a.recommendation.location as any).longitude,
+      latitude: a.recommendation.location.latitude,
+      longitude: a.recommendation.location.longitude,
     }));
 
     // Create a single cluster centered on the mean location
@@ -342,7 +341,10 @@ export const spaWellnessRecommendationService = {
     return score;
   },
 
-  calculateEnergyAlignmentScore(activity: ActivityRecommendation, energyLevel: number): number {
+  calculateEnergyAlignmentScore(
+    activity: ActivityRecommendation,
+    energyLevel: EnergyLevel
+  ): number {
     // For spa activities, we generally want to align with lower energy preferences
     // as they're typically relaxation-focused
 
@@ -359,7 +361,7 @@ export const spaWellnessRecommendationService = {
     }
 
     // Calculate score based on how well the activity intensity matches the user's energy level
-    const userEnergyNormalized = (energyLevel - 1) / 2; // Convert 1-3 to 0-1 scale
+    const userEnergyNormalized = ((energyLevel ?? 1) - 1) / 2; // Convert 1-3 to 0-1 scale
     const intensityDiff = Math.abs(baseIntensity - userEnergyNormalized);
 
     return Math.max(0, 1 - intensityDiff);

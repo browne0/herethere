@@ -2,6 +2,7 @@ import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types'
 import {
   CrowdPreference,
   Cuisine,
+  EnergyLevel,
   InterestType,
   MealImportance,
   StartTime,
@@ -36,7 +37,7 @@ export interface ScoringParams {
   interests: InterestType[];
   transportPreferences: TransportMode[];
   crowdPreference: CrowdPreference;
-  energyLevel: 1 | 2 | 3;
+  energyLevel: EnergyLevel;
   preferredStartTime: StartTime;
 
   locationContext: LocationContext;

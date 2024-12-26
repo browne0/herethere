@@ -48,7 +48,7 @@ export function ActivityTimelineItem({
   const handleDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/trips/${trip.id}/activities/${activity.id}`, {
+      const response = await fetch(`/api/trips/${trip?.id}/activities/${activity.id}`, {
         method: 'DELETE',
       });
 
@@ -141,7 +141,7 @@ export function ActivityTimelineItem({
           {/* Category Tag */}
           <div className="mb-3">
             <span className="px-2 py-1 bg-primary/10 text-primary text-xs font-medium rounded-full">
-              {recommendation.category}
+              {recommendation.primaryType}
             </span>
           </div>
 
