@@ -5,7 +5,7 @@ import { ActivityCategoryType } from '../../types';
 
 interface CategoryNavigationProps {
   categories: ActivityCategoryType[];
-  handleCategoryChange: (categoryType: string) => Promise<void>;
+  handleCategoryChange: (categoryType: string) => void;
   selectedCategory: ActivityCategoryType['type'];
 }
 
@@ -17,13 +17,6 @@ const CategoryNavigation = ({
   const [showLeftScroll, setShowLeftScroll] = React.useState(false);
   const [showRightScroll, setShowRightScroll] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
-  // Add optimistic state
-  const [optimisticCategory, setOptimisticCategory] = React.useState(selectedCategory);
-
-  // Update optimistic state when real state changes
-  React.useEffect(() => {
-    setOptimisticCategory(selectedCategory);
-  }, [selectedCategory]);
 
   const checkScroll = () => {
     const container = scrollContainerRef.current;
@@ -56,16 +49,9 @@ const CategoryNavigation = ({
     }
   };
 
-  // Add optimistic update handler
-  const handleOptimisticCategoryChange = async (categoryType: string) => {
-    setOptimisticCategory(categoryType);
-    await handleCategoryChange(categoryType);
-  };
-
   return (
     <div className="relative w-full">
       <div className="relative flex items-center">
-        {/* Left scroll button */}
         {showLeftScroll && (
           <div className="absolute left-0 top-0 h-full flex items-center z-20">
             <div className="absolute inset-y-0 left-0 w-32 bg-gradient-to-l from-transparent to-white" />
@@ -80,7 +66,6 @@ const CategoryNavigation = ({
           </div>
         )}
 
-        {/* Categories */}
         <div
           ref={scrollContainerRef}
           className="flex items-center gap-4 overflow-x-auto scrollbar-hide w-full px-4"
@@ -89,22 +74,21 @@ const CategoryNavigation = ({
           {categories.map(category => (
             <button
               key={category.type}
-              onClick={() => handleOptimisticCategoryChange(category.type)}
+              onClick={() => handleCategoryChange(category.type)}
               className={`flex min-w-[80px] md:min-w-[100px] flex-col items-center justify-center py-4 
                 whitespace-nowrap transition-colors flex-shrink-0 relative
                 ${
-                  optimisticCategory === category.type // Changed to use optimisticCategory
+                  selectedCategory === category.type
                     ? 'text-black after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-black'
                     : 'text-gray-500 hover:text-black'
                 }`}
             >
               {category.icon}
-              <span className="capitalize text-xs">{category.type.replace(/-/g, ' ')}</span>
+              <span className="capitalize text-xs mt-2">{category.type.replace(/-/g, ' ')}</span>
             </button>
           ))}
         </div>
 
-        {/* Right scroll button */}
         {showRightScroll && (
           <div className="absolute right-0 top-0 h-full flex items-center z-20">
             <div className="absolute inset-y-0 right-0 w-32 bg-gradient-to-r from-transparent to-white" />

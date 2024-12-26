@@ -138,7 +138,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, alt, className = '', 
         ))}
       </div>
 
-      <div className="opacity-0 group-hover:opacity-100">
+      <div className="opacity-0 group-hover:opacity-100 hidden md:block">
         {currentIndex > 0 && (
           <button
             onClick={goToPrevious}

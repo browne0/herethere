@@ -29,12 +29,6 @@ export default async function TripPage({
 }) {
   const { userId } = await auth();
   const { tripId } = await params;
-  const syncSearchParams = await searchParams;
-
-  // Get current category and page from URL params
-  const currentCategory = syncSearchParams['category'] || 'must-see';
-  const currentPage = parseInt(syncSearchParams['page'] || '1');
-  const paginationParams = { page: currentPage, pageSize: DEFAULT_PAGE_SIZE };
 
   if (!userId) {
     redirect('/sign-in');
@@ -68,20 +62,24 @@ export default async function TripPage({
     notFound();
   }
 
+  const syncSearchParams = await searchParams;
+
+  const currentCategory = syncSearchParams['category'] || 'must-see';
+  const currentPage = parseInt(syncSearchParams['page'] || '1');
+
   const cityCenter = {
     latitude: trip.city.latitude,
     longitude: trip.city.longitude,
   };
 
-  const locationContext =
+  const locationContext: LocationContext =
     trip.activities.length > 0
       ? {
-          type: 'activity_cluster' as LocationContext['type'],
+          type: 'activity_cluster',
           reference: cityCenter,
-          selectedActivities: trip.activities,
         }
       : {
-          type: 'city_center' as LocationContext['type'],
+          type: 'city_center',
           reference: cityCenter,
         };
 
@@ -107,119 +105,147 @@ export default async function TripPage({
     selectedActivities: trip.activities as unknown as ParsedItineraryActivity[],
   };
 
-  // Fetch all recommendations in parallel
-  const [
-    essentialExperiencesRecommendations,
-    restaurantRecommendations,
-    touristAttractionRecommendations,
-    museumsRecommendations,
-    historicSitesRecommendations,
-    nightlifeRecommendations,
-    spaAndWellnessRecommendations,
-  ] = await Promise.all([
-    essentialExperiencesRecommendationService.getRecommendations(
-      recommendationsData,
-      paginationParams
-    ),
-    restaurantRecommendationService.getRecommendations(recommendationsData, paginationParams),
-    touristAttractionService.getRecommendations(recommendationsData, paginationParams),
-    museumRecommendationService.getRecommendations(recommendationsData, paginationParams),
-    historicSitesRecommendationService.getRecommendations(recommendationsData, paginationParams),
-    nightlifeRecommendationService.getRecommendations(recommendationsData, paginationParams),
-    spaWellnessRecommendationService.getRecommendations(recommendationsData, paginationParams),
-  ]);
+  // Get the appropriate service based on category
+  const getServiceForCategory = (category: string) => {
+    switch (category) {
+      case 'must-see':
+        return essentialExperiencesRecommendationService;
+      case 'tourist-attractions':
+        return touristAttractionService;
+      case 'culture':
+        return museumRecommendationService;
+      case 'historic-sites':
+        return historicSitesRecommendationService;
+      case 'restaurants':
+        return restaurantRecommendationService;
+      case 'nightlife':
+        return nightlifeRecommendationService;
+      case 'spas-&-wellness':
+        return spaWellnessRecommendationService;
+      default:
+        return essentialExperiencesRecommendationService;
+    }
+  };
 
-  const categories = [
+  const service = getServiceForCategory(currentCategory);
+  const recommendations = await service.getRecommendations(recommendationsData, {
+    page: currentPage,
+    pageSize: DEFAULT_PAGE_SIZE,
+  });
+
+  // Define all categories but only populate data for the current one
+  const categories: ActivityCategoryType[] = [
     {
       type: 'must-see',
-      icon: <Star className="w-5 h-5 mb-2" />,
+      icon: <Star className="w-5 h-5" />,
       title: `Must See in ${trip.city.name}`,
       description: 'Essential experiences and notable attractions',
-      activities: essentialExperiencesRecommendations.items,
-      pagination: {
-        currentPage: essentialExperiencesRecommendations.page,
-        totalPages: essentialExperiencesRecommendations.totalPages,
-        hasNextPage: essentialExperiencesRecommendations.hasNextPage,
-        hasPreviousPage: essentialExperiencesRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'must-see' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'must-see'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
     {
       type: 'tourist-attractions',
-      icon: <Camera className="w-5 h-5 mb-2" />,
+      icon: <Camera className="w-5 h-5" />,
       title: 'Popular Tourist Attractions',
       description: `Famous spots in ${trip.city.name} that are loved by visitors`,
-      activities: touristAttractionRecommendations.items,
-      pagination: {
-        currentPage: touristAttractionRecommendations.page,
-        totalPages: touristAttractionRecommendations.totalPages,
-        hasNextPage: touristAttractionRecommendations.hasNextPage,
-        hasPreviousPage: touristAttractionRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'tourist-attractions' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'tourist-attractions'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
     {
       type: 'culture',
       title: 'Museums & Cultural Spaces',
-      icon: <Palette className="w-5 h-5 mb-2" />,
+      icon: <Palette className="w-5 h-5" />,
       description: `Art, history, and cultural treasures in ${trip.city.name} to explore`,
-      activities: museumsRecommendations.items,
-      pagination: {
-        currentPage: museumsRecommendations.page,
-        totalPages: museumsRecommendations.totalPages,
-        hasNextPage: museumsRecommendations.hasNextPage,
-        hasPreviousPage: museumsRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'culture' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'culture'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
     {
       type: 'historic-sites',
-      icon: <Landmark className="w-5 h-5 mb-2" />,
+      icon: <Landmark className="w-5 h-5" />,
       title: 'Historic & Cultural Landmarks',
       description: `Iconic institutions and landmarks that define ${trip.city.name}'s character`,
-      activities: historicSitesRecommendations.items,
-      pagination: {
-        currentPage: historicSitesRecommendations.page,
-        totalPages: historicSitesRecommendations.totalPages,
-        hasNextPage: historicSitesRecommendations.hasNextPage,
-        hasPreviousPage: historicSitesRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'historic-sites' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'historic-sites'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
     {
       type: 'restaurants',
-      icon: <HandPlatter className="w-5 h-5 mb-2" />,
+      icon: <HandPlatter className="w-5 h-5" />,
       description: 'Curated dining picks just for you',
       title: 'Popular Restaurants & Foodie Spots',
-      activities: restaurantRecommendations.items,
-      pagination: {
-        currentPage: restaurantRecommendations.page,
-        totalPages: restaurantRecommendations.totalPages,
-        hasNextPage: restaurantRecommendations.hasNextPage,
-        hasPreviousPage: restaurantRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'restaurants' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'restaurants'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
     {
       type: 'nightlife',
       title: 'Nightlife & Entertainment',
-      icon: <Martini className="w-5 h-5 mb-2" />,
+      icon: <Martini className="w-5 h-5" />,
       description: `From stylish rooftop bars to legendary music venues`,
-      activities: nightlifeRecommendations.items,
-      pagination: {
-        currentPage: nightlifeRecommendations.page,
-        totalPages: nightlifeRecommendations.totalPages,
-        hasNextPage: nightlifeRecommendations.hasNextPage,
-        hasPreviousPage: nightlifeRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'nightlife' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'nightlife'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
     {
       type: 'spas-&-wellness',
       title: 'Spas & Wellness',
-      icon: <Flower2 className="w-5 h-5 mb-2" />,
+      icon: <Flower2 className="w-5 h-5" />,
       description: `From luxury day spas to premium wellness experiences`,
-      activities: spaAndWellnessRecommendations.items,
-      pagination: {
-        currentPage: spaAndWellnessRecommendations.page,
-        totalPages: spaAndWellnessRecommendations.totalPages,
-        hasNextPage: spaAndWellnessRecommendations.hasNextPage,
-        hasPreviousPage: spaAndWellnessRecommendations.hasPreviousPage,
-      },
+      activities: currentCategory === 'spas-&-wellness' ? recommendations.items : [],
+      pagination:
+        currentCategory === 'spas-&-wellness'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : undefined,
     },
   ];
 
