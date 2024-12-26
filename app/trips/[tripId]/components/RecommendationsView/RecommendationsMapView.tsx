@@ -7,9 +7,9 @@ import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
-import { type ParsedTrip } from '../../types';
 import CustomMarker from './CustomMarker';
 import { MapLegend } from './MapLegend';
+import { type ParsedTrip } from '../../types';
 
 interface RecommendationsMapViewProps {
   activities: ActivityRecommendation[];

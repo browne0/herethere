@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { Sliders, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -9,12 +10,12 @@ import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { cn } from '@/lib/utils';
 
+import ActivityList from './ActivityList';
+import CategoryNavigation from './CategoryNavigation';
+import MobileActivityView from './MobileActivityView';
 import RecommendationsMapView from './RecommendationsMapView';
 import SelectedActivities from './SelectedActivities';
 import { ActivityCategoryType, ParsedTrip } from '../../types';
-import CategoryNavigation from './CategoryNavigation';
-import ActivityList from './ActivityList';
-import MobileActivityView from './MobileActivityView';
 
 interface RecommendationsViewProps {
   categories: ActivityCategoryType[];

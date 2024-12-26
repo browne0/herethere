@@ -1,8 +1,16 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@/components/ui/dialog';
+
+import { DialogTitle } from '@radix-ui/react-dialog';
+import { useMutation } from '@tanstack/react-query';
+import { Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+
+import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
+import DateRangePicker from '@/components/DateRangePicker';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -10,15 +18,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useMutation } from '@tanstack/react-query';
-import { ParsedTrip, TripBudget } from '../types';
-import DateRangePicker from '@/components/DateRangePicker';
-import { DialogTitle } from '@radix-ui/react-dialog';
-import { toast } from 'sonner';
-import { Loader2 } from 'lucide-react';
 import { BUDGET_OPTIONS, CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
-import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
+
+import { ParsedTrip, TripBudget } from '../types';
+
 
 interface TripEditModalProps {
   trip: ParsedTrip;

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Heart, Loader2, Star, MapPin, CalendarPlus, Check, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 
+import ImageSlider from '@/components/ImageSlider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GOOGLE_RESTAURANT_TYPES, MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
@@ -11,7 +12,6 @@ import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { formatNumberIntl } from '@/lib/utils';
 
 import { ActivityCategoryType } from '../../types';
-import ImageSlider from '@/components/ImageSlider';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;

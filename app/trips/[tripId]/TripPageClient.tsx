@@ -1,14 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+
 import { RecommendationsView } from './components/RecommendationsView';
 import { ActivityCategoryType, ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
-import TripHeader from './components/TripHeader';
 import TripEditModal from './components/TripEditModal';
+import TripHeader from './components/TripHeader';
 
 interface TripPageClientProps {
   trip: ParsedTrip;

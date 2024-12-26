@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+
 import {
   Clock,
   MapPin,
@@ -14,6 +13,9 @@ import {
   ChevronUp,
   AlertCircle,
 } from 'lucide-react';
+
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 
 const ItineraryView = () => {
   const [selectedDay, setSelectedDay] = useState(0);

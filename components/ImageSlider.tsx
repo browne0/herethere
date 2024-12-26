@@ -1,5 +1,7 @@
 import React, { useRef, TouchEvent } from 'react';
+
 import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
+
 import { CachedImage } from '@/components/CachedImage';
 
 const imageIndexCache = new Map<string, number>();

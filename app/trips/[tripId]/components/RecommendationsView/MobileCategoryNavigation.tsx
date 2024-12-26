@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { Info } from 'lucide-react';
+
 import {
   Select,
   SelectContent,
@@ -8,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+
 import { ActivityCategoryType } from '../../types';
 
 interface MobileCategoryNavigationProps {

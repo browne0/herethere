@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { OverlayViewF, OVERLAY_MOUSE_TARGET } from '@react-google-maps/api';
 import {
   Camera,
@@ -13,6 +14,7 @@ import {
   Bookmark,
   HandPlatter,
 } from 'lucide-react';
+
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 // Activity type icons mapping

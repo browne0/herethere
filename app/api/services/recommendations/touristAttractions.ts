@@ -21,7 +21,7 @@ export const touristAttractionService = {
     const { cityId } = params;
     const relevantTypes = this.getPlaceTypesFromInterests(params.interests);
 
-    let locationContext = params.locationContext;
+    const locationContext = params.locationContext;
 
     // Calculate activity clusters if we have selected activities and are in planning phase
     if (params.phase === 'planning' && params.selectedActivities?.length > 0) {

@@ -4,7 +4,6 @@ import _ from 'lodash';
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping, PLACE_INDICATORS } from '@/constants';
 import { prisma } from '@/lib/db';
-import { TransportMode } from '@/lib/stores/preferences';
 
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
@@ -21,7 +20,7 @@ export const historicSitesRecommendationService = {
     const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
     const { cityId } = params;
 
-    let locationContext = params.locationContext;
+    const locationContext = params.locationContext;
 
     // Calculate activity clusters if we have selected activities and are in planning phase
     if (params.phase === 'planning' && params.selectedActivities?.length > 0) {

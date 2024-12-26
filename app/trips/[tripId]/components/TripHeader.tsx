@@ -1,11 +1,14 @@
 'use client';
 import React from 'react';
-import Link from 'next/link';
-import { ChevronLeft } from 'lucide-react';
-import { HereThereUserButton } from '@/components/nav';
-import { ParsedTrip } from '../types';
-import { Button } from '@/components/ui/button';
+
 import { SignedIn } from '@clerk/nextjs';
+import { ChevronLeft } from 'lucide-react';
+import Link from 'next/link';
+
+import { HereThereUserButton } from '@/components/nav';
+import { Button } from '@/components/ui/button';
+
+import { ParsedTrip } from '../types';
 
 interface TripHeaderProps {
   trip: ParsedTrip;

@@ -2,10 +2,10 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
+import { usePreferences } from '@/lib/stores/preferences';
 
 import { ParsedTrip } from './[tripId]/types';
 import { TripsList } from './components/TripsList';
-import { usePreferences } from '@/lib/stores/preferences';
 
 export default async function TripsPage() {
   const { userId } = await auth();

@@ -1,9 +1,9 @@
 // app/trips/[tripId]/types.ts
 import type { Trip, ItineraryActivity, City } from '@prisma/client';
 
+import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { ActivityCategoryDetails } from '@/lib/types/activities';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
-import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 
 export interface Location {
   latitude: number;

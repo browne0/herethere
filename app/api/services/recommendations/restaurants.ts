@@ -16,6 +16,7 @@ import {
   DietaryRestriction,
   MealImportance,
 } from '@/lib/stores/preferences';
+
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
 interface Location {

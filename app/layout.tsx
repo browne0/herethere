@@ -4,8 +4,8 @@ import { Inter } from 'next/font/google';
 import { PageLayout } from '@/components/layout/PageLayout';
 import { GoogleMapsProvider } from '@/components/maps/GoogleMapsProvider';
 import './globals.css';
-import { Toaster } from '@/components/ui/sonner';
 import QueryProvider from '@/components/QueryProvider';
+import { Toaster } from '@/components/ui/sonner';
 
 const inter = Inter({ subsets: ['latin'] });
 

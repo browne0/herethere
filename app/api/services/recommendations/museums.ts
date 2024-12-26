@@ -1,10 +1,10 @@
 import { ActivityRecommendation, PriceLevel } from '@prisma/client';
+import _ from 'lodash';
 
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { PlaceCategory, CategoryMapping } from '@/constants';
 import { prisma } from '@/lib/db';
 import { InterestType, TransportMode } from '@/lib/stores/preferences';
-import _ from 'lodash';
 
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 interface Location {
@@ -20,7 +20,7 @@ export const museumRecommendationService = {
     const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
     const { cityId } = params;
 
-    let locationContext = params.locationContext;
+    const locationContext = params.locationContext;
 
     // Calculate activity clusters if we have selected activities and are in planning phase
     if (params.phase === 'planning' && params.selectedActivities?.length > 0) {

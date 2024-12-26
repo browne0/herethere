@@ -10,8 +10,8 @@ import { Sheet, SheetContent } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { DailyRouteSummary } from './DailyRouteSummary';
-import { RecommendationsMapView } from '../RecommendationsView/RecommendationsMapView';
 import { ParsedTrip } from '../../types';
+import { RecommendationsMapView } from '../RecommendationsView/RecommendationsMapView';
 
 interface ItineraryViewProps {
   trip: ParsedTrip;

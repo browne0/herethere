@@ -1,5 +1,7 @@
 import React from 'react';
+
 import { Info } from 'lucide-react';
+
 import {
   Pagination,
   PaginationContent,
@@ -8,11 +10,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { ActivityStatus } from '@/lib/stores/activitiesStore';
+import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { cn } from '@/lib/utils';
+
 import ActivityCard from './ActivityCard';
 import { ActivityCategoryType } from '../../types';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
-import { ActivityStatus } from '@/lib/stores/activitiesStore';
 
 interface ActivityListProps {
   currentCategory?: ActivityCategoryType;

@@ -27,10 +27,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { DeleteTripDialog } from './DeleteTripDialog';
 import { ParsedTrip } from '../[tripId]/types';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 interface TripsListProps {
   initialTrips: ParsedTrip[];

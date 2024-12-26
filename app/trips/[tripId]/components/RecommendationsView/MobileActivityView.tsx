@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react';
+
+import { useVirtualizer } from '@tanstack/react-virtual';
 import {
   MapPin,
   Star,
@@ -10,23 +12,25 @@ import {
   ArrowUpDown,
   Info,
 } from 'lucide-react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { useVirtualizer } from '@tanstack/react-virtual';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { ActivityCategoryType, ParsedTrip, ParsedItineraryActivity } from '../../types';
-import ActivityList from './ActivityList';
-import MobileCategoryNavigation from './MobileCategoryNavigation';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { cn } from '@/lib/utils';
-import { Progress } from '@/components/ui/progress';
+
+import ActivityList from './ActivityList';
+import MobileCategoryNavigation from './MobileCategoryNavigation';
+import { ActivityCategoryType, ParsedTrip, ParsedItineraryActivity } from '../../types';
+
 
 interface MiniActivityCardProps {
   activity: ParsedItineraryActivity;
