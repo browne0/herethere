@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-import { City, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { Search, X } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';

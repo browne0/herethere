@@ -69,7 +69,14 @@ const FoodPage = () => {
       setTripCuisinePreferences(cuisinePreferences);
       setTripDietaryRestrictions(dietaryRestrictions);
     }
-  }, []);
+  }, [
+    cuisinePreferences,
+    dietaryRestrictions,
+    setTripCuisinePreferences,
+    setTripDietaryRestrictions,
+    tripCuisinePreferences.preferred.length,
+    tripDietaryRestrictions.length,
+  ]);
 
   // SSR placeholder
   if (!mounted) {

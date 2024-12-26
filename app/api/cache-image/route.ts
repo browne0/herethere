@@ -21,7 +21,7 @@ async function checkImageExists(key: string): Promise<boolean> {
       })
     );
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }

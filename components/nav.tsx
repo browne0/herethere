@@ -23,7 +23,7 @@ const isTripDetailsPage = (pathname: string): boolean => {
     return false;
   }
   // Check for trip detail pages like /trips/[tripId]
-  return /^\/trips\/[^\/]+$/.test(pathname);
+  return /^\/trips\/[^/]+$/.test(pathname);
 };
 
 // Subcomponents for better organization

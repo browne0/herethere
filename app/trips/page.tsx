@@ -2,7 +2,6 @@ import { auth } from '@clerk/nextjs/server';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
-import { usePreferences } from '@/lib/stores/preferences';
 
 import { ParsedTrip } from './[tripId]/types';
 import { TripsList } from './components/TripsList';
@@ -22,8 +21,6 @@ export default async function TripsPage() {
   });
 
   if (!user?.onboardingCompleted) {
-    const { reset } = usePreferences();
-    reset();
     redirect('/onboarding/interests');
   }
 

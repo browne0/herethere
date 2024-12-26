@@ -15,7 +15,6 @@ import {
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
 
@@ -40,8 +39,7 @@ const activityOptions = Object.entries(ACTIVITY_CATEGORIES).map(([key, category]
 
 export default function ActivitiesPage() {
   const router = useRouter();
-  const { city, dates, budget, activities, customInterests, setActivities, setCustomInterests } =
-    useTripFormStore();
+  const { city, dates, budget, activities, setActivities } = useTripFormStore();
 
   // Redirect if previous steps not completed
   useEffect(() => {

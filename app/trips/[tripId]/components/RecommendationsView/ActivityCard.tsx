@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Heart, Loader2, Star, MapPin, CalendarPlus, Check, Bookmark } from 'lucide-react';
+import { Loader2, Star, MapPin, CalendarPlus, Check, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 
 import ImageSlider from '@/components/ImageSlider';
@@ -164,7 +164,7 @@ export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCar
         {/* Image container */}
         <div className="relative w-full h-full md:h-[200px]">
           <ImageSlider
-            images={[...images?.urls, ...images.urls]}
+            images={images?.urls}
             alt={activity.name}
             className="rounded-t-xl"
             activityId={activity.id}
