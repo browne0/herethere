@@ -1,4 +1,3 @@
-// app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { Camera, Flower2, HandPlatter, Landmark, Martini, Palette, Star } from 'lucide-react';
 import { Metadata } from 'next';

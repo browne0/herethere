@@ -2,10 +2,8 @@
 
 import { Prisma } from '@prisma/client';
 import { MapPin } from 'lucide-react';
-import { Metadata } from 'next';
 import { useRouter } from 'next/navigation';
 
-import { baseMetadata } from '@/app/lib/metadata';
 import { CitySearch } from '@/components/maps/CitySearch';
 import { Button } from '@/components/ui/button';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
@@ -71,7 +69,3 @@ export default function CitySelectionPage() {
     </div>
   );
 }
-
-export const metadata: Metadata = {
-  ...baseMetadata,
-};
