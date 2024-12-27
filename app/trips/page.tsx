@@ -1,10 +1,12 @@
 import { auth } from '@clerk/nextjs/server';
+import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
 
 import { ParsedTrip } from './[tripId]/types';
 import { TripsList } from './components/TripsList';
+import { baseMetadata } from '../lib/metadata';
 
 export default async function TripsPage() {
   const { userId } = await auth();
@@ -35,3 +37,7 @@ export default async function TripsPage() {
 
   return <TripsList initialTrips={trips as unknown as ParsedTrip[]} />;
 }
+
+export const metadata: Metadata = {
+  ...baseMetadata,
+};

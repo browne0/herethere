@@ -1,6 +1,7 @@
 // app/trips/[tripId]/page.tsx
 import { auth } from '@clerk/nextjs/server';
 import { Camera, Flower2, HandPlatter, Landmark, Martini, Palette, Star } from 'lucide-react';
+import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
@@ -15,6 +16,7 @@ import {
   LocationContext,
   ScoringParams,
 } from '@/app/api/services/recommendations/types';
+import { baseMetadata } from '@/app/lib/metadata';
 import { prisma } from '@/lib/db';
 import { UserPreferences } from '@/lib/stores/preferences';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
@@ -308,3 +310,7 @@ export default async function TripPage({
     />
   );
 }
+
+export const metadata: Metadata = {
+  ...baseMetadata,
+};
