@@ -21,6 +21,7 @@ interface RecommendationsViewProps {
   categories: ActivityCategoryType[];
   onDeleteClick: () => void;
   trip: ParsedTrip;
+  isEditModalOpen: boolean;
 }
 
 interface ResponsiveMapContainerProps {
@@ -62,7 +63,12 @@ const ResponsiveMapContainer = ({ children, snap, className }: ResponsiveMapCont
   );
 };
 
-export function RecommendationsView({ categories, onDeleteClick, trip }: RecommendationsViewProps) {
+export function RecommendationsView({
+  categories,
+  onDeleteClick,
+  trip,
+  isEditModalOpen,
+}: RecommendationsViewProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -218,7 +224,7 @@ export function RecommendationsView({ categories, onDeleteClick, trip }: Recomme
               trip={trip}
             />
           </div>
-          {/* {!isEditModalOpen && <SelectedActivities tripId={trip.id} />} */}
+          {!isEditModalOpen && <SelectedActivities tripId={trip.id} />}
         </div>
       </div>
 
