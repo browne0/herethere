@@ -135,6 +135,8 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, alt, className = '', 
               photo={image}
               alt={`${alt} - Image ${index + 1}`}
               className="w-full h-full"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              priority={index === 0}
             />
           </div>
         ))}

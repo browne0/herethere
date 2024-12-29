@@ -14,9 +14,17 @@ interface CachedImageProps {
   photo: ImageUrl | null;
   alt: string;
   className?: string;
+  sizes?: string;
+  priority?: boolean;
 }
 
-export const CachedImage: React.FC<CachedImageProps> = ({ photo, alt, className = '' }) => {
+export const CachedImage: React.FC<CachedImageProps> = ({
+  photo,
+  alt,
+  className = '',
+  sizes = '',
+  priority = false,
+}) => {
   if (!photo) {
     return (
       <div className={`bg-gray-100 flex items-center justify-center ${className}`}>
@@ -34,8 +42,9 @@ export const CachedImage: React.FC<CachedImageProps> = ({ photo, alt, className 
       fill
       alt={alt}
       className={`object-cover ${className}`}
-      unoptimized
-      loading="lazy"
+      // unoptimized
+      sizes={sizes}
+      priority={priority}
     />
   );
 };

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 
 import { Sliders, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -205,7 +205,7 @@ export function RecommendationsView({
         </div>
 
         <div className="flex overflow-hidden">
-          <div className="w-7/12 mt-[144px]">
+          <div className="w-7/12 mt-[144px] lg:pb-[60px]">
             <ActivityList
               currentCategory={currentCategory}
               onPageChange={handlePageChange}
@@ -265,7 +265,7 @@ export function RecommendationsView({
             <Drawer.Title className="sr-only">Selected Activities</Drawer.Title>
             <Drawer.Description className="sr-only">Activities for {trip.title}</Drawer.Description>
 
-            <div className={cn({ 'overflow-y-auto': snap === snapPoints[2] })}>
+            <div className={cn({ 'overflow-y-auto': snap >= snapPoints[1] })}>
               <MobileActivityView
                 categories={categories}
                 currentCategory={currentCategory}
