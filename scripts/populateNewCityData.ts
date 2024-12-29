@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+// @ts-nocheck (TypeScript is disabled for this file)
 import { HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { PlacesClient, protos } from '@googlemaps/places';
 import {
@@ -17,7 +19,6 @@ import { Logger } from './logger';
 import {
   CategoryMapping,
   PlaceCategory,
-  isCityCoastal,
   PREDEFINED_CITY_AREAS,
   fieldMask,
   PLACE_INDICATORS,

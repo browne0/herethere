@@ -1,27 +1,18 @@
 import { appendFileSync, existsSync, mkdirSync } from 'fs';
 import path from 'path';
 
-interface APICallStats {
-  searchNearby: number;
-  placeDetails: number;
-}
+import { PlaceCategory } from '@/constants';
 
-interface RestaurantSubtypes {
-  upscale: number;
-  standard: number;
-  byType: Record<string, number>;
-}
-
-interface LoggerStats {
+interface SyncStats {
   processed: number;
   added: number;
-  skipped: number;
+  updated: number;
   errors: number;
-  imageErrors: number;
-  apiCalls: APICallStats;
-  byType: Record<string, number>;
+  byType: Record<PlaceCategory, number>;
   byArea: Record<string, number>;
-  restaurantSubtypes: RestaurantSubtypes;
+  apiCalls: {
+    searchNearby: number;
+  };
 }
 
 export class Logger {
@@ -88,39 +79,24 @@ export class Logger {
     this.writeToFile(`[PROGRESS] ${message}`);
   }
 
-  stats(stats: LoggerStats): void {
-    const messages: string[] = [
+  stats(stats: SyncStats): void {
+    const messages = [
       '\nSync Statistics:',
       '-'.repeat(30),
       `Total processed: ${stats.processed}`,
-      `Added/Updated: ${stats.added}`,
-      `Skipped: ${stats.skipped}`,
+      `Added: ${stats.added}`,
+      `Updated: ${stats.updated}`,
       `Errors: ${stats.errors}`,
-      `Image Upload Errors: ${stats.imageErrors}`,
-      '\nAPI Calls:',
-      `Search Nearby: ${stats.apiCalls.searchNearby}`,
-      `Place Details: ${stats.apiCalls.placeDetails}`,
+      `API Calls (searchNearby): ${stats.apiCalls.searchNearby}`,
       '\nBy Type:',
       ...Object.entries(stats.byType)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .sort(([, a], [, b]) => b - a)
         .map(([type, count]) => `${type}: ${count}`),
       '\nBy Area:',
       ...Object.entries(stats.byArea)
-        .sort(([, a], [, b]) => (b as number) - (a as number))
+        .sort(([, a], [, b]) => b - a)
         .map(([area, count]) => `${area}: ${count}`),
     ];
-
-    if ((stats.byType.RESTAURANT ?? 0) > 0) {
-      messages.push(
-        '\nRestaurant Types:',
-        `Upscale: ${stats.restaurantSubtypes.upscale}`,
-        `Standard: ${stats.restaurantSubtypes.standard}`,
-        '\nCuisine Types:',
-        ...Object.entries(stats.restaurantSubtypes.byType)
-          .sort(([, a], [, b]) => (b as number) - (a as number))
-          .map(([cuisine, count]) => `${cuisine}: ${count}`)
-      );
-    }
 
     messages.forEach(message => {
       console.log(message);

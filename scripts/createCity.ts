@@ -34,7 +34,7 @@ async function main() {
   if (!name || !countryCode || !latitude || !longitude || !placeId) {
     console.error('Missing arguments. Usage:');
     console.error(
-      'npx tsx scripts/createCity.ts "New York City" US 40.7128 -74.0060 ChIJOwg_06VPwokRYv534QaPC8g'
+      'npx tsx scripts/createCity.ts "New York City" US 40.7831 -73.9712 ChIJOwg_06VPwokRYv534QaPC8g'
     );
     process.exit(1);
   }

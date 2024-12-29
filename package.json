@@ -13,7 +13,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:push": "dotenv -e .env.local -- prisma db push",
-    "db:push:prod": "dotenv -e .env.production -- prisma db push",
+    "db:push:old": "dotenv -e .env.production -- prisma db push",
     "db:reset": "dotenv -e .env.local -- prisma db push --force-reset",
     "db:seed": "tsx prisma/seed/activities.ts",
     "prisma:studio": "prisma studio",

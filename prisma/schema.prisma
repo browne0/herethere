@@ -80,80 +80,20 @@ model Trip {
 }
 
 model ActivityRecommendation {
-  id          String @id @default(cuid())
-  name        String
-  description String
-  cityId      String
-  city        City   @relation(fields: [cityId], references: [id])
+  id           String   @id @default(cuid())
+  placeId      String   @unique // Google Place ID
+  name         String
+  location     Json // { latitude: number, longitude: number, neighborhood: string }
+  cityId       String
+  city         City     @relation(fields: [cityId], references: [id])
+  lastSyncedAt DateTime // Track when we last confirmed existence
+  images       Json? // Array of { url: string, author: string, id: string }
 
-  // Core quality metrics
-  rating          Float
-  ratingTier      RatingTier
-  reviewCount     Int
-  reviewCountTier ReviewCountTier
-
-  // Basic attributes
-  isMustSee           Boolean  @default(false)
-  isTouristAttraction Boolean  @default(false)
-  placeTypes          String[] // ['museum', 'art_gallery', etc.]
-
-  // Characteristics
-  indoorOutdoor        IndoorOutdoor
-  duration             Int // in minutes
-  priceLevel           PriceLevel
-  seasonalAvailability SeasonalAvailability @default(ALL_YEAR)
-
-  // Location and media
-  location Json // { latitude: number, longitude: number, address: string, placeId: string, neighborhood: string }
-  images   Json // { urls: Array<{url: string, cdnUrl: string}> }
-
-  // Operating hours
-  // {
-  //   periods: {
-  //     open: { day: number, hour: number, minute: number },
-  //     close: { day: number, hour: number, minute: number }
-  //   }[],
-  //   weekdayDescriptions: string[]
-  // }
-  openingHours Json?
-
-  availableDays Int[] // [0,1,2,3,4,5,6] for days of week
-
-  businessStatus BusinessStatus @default(OPERATIONAL)
-  primaryType    String? // Direct from Places API primaryTypeDisplayName
-
-  features Json?
-  // {
-  // wheelchair   Boolean?
-  // dineIn      Boolean?
-  // takeout     Boolean?
-  // delivery    Boolean?
-  // parking     Json? 
-  // {
-  //   freeParkingLot  Boolean?
-  //   paidParkingLot  Boolean?
-  //   streetParking   Boolean?
-  //   valetParking    Boolean?
-  // }
-  // }
-
-  // External IDs and metadata
-  googlePlaceId String?  @unique // For updating from Google Places
-  lastSyncedAt  DateTime // Track when we last synced with Google
-
-  viatorProductId String?
-  viatorData      Json? // Store full Viator product data
-  lastViatorSync  DateTime? // Track when we last synced with Viator
-
-  // Relations and timestamps
-  itineraryActivities ItineraryActivity[]
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
+  itineraryActivities ItineraryActivity[]
 
   @@index([cityId])
-  @@index([isMustSee])
-  @@index([placeTypes])
-  @@index([googlePlaceId])
 }
 
 model ItineraryActivity {
