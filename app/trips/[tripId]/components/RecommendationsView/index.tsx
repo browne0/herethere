@@ -14,8 +14,8 @@ import ActivityList from './ActivityList';
 import CategoryNavigation from './CategoryNavigation';
 import MobileActivityView from './MobileActivityView';
 import RecommendationsMapView from './RecommendationsMapView';
-import SelectedActivities from './SelectedActivities';
 import { ActivityCategoryType, ParsedTrip } from '../../types';
+import FloatingControlBar from '../FloatingControlBar';
 
 interface RecommendationsViewProps {
   categories: ActivityCategoryType[];
@@ -205,7 +205,7 @@ export function RecommendationsView({
         </div>
 
         <div className="flex overflow-hidden">
-          <div className="w-7/12 mt-[144px] lg:pb-[60px]">
+          <div className="w-7/12 mt-[144px]">
             <ActivityList
               currentCategory={currentCategory}
               onPageChange={handlePageChange}
@@ -224,7 +224,7 @@ export function RecommendationsView({
               trip={trip}
             />
           </div>
-          {!isEditModalOpen && <SelectedActivities tripId={trip.id} />}
+          {!isEditModalOpen && <FloatingControlBar tripId={trip.id} />}
         </div>
       </div>
 
@@ -248,36 +248,41 @@ export function RecommendationsView({
         </ResponsiveMapContainer>
 
         {/* Drawer */}
-        <Drawer.Root
-          open
-          modal={false}
-          snapPoints={snapPoints}
-          activeSnapPoint={snap}
-          setActiveSnapPoint={setSnap}
-          dismissible={false}
-        >
-          <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-          <Drawer.Content className="bg-white flex flex-col rounded-t-[10px] fixed top-0 left-0 right-0 min-h-[25dvh] max-h-[100dvh] z-50">
-            <div className="p-4 flex-none">
-              <Drawer.Handle className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300" />
-            </div>
+        {typeof document !== 'undefined' && (
+          <Drawer.Root
+            open
+            modal={false}
+            snapPoints={snapPoints}
+            activeSnapPoint={snap}
+            setActiveSnapPoint={setSnap}
+            dismissible={false}
+            snapToSequentialPoint
+          >
+            <Drawer.Overlay className="fixed inset-0 bg-black/40" />
+            <Drawer.Content className="bg-white flex flex-col rounded-t-[10px] fixed top-0 left-0 right-0 min-h-[25dvh] max-h-[100dvh] z-50">
+              <div className="p-4 flex-none">
+                <Drawer.Handle className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300" />
+              </div>
 
-            <Drawer.Title className="sr-only">Selected Activities</Drawer.Title>
-            <Drawer.Description className="sr-only">Activities for {trip.title}</Drawer.Description>
+              <Drawer.Title className="sr-only">Selected Activities</Drawer.Title>
+              <Drawer.Description className="sr-only">
+                Activities for {trip.title}
+              </Drawer.Description>
 
-            <div className={cn({ 'overflow-y-auto': snap >= snapPoints[1] })}>
-              <MobileActivityView
-                categories={categories}
-                currentCategory={currentCategory}
-                onCategoryChange={handleCategoryChange}
-                onPageChange={handlePageChange}
-                onHover={setHoveredActivityId}
-                onAdd={handleAddActivity}
-                trip={trip}
-              />
-            </div>
-          </Drawer.Content>
-        </Drawer.Root>
+              <div className={cn({ 'overflow-y-auto': snap! >= snapPoints[1] })}>
+                <MobileActivityView
+                  categories={categories}
+                  currentCategory={currentCategory}
+                  onCategoryChange={handleCategoryChange}
+                  onPageChange={handlePageChange}
+                  onHover={setHoveredActivityId}
+                  onAdd={handleAddActivity}
+                  trip={trip}
+                />
+              </div>
+            </Drawer.Content>
+          </Drawer.Root>
+        )}
       </div>
     </div>
   );

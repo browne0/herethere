@@ -1,5 +1,5 @@
 import { auth } from '@clerk/nextjs/server';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
@@ -40,4 +40,10 @@ export default async function TripsPage() {
 
 export const metadata: Metadata = {
   ...baseMetadata,
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };

@@ -1,16 +1,13 @@
 import { OpeningHours } from '@googlemaps/google-maps-services-js';
-import { Prisma, Trip } from '@prisma/client';
 import { addMinutes, isSameDay } from 'date-fns';
 
+import { ParsedItineraryActivity, ParsedTrip } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
 import { getTransitTime } from '@/lib/maps/utils';
 import { ActivityStatus } from '@/lib/stores/activitiesStore';
+import { ActivityRecommendation } from '@/lib/types/recommendations';
 
-import { findAvailableSlots, scoreTimeSlot } from '../trips/[tripId]/activities/utils';
-
-type ActivityWithRecommendation = Prisma.ItineraryActivityGetPayload<{
-  include: { recommendation: true };
-}>;
+import { findAvailableSlots, scoreTimeSlot } from './utils';
 
 interface ScheduleActivityParams {
   tripId: string;
@@ -37,6 +34,12 @@ interface TimeSlotResult {
   bestTransitTime: number;
 }
 
+interface ScheduleResults {
+  scheduled: ParsedItineraryActivity[];
+  unscheduled: ParsedItineraryActivity[];
+  warnings: string[];
+}
+
 export const activityService = {
   async validateTripAccess(tripId: string, userId: string) {
     const trip = await prisma.trip.findUnique({
@@ -60,13 +63,13 @@ export const activityService = {
       throw new Error('Trip not found');
     }
 
-    return trip;
+    return trip as unknown as ParsedTrip;
   },
 
   async findBestTimeSlot(
-    trip: Trip,
-    recommendation: Prisma.ActivityRecommendationGetPayload<object>,
-    existingActivities: ActivityWithRecommendation[]
+    trip: ParsedTrip,
+    recommendation: ActivityRecommendation,
+    existingActivities: ParsedItineraryActivity[]
   ): Promise<TimeSlotResult> {
     let bestSlot: Date | null = null;
     let bestScore = -Infinity;
@@ -97,12 +100,12 @@ export const activityService = {
         const transitTime = previousActivity
           ? await getTransitTime(
               {
-                lat: (previousActivity.recommendation.location as any).latitude,
-                lng: (previousActivity.recommendation.location as any).longitude,
+                lat: previousActivity.recommendation.location.latitude,
+                lng: previousActivity.recommendation.location.longitude,
               },
               {
-                lat: (recommendation.location as any).latitude,
-                lng: (recommendation.location as any).longitude,
+                lat: recommendation.location.latitude,
+                lng: recommendation.location.longitude,
               },
               new Date(previousActivity.endTime)
             )
@@ -142,39 +145,43 @@ export const activityService = {
     const trip = await this.validateTripAccess(tripId, userId);
 
     // Get the recommendation details
-    const recommendation = await prisma.activityRecommendation.findUnique({
+    const recommendation = (await prisma.activityRecommendation.findUnique({
       where: { id: recommendationId },
-    });
+    })) as unknown as ActivityRecommendation;
 
     if (!recommendation) {
       throw new Error('Activity recommendation not found');
     }
 
     // Find the best time slot
-    const { bestSlot, bestTransitTime } = await this.findBestTimeSlot(
-      trip,
-      recommendation,
-      trip.activities
-    );
+    try {
+      const { bestSlot, bestTransitTime } = await this.findBestTimeSlot(
+        trip,
+        recommendation,
+        trip.activities
+      );
 
-    // Calculate start and end times
-    const startTime = addMinutes(bestSlot, bestTransitTime);
-    const endTime = addMinutes(startTime, recommendation.duration);
+      // Calculate start and end times
+      const startTime = addMinutes(bestSlot, bestTransitTime);
+      const endTime = addMinutes(startTime, recommendation.duration);
 
-    // Create the activity in the itinerary
-    return await prisma.itineraryActivity.create({
-      data: {
-        tripId,
-        recommendationId: recommendation.id,
-        startTime,
-        endTime,
-        transitTimeFromPrevious: bestTransitTime,
-        status: 'planned',
-      },
-      include: {
-        recommendation: true,
-      },
-    });
+      // Create the activity in the itinerary
+      return await prisma.itineraryActivity.create({
+        data: {
+          tripId,
+          recommendationId: recommendation.id,
+          startTime,
+          endTime,
+          transitTimeFromPrevious: bestTransitTime,
+          status: 'planned',
+        },
+        include: {
+          recommendation: true,
+        },
+      });
+    } catch (error) {
+      throw new Error(`Unable to schedule activity: ${(error as Error).message}`);
+    }
   },
 
   async deleteActivity(params: { tripId: string; activityId: string; userId: string }) {
@@ -219,10 +226,10 @@ export const activityService = {
     const trip = await this.validateTripAccess(tripId, userId);
 
     // Get the current activity
-    const currentActivity = await prisma.itineraryActivity.findUnique({
+    const currentActivity = (await prisma.itineraryActivity.findUnique({
       where: { id: activityId },
       include: { recommendation: true },
-    });
+    })) as unknown as ParsedItineraryActivity;
 
     if (!currentActivity) {
       throw new Error('Activity not found');
@@ -261,8 +268,8 @@ export const activityService = {
       data: {
         status,
         // Clear scheduling data if not planned
-        startTime: new Date(),
-        endTime: new Date(),
+        startTime: undefined,
+        endTime: undefined,
         transitTimeFromPrevious: 0,
       },
       include: {
@@ -276,9 +283,9 @@ export const activityService = {
     const trip = await this.validateTripAccess(tripId, userId);
 
     // Get the recommendation
-    const recommendation = await prisma.activityRecommendation.findUnique({
+    const recommendation = (await prisma.activityRecommendation.findUnique({
       where: { id: recommendationId },
-    });
+    })) as unknown as ActivityRecommendation;
 
     if (!recommendation) {
       throw new Error('Activity recommendation not found');
@@ -324,5 +331,83 @@ export const activityService = {
         recommendation: true,
       },
     });
+  },
+
+  async rebalanceSchedule(tripId: string, userId: string): Promise<ScheduleResults> {
+    // Validate trip access
+    const trip = await this.validateTripAccess(tripId, userId);
+
+    // Get all planned activities
+    const activities = trip.activities.filter(
+      activity => activity.status === 'planned'
+    ) as ParsedItineraryActivity[];
+
+    // Sort activities by priority
+    const sortedActivities = activities.sort((a, b) => {
+      // Must-see attractions get highest priority
+      if (a.recommendation.isMustSee !== b.recommendation.isMustSee) {
+        return a.recommendation.isMustSee ? -1 : 1;
+      }
+      // Restaurants get next priority for meal timing
+      if (
+        a.recommendation.placeTypes.includes('restaurant') !==
+        b.recommendation.placeTypes.includes('restaurant')
+      ) {
+        return a.recommendation.placeTypes.includes('restaurant') ? -1 : 1;
+      }
+      // Then sort by rating
+      return (b.recommendation.rating || 0) - (a.recommendation.rating || 0);
+    });
+
+    // Clear all scheduling data
+    await prisma.itineraryActivity.updateMany({
+      where: { tripId },
+      data: {
+        startTime: undefined,
+        endTime: undefined,
+        transitTimeFromPrevious: 0,
+      },
+    });
+
+    const results: ScheduleResults = {
+      scheduled: [],
+      unscheduled: [],
+      warnings: [],
+    };
+
+    // Schedule each activity in priority order
+    for (const activity of sortedActivities) {
+      try {
+        const { bestSlot, bestTransitTime } = await this.findBestTimeSlot(
+          trip,
+          activity.recommendation,
+          results.scheduled
+        );
+
+        const endTime = new Date(bestSlot);
+        endTime.setMinutes(endTime.getMinutes() + activity.recommendation.duration);
+
+        const updatedActivity = await prisma.itineraryActivity.update({
+          where: { id: activity.id },
+          data: {
+            startTime: bestSlot,
+            endTime,
+            transitTimeFromPrevious: bestTransitTime,
+          },
+          include: {
+            recommendation: true,
+          },
+        });
+
+        results.scheduled.push(updatedActivity as unknown as ParsedItineraryActivity);
+      } catch (error) {
+        results.unscheduled.push(activity);
+        results.warnings.push(
+          `Could not schedule ${activity.recommendation.name}: ${(error as Error).message}`
+        );
+      }
+    }
+
+    return results;
   },
 };

@@ -1,13 +1,8 @@
 import { OpeningHours } from '@googlemaps/google-maps-services-js';
-import { Prisma } from '@prisma/client';
 import { addMinutes } from 'date-fns';
 
+import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { isOpenAtTime } from '@/lib/maps/utils';
-
-// Use Prisma's generated types for better type safety
-type ActivityWithRecommendation = Prisma.ItineraryActivityGetPayload<{
-  include: { recommendation: true };
-}>;
 
 interface DayBalance {
   activityCount: number;
@@ -68,7 +63,7 @@ function isSameDay(date1: Date, date2: Date): boolean {
   );
 }
 
-function getReservedMealBlocks(activities: ActivityWithRecommendation[], date: Date): TimeBlock[] {
+function getReservedMealBlocks(activities: ParsedItineraryActivity[], date: Date): TimeBlock[] {
   const blocks: TimeBlock[] = [];
   const dayActivities = activities.filter(activity =>
     isSameDay(new Date(activity.startTime), date)
@@ -103,7 +98,7 @@ function getReservedMealBlocks(activities: ActivityWithRecommendation[], date: D
   return blocks;
 }
 
-function getDayBalance(activities: ActivityWithRecommendation[], date: Date): DayBalance {
+function getDayBalance(activities: ParsedItineraryActivity[], date: Date): DayBalance {
   const dayActivities = activities.filter(activity =>
     isSameDay(new Date(activity.startTime), date)
   );
@@ -118,7 +113,7 @@ function getDayBalance(activities: ActivityWithRecommendation[], date: Date): Da
 }
 
 function hasMealScheduled(
-  activities: ActivityWithRecommendation[],
+  activities: ParsedItineraryActivity[],
   type: keyof typeof MEAL_WINDOWS
 ): boolean {
   const window = MEAL_WINDOWS[type];
@@ -132,7 +127,7 @@ function hasMealScheduled(
   });
 }
 
-function calculateDayIntensity(activities: ActivityWithRecommendation[]): number {
+function calculateDayIntensity(activities: ParsedItineraryActivity[]): number {
   if (activities.length === 0) return 0;
 
   const totalIntensity = activities.reduce((sum, activity) => {
@@ -149,7 +144,7 @@ function calculateDayIntensity(activities: ActivityWithRecommendation[]): number
 export function scoreTimeSlot(
   slot: Date,
   transitTime: number,
-  dayActivities: ActivityWithRecommendation[],
+  dayActivities: ParsedItineraryActivity[],
   isRestaurant: boolean
 ): number {
   let score = 100;
@@ -191,7 +186,7 @@ function conflictsWithMeals(requiredMealBlocks: TimeBlock[], start: Date, end: D
 }
 
 export function findAvailableSlots(
-  activities: ActivityWithRecommendation[],
+  activities: ParsedItineraryActivity[],
   date: Date,
   duration: number,
   openingHours: OpeningHours,
@@ -332,8 +327,6 @@ export function findAvailableSlots(
       slots.push(breakfastStart);
     }
   }
-
-  return slots;
 
   return slots;
 }

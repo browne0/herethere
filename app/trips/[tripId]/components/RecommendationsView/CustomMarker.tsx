@@ -39,6 +39,7 @@ interface CustomMarkerProps {
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   labelPosition: 'left' | 'right';
+  showLabel?: boolean;
 }
 
 const CustomMarker = React.memo(
@@ -52,6 +53,7 @@ const CustomMarker = React.memo(
     onMouseEnter,
     onMouseLeave,
     labelPosition,
+    showLabel = false,
   }: CustomMarkerProps) => {
     const IconComponent = ACTIVITY_ICONS[categoryType] || ACTIVITY_ICONS.default;
 
@@ -76,7 +78,6 @@ const CustomMarker = React.memo(
         );
       }
 
-      // Default marker with activity-specific icon
       return (
         <div
           className={`flex h-7 w-7 items-center justify-center rounded-full 
@@ -107,16 +108,14 @@ const CustomMarker = React.memo(
         <div className="relative">
           <button
             onClick={onClick}
-            onMouseEnter={onMouseEnter}
-            onMouseLeave={onMouseLeave}
             className={`group/marker relative block cursor-pointer rounded-full
               ${isHighlighted || isInTrip ? 'z-50' : 'hover:z-40 z-30'}`}
           >
             {getMarkerContent()}
-            {isHighlighted && (
+            {(showLabel || isHighlighted) && (
               <div
                 className={`pointer-events-none absolute max-w-[160px] text-xs font-medium leading-tight text-foreground whitespace-nowrap
-                  ${labelPosition === 'right' ? 'left-full ml-1' : 'right-full mr-1'} 
+                  ${labelPosition === 'right' ? 'left-full ml-2' : 'right-full mr-2'} 
                   top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? 'text-left' : 'text-right'}`}
               >
                 <span className="rounded-sm bg-background/95 px-2 py-1 shadow-sm">

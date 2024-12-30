@@ -31,7 +31,6 @@ import ActivityList from './ActivityList';
 import MobileCategoryNavigation from './MobileCategoryNavigation';
 import { ActivityCategoryType, ParsedTrip, ParsedItineraryActivity } from '../../types';
 
-
 interface MiniActivityCardProps {
   activity: ParsedItineraryActivity;
   tripId: string;
@@ -111,7 +110,7 @@ const ItineraryProgress = ({
             onClick={onGenerate}
             disabled={!canGenerate}
           >
-            Generate Itinerary
+            View Itinerary
           </Button>
         </div>
       </div>
@@ -325,10 +324,10 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
         onClick={e => {
           e.preventDefault();
           e.stopPropagation();
-          alert('Generate Itinerary clicked!');
+          alert('View Itinerary clicked!');
         }}
       >
-        Generate Itinerary
+        View Itinerary
       </Button>
     ) : (
       <div className="flex items-center text-sm text-gray-500">

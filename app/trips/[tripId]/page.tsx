@@ -1,6 +1,6 @@
 import { auth } from '@clerk/nextjs/server';
 import { Camera, Flower2, HandPlatter, Landmark, Martini, Palette, Star } from 'lucide-react';
-import { Metadata } from 'next';
+import { Metadata, Viewport } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
@@ -312,4 +312,10 @@ export default async function TripPage({
 
 export const metadata: Metadata = {
   ...baseMetadata,
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 };

@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 
-import { GoogleMap, InfoWindow } from '@react-google-maps/api';
+import {
+  GoogleMap,
+  InfoWindow,
+  Marker,
+  OVERLAY_MOUSE_TARGET,
+  OverlayViewF,
+} from '@react-google-maps/api';
 import { MapPin, Loader2 } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
@@ -10,6 +16,21 @@ import { ActivityRecommendation } from '@/lib/types/recommendations';
 import CustomMarker from './CustomMarker';
 import { MapLegend } from './MapLegend';
 import { type ParsedTrip } from '../../types';
+
+// Constants
+const MIN_LABEL_DISTANCE = 105;
+const DEFAULT_ZOOM = 13;
+const MIN_ZOOM_FOR_LABELS = 12;
+
+// Types
+interface MarkerWithPixels {
+  id: string;
+  position: google.maps.LatLng;
+  label?: string;
+  pixel?: google.maps.Point;
+  shouldShowLabel: boolean;
+  priority: number;
+}
 
 interface RecommendationsMapViewProps {
   activities: ActivityRecommendation[];
@@ -21,6 +42,56 @@ interface RecommendationsMapViewProps {
   trip: ParsedTrip | null;
 }
 
+const calculateVisibleLabels = (
+  markers: MarkerWithPixels[],
+  map: google.maps.Map | null,
+  zoom: number
+): Set<string> => {
+  if (!map || zoom < MIN_ZOOM_FOR_LABELS) return new Set();
+
+  const projection = map.getProjection();
+  if (!projection) return new Set();
+
+  // Convert all markers to pixel coordinates
+  const markersWithPixels = markers.map(marker => {
+    const pixel = projection.fromLatLngToPoint(marker.position);
+    const scaledPixel = new google.maps.Point(
+      pixel!.x * Math.pow(2, zoom),
+      pixel!.y * Math.pow(2, zoom)
+    );
+    return { ...marker, pixel: scaledPixel };
+  });
+
+  // Sort by priority (higher rating = higher priority)
+  const sortedMarkers = [...markersWithPixels].sort((a, b) => b.priority - a.priority);
+
+  // Track occupied spaces
+  const occupiedSpaces: Array<{ x: number; y: number }> = [];
+  const visibleLabels = new Set<string>();
+
+  // Check each marker for available space
+  sortedMarkers.forEach(marker => {
+    if (!marker.pixel) return;
+
+    const hasSpace = !occupiedSpaces.some(space => {
+      const distance = Math.sqrt(
+        Math.pow(space.x - marker.pixel!.x, 2) + Math.pow(space.y - marker.pixel!.y, 2)
+      );
+      return distance < MIN_LABEL_DISTANCE;
+    });
+
+    if (hasSpace) {
+      occupiedSpaces.push({
+        x: marker.pixel.x,
+        y: marker.pixel.y,
+      });
+      visibleLabels.add(marker.id);
+    }
+  });
+
+  return visibleLabels;
+};
+
 const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   activities,
   currentCategory,
@@ -31,22 +102,35 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   trip,
 }) => {
   const [map, setMap] = useState<google.maps.Map | null>(null);
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecommendation | null>(null);
-  const { isLoaded, loadError } = useGoogleMapsStatus();
+  const [visibleLabels, setVisibleLabels] = useState<Set<string>>(new Set());
   const [isMobile, setIsMobile] = useState(false);
-
+  const { isLoaded, loadError } = useGoogleMapsStatus();
   const boundsSet = useRef<boolean>(false);
 
-  const fitBoundsToActivities = useCallback(() => {
-    if (!map || !activities.length) return;
+  const handleMapChange = useCallback(() => {
+    if (!map) return;
 
-    const bounds = new google.maps.LatLngBounds();
-    activities.forEach(activity => {
-      const { location } = activity;
-      bounds.extend({ lat: location.latitude, lng: location.longitude });
+    const newZoom = map.getZoom() || DEFAULT_ZOOM;
+    setZoom(newZoom);
+
+    const markers = activities.map(activity => {
+      const tripActivity = trip?.activities.find(ta => ta.recommendationId === activity.id);
+      const isInTrip = !!tripActivity;
+
+      return {
+        id: activity.id,
+        position: new google.maps.LatLng(activity.location.latitude, activity.location.longitude),
+        label: activity.name,
+        shouldShowLabel: false,
+        priority: isInTrip ? 1000 : (activity.rating || 0) * 100, // Prioritize trip items
+      };
     });
-    map.fitBounds(bounds, 100);
-  }, [map, activities]);
+
+    const newVisibleLabels = calculateVisibleLabels(markers, map, newZoom);
+    setVisibleLabels(newVisibleLabels);
+  }, [map, activities, trip]);
 
   const handleMapLoad = useCallback((mapInstance: google.maps.Map) => {
     setMap(mapInstance);
@@ -54,41 +138,44 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   }, []);
 
   useEffect(() => {
+    if (map) {
+      map.addListener('zoom_changed', handleMapChange);
+      map.addListener('bounds_changed', handleMapChange);
+      return () => {
+        google.maps.event.clearListeners(map, 'zoom_changed');
+        google.maps.event.clearListeners(map, 'bounds_changed');
+      };
+    }
+  }, [map, handleMapChange]);
+
+  useEffect(() => {
     if (!map || boundsSet.current) return;
 
     if (activities.length === 0 && trip) {
-      map.setCenter({ lat: trip.city.latitude, lng: trip.city.longitude });
-      map.setZoom(13);
-    } else {
-      fitBoundsToActivities();
+      map.setCenter({
+        lat: trip.city.latitude,
+        lng: trip.city.longitude,
+      });
+      map.setZoom(DEFAULT_ZOOM);
+    } else if (activities.length > 0) {
+      const bounds = new google.maps.LatLngBounds();
+      activities.forEach(activity => {
+        bounds.extend({
+          lat: activity.location.latitude,
+          lng: activity.location.longitude,
+        });
+      });
+      map.fitBounds(bounds, 100);
     }
     boundsSet.current = true;
-  }, [map, activities, trip, fitBoundsToActivities]);
+  }, [map, activities, trip]);
 
   useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    // Check initially
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
-
-    // Add resize listener
     window.addEventListener('resize', checkMobile);
-
-    // Cleanup
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  const getLabelPosition = useCallback(
-    (lng: number): 'left' | 'right' => {
-      if (!map) return 'right';
-      const center = map.getCenter();
-      if (!center) return 'right';
-      return lng > center.lng() ? 'left' : 'right';
-    },
-    [map]
-  );
 
   if (!isLoaded) {
     return (
@@ -113,43 +200,18 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     );
   }
 
-  const markers = activities.map(activity => {
-    const tripActivity = trip!.activities.find(
-      tripActivity => tripActivity.recommendationId === activity.id
-    );
-    const isInTrip = !!tripActivity;
-    const tripStatus = tripActivity?.status as 'planned' | 'interested' | undefined;
-
-    return (
-      <CustomMarker
-        key={activity.id}
-        activity={activity}
-        categoryType={currentCategory}
-        isInTrip={isInTrip}
-        tripStatus={tripStatus}
-        isHighlighted={hoveredActivityId === activity.id || selectedActivityId === activity.id}
-        onClick={() => {
-          setSelectedActivity(activity);
-          onMarkerSelect(activity.id);
-        }}
-        onMouseEnter={() => onMarkerHover(activity.id)}
-        onMouseLeave={() => onMarkerHover(null)}
-        labelPosition={getLabelPosition(activity.location.longitude)}
-      />
-    );
-  });
-
-  // Map styling to hide unnecessary elements
   const mapOptions: google.maps.MapOptions = {
-    disableDefaultUI: isMobile,
+    disableDefaultUI: true,
     clickableIcons: false,
     streetViewControl: false,
     mapTypeControl: false,
     keyboardShortcuts: false,
     fullscreenControl: false,
+    zoomControl: true,
     zoomControlOptions: {
       position: google.maps.ControlPosition.TOP_RIGHT,
     },
+    gestureHandling: isMobile ? 'cooperative' : 'greedy',
     styles: [
       {
         featureType: 'poi',
@@ -169,15 +231,79 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     ],
   };
 
+  const renderMarkers = activities.map(activity => {
+    const tripActivity = trip?.activities.find(ta => ta.recommendationId === activity.id);
+    const isInTrip = !!tripActivity;
+    const shouldShowLabel = visibleLabels.has(activity.id);
+    const isHighlighted = hoveredActivityId === activity.id || selectedActivityId === activity.id;
+
+    if (isInTrip) {
+      return (
+        <CustomMarker
+          key={activity.id}
+          activity={activity}
+          categoryType={currentCategory}
+          isInTrip={true}
+          tripStatus={tripActivity?.status as 'planned' | 'interested'}
+          isHighlighted={isHighlighted}
+          onClick={() => {
+            setSelectedActivity(activity);
+            onMarkerSelect(activity.id);
+          }}
+          onMouseEnter={() => onMarkerHover(activity.id)}
+          onMouseLeave={() => onMarkerHover(null)}
+          labelPosition="right"
+          showLabel={shouldShowLabel}
+        />
+      );
+    }
+
+    // For non-trip activities, render a regular marker with OverlayViewF label
+    return (
+      <React.Fragment key={activity.id}>
+        <Marker
+          position={{
+            lat: activity.location.latitude,
+            lng: activity.location.longitude,
+          }}
+          onClick={() => {
+            setSelectedActivity(activity);
+            onMarkerSelect(activity.id);
+          }}
+          // opacity={hoveredActivityId ? (hoveredActivityId === activity.id ? 1 : 0.5) : 1}
+        />
+        {(shouldShowLabel || isHighlighted) && (
+          <OverlayViewF
+            position={{
+              lat: activity.location.latitude,
+              lng: activity.location.longitude,
+            }}
+            mapPaneName={OVERLAY_MOUSE_TARGET}
+            getPixelPositionOffset={() => ({
+              x: 20, // Offset to position label to the right of marker
+              y: -25,
+            })}
+          >
+            <div className="pointer-events-none absolute max-w-[160px] text-xs font-medium leading-tight text-foreground whitespace-nowrap">
+              <span className="rounded-sm bg-background/95 px-2 py-1 shadow-sm">
+                {activity.name}
+              </span>
+            </div>
+          </OverlayViewF>
+        )}
+      </React.Fragment>
+    );
+  });
+
   return (
     <GoogleMap
       mapContainerClassName="w-full h-full overflow-hidden"
       options={mapOptions}
       onLoad={handleMapLoad}
+      zoom={zoom}
     >
       <MapLegend />
-      {markers}
-
+      {renderMarkers}
       {selectedActivity && (
         <InfoWindow
           position={{
