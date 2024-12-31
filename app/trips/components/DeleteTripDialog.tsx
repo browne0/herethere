@@ -12,25 +12,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
-import { ParsedTrip } from '../[tripId]/types';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 interface DeleteTripDialogProps {
-  trip: ParsedTrip | null;
   isOpen: boolean;
   onClose: () => void;
   onDelete: (tripId: string) => Promise<void>;
 }
 
-export function DeleteTripDialog({ trip, isOpen, onClose, onDelete }: DeleteTripDialogProps) {
+export function DeleteTripDialog({ isOpen, onClose, onDelete }: DeleteTripDialogProps) {
+  const { trip } = useActivitiesStore();
   const [isDeleting, setIsDeleting] = useState(false);
 
   if (!trip) return null;
 
-  const handleDelete = async () => {
+  const handleDelete = async (event: React.MouseEvent) => {
+    event.preventDefault();
     setIsDeleting(true);
+
     try {
       await onDelete(trip.id);
+      // Only close the dialog after successful deletion
       onClose();
     } catch (_error) {
       // Error is handled in parent component
@@ -39,8 +41,15 @@ export function DeleteTripDialog({ trip, isOpen, onClose, onDelete }: DeleteTrip
     }
   };
 
+  const handleOpenChange = () => {
+    // Prevent closing while delete is in progress
+    if (!isDeleting) {
+      onClose();
+    }
+  };
+
   return (
-    <AlertDialog open={isOpen} onOpenChange={onClose}>
+    <AlertDialog open={isOpen} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Trip</AlertDialogTitle>
@@ -69,7 +78,7 @@ export function DeleteTripDialog({ trip, isOpen, onClose, onDelete }: DeleteTrip
           </p>
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={handleDelete}
             className="bg-red-600 hover:bg-red-700 text-white"

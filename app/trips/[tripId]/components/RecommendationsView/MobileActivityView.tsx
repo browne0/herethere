@@ -12,6 +12,7 @@ import {
   ArrowUpDown,
   Info,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -38,11 +39,6 @@ interface MiniActivityCardProps {
   onRemove: () => Promise<void>;
 }
 
-interface MyActivitiesContentProps {
-  trip: ParsedTrip;
-  activities: ParsedItineraryActivity[];
-}
-
 interface MobileActivityViewProps {
   categories: ActivityCategoryType[];
   currentCategory: ActivityCategoryType | undefined;
@@ -67,16 +63,17 @@ interface VirtualizedActivityListProps {
 
 const ItineraryProgress = ({
   addedActivities,
-  minimumActivities = 5,
-  onGenerate,
+  minimumActivities = 1,
 }: {
   addedActivities: ParsedItineraryActivity[];
   minimumActivities: number;
-  onGenerate: () => void;
 }) => {
+  const { trip } = useActivitiesStore();
   const progress = Math.min((addedActivities.length / minimumActivities) * 100, 100);
   const remainingActivities = Math.max(minimumActivities - addedActivities.length, 0);
   const canGenerate = addedActivities.length >= minimumActivities;
+
+  if (!trip) return null;
 
   return (
     <div className="p-4 bg-white border-b">
@@ -99,19 +96,18 @@ const ItineraryProgress = ({
               <Info className="h-4 w-4 mr-2 flex-shrink-0" />
               <span>
                 Add {remainingActivities} more{' '}
-                {remainingActivities === 1 ? 'activity' : 'activities'}
+                {remainingActivities === 1 ? 'activity' : 'activities'} to your itinerary
               </span>
             </div>
           ) : (
             <span className="text-sm text-green-600">Ready to generate!</span>
           )}
-          <Button
-            className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px]"
-            onClick={onGenerate}
-            disabled={!canGenerate}
+          <Link
+            className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px] px-4 py-2 rounded-lg"
+            href={`/trips/${trip.id}/itinerary`}
           >
             View Itinerary
-          </Button>
+          </Link>
         </div>
       </div>
     </div>
@@ -120,7 +116,6 @@ const ItineraryProgress = ({
 
 const MiniActivityCard: React.FC<MiniActivityCardProps> = ({
   activity,
-  tripId,
   onStatusChange,
   onRemove,
 }) => {
@@ -220,50 +215,28 @@ const VirtualizedActivityList: React.FC<VirtualizedActivityListProps> = ({
   );
 };
 
-const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activities }) => {
-  const { updateActivityStatus, removeActivity } = useActivitiesStore();
+const MyActivitiesContent = () => {
+  const { updateActivityStatus, removeActivity, trip } = useActivitiesStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'name', direction: 'asc' });
 
-  const handleStatusChange = async (activity: ParsedItineraryActivity): Promise<void> => {
-    const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
-    try {
-      const response = await fetch(`/api/trips/${trip.id}/activities/${activity.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update activity');
-      updateActivityStatus(activity.id, newStatus);
-    } catch (error) {
-      console.error('Error updating activity:', error);
-    }
-  };
-
-  const handleRemove = async (activityId: string): Promise<void> => {
-    try {
-      const response = await fetch(`/api/trips/${trip.id}/activities/${activityId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to remove activity');
-      removeActivity(activityId);
-    } catch (error) {
-      console.error('Error removing activity:', error);
-    }
-  };
-
   const filteredAndSortedActivities = useMemo(() => {
+    if (!trip) return { added: [], saved: [] };
+    const { activities } = trip;
+
     const addedActivities = activities.filter(act => act.status === 'planned');
     const savedActivities = activities.filter(act => act.status === 'interested');
 
     const filterActivities = (acts: ParsedItineraryActivity[]) => {
-      return acts.filter(
-        act =>
+      return acts.filter(act => {
+        const matchesSearch =
           act.recommendation.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          act.recommendation.location.neighborhood.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+          act.recommendation.location.neighborhood
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase());
+
+        return matchesSearch;
+      });
     };
 
     const sortActivities = (acts: ParsedItineraryActivity[]) => {
@@ -303,7 +276,38 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
       added: sortActivities(filterActivities(addedActivities)),
       saved: sortActivities(filterActivities(savedActivities)),
     };
-  }, [activities, searchQuery, sortConfig]);
+  }, [trip, searchQuery, sortConfig]);
+
+  const handleStatusChange = async (activity: ParsedItineraryActivity): Promise<void> => {
+    if (!trip) return;
+    const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
+    try {
+      const response = await fetch(`/api/trips/${trip.id}/activities/${activity.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update activity');
+      updateActivityStatus(activity.id, newStatus);
+    } catch (error) {
+      console.error('Error updating activity:', error);
+    }
+  };
+
+  const handleRemove = async (activityId: string): Promise<void> => {
+    if (!trip) return;
+    try {
+      const response = await fetch(`/api/trips/${trip.id}/activities/${activityId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to remove activity');
+      removeActivity(activityId);
+    } catch (error) {
+      console.error('Error removing activity:', error);
+    }
+  };
 
   const handleSort = (field: SortConfig['field']) => {
     setSortConfig(current => ({
@@ -312,29 +316,10 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
     }));
   };
 
-  const addedActivities = activities.filter(act => act.status === 'planned');
+  if (!trip) return null;
 
-  const MINIMUM_ACTIVITIES = 5;
-  const canGenerateItinerary = addedActivities.length >= MINIMUM_ACTIVITIES;
-
-  const GenerateItineraryButton = () =>
-    canGenerateItinerary ? (
-      <Button
-        className="bg-blue-500 hover:bg-blue-600 text-white mx-auto w-full"
-        onClick={e => {
-          e.preventDefault();
-          e.stopPropagation();
-          alert('View Itinerary clicked!');
-        }}
-      >
-        View Itinerary
-      </Button>
-    ) : (
-      <div className="flex items-center text-sm text-gray-500">
-        <Info className="h-4 w-4 mr-2" />
-        Add {MINIMUM_ACTIVITIES - addedActivities.length} more activities
-      </div>
-    );
+  const addedActivities = trip.activities.filter(act => act.status === 'planned');
+  const MINIMUM_ACTIVITIES = 1;
 
   return (
     <div className="h-full flex flex-col">
@@ -343,9 +328,8 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
         <ItineraryProgress
           addedActivities={addedActivities}
           minimumActivities={MINIMUM_ACTIVITIES}
-          onGenerate={() => {}}
         />
-        <div className="relative mb-2">
+        <div className="relative m-4">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
           <Input
             type="text"
@@ -355,8 +339,9 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
             className="w-full pl-9"
           />
         </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {/* Your sort buttons */}
+
+        {/* Sort buttons */}
+        <div className="flex gap-2 items-center ml-4 mb-4">
           <Button
             variant="outline"
             size="sm"
@@ -366,7 +351,27 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
             Name
             <ArrowUpDown className="h-3 w-3 ml-1" />
           </Button>
-          {/* Other sort buttons */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleSort('rating')}
+            className={cn('whitespace-nowrap', sortConfig.field === 'rating' && 'bg-gray-100')}
+          >
+            Rating
+            <ArrowUpDown className="h-3 w-3 ml-1" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleSort('neighborhood')}
+            className={cn(
+              'whitespace-nowrap',
+              sortConfig.field === 'neighborhood' && 'bg-gray-100'
+            )}
+          >
+            Neighborhood
+            <ArrowUpDown className="h-3 w-3 ml-1" />
+          </Button>
         </div>
       </div>
 
@@ -409,15 +414,17 @@ const MyActivitiesContent: React.FC<MyActivitiesContentProps> = ({ trip, activit
 };
 
 const MobileActivityView: React.FC<MobileActivityViewProps> = ({
-  categories,
   currentCategory,
   onCategoryChange,
   onPageChange,
   onHover,
   onAdd,
-  trip,
 }) => {
-  const { activities } = useActivitiesStore();
+  const { categories, trip } = useActivitiesStore();
+
+  if (!trip) {
+    return null;
+  }
 
   return (
     <Tabs defaultValue="discover" className="h-full flex flex-col">
@@ -428,7 +435,7 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
               Discover
             </TabsTrigger>
             <TabsTrigger value="my-activities" className="flex-1">
-              My Activities ({activities.length})
+              My Activities ({trip.activities.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -452,7 +459,7 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
         </TabsContent>
 
         <TabsContent value="my-activities" className="h-full mt-0">
-          <MyActivitiesContent trip={trip} activities={activities} />
+          <MyActivitiesContent />
         </TabsContent>
       </div>
     </Tabs>

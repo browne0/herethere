@@ -50,8 +50,6 @@ const CustomMarker = React.memo(
     isInTrip,
     tripStatus,
     onClick,
-    onMouseEnter,
-    onMouseLeave,
     labelPosition,
     showLabel = false,
   }: CustomMarkerProps) => {

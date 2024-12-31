@@ -40,10 +40,5 @@ export default async function ItineraryPage({ params }: { params: { tripId: stri
 
   const trip = (await getTrip(tripId, userId)) as unknown as ParsedTrip;
 
-  return (
-    <div className="flex h-screen">
-      <ItineraryPageClient trip={trip} initialActivities={trip.activities} />
-      <div className="flex-1 bg-gray-100">{/* Map will go here */}</div>
-    </div>
-  );
+  return <ItineraryPageClient initialTrip={trip} initialActivities={trip.activities} />;
 }

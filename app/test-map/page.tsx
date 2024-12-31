@@ -1,7 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 
-import { GoogleMap, Rectangle, Circle, Polygon } from '@react-google-maps/api';
+import { GoogleMap, Circle, Polygon } from '@react-google-maps/api';
 import { Loader2 } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';

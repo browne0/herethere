@@ -20,15 +20,15 @@ interface TripPageClientProps {
 
 export function TripPageClient({ trip, categories }: TripPageClientProps) {
   const router = useRouter();
-  const { setActivities, setTrip } = useActivitiesStore();
+  const { setTrip, setCategories } = useActivitiesStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Initialize store with trip activities
   useEffect(() => {
-    setActivities(trip.activities);
     setTrip(trip);
-  }, [trip.activities, setActivities, setTrip, trip.id]);
+    setCategories(categories);
+  }, [setCategories, setTrip, categories, trip]);
 
   const handleDeleteTrip = async (tripId: string) => {
     try {
@@ -59,26 +59,17 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
 
   return (
     <div className="bg-white">
-      <TripHeader
-        trip={trip}
-        onDeleteClick={() => setIsDeleteDialogOpen(true)}
-        onEditClick={() => setIsEditModalOpen(true)}
-      />
+      <TripHeader onEditClick={() => setIsEditModalOpen(true)} />
       <RecommendationsView
-        categories={categories}
         onDeleteClick={() => setIsDeleteDialogOpen(true)}
-        trip={trip}
         isEditModalOpen={isEditModalOpen}
       />
       <DeleteTripDialog
-        trip={trip}
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onDelete={handleDeleteTrip}
       />
-
       <TripEditModal
-        trip={trip}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onUpdateTrip={handleTripUpdate}

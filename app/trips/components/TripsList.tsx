@@ -379,7 +379,6 @@ export function TripsList({ initialTrips }: TripsListProps) {
         </div>
       </div>
       <DeleteTripDialog
-        trip={tripToDelete}
         isOpen={!!tripToDelete}
         onClose={() => setTripToDelete(null)}
         onDelete={handleDeleteTrip}

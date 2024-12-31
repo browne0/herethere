@@ -1,12 +1,16 @@
 import { create } from 'zustand';
 
-import type { ParsedItineraryActivity, ParsedTrip } from '@/app/trips/[tripId]/types';
+import type {
+  ActivityCategoryType,
+  ParsedItineraryActivity,
+  ParsedTrip,
+} from '@/app/trips/[tripId]/types';
 
 export type ActivityStatus = 'interested' | 'planned' | 'confirmed' | 'completed' | 'cancelled';
 
 interface ActivitiesStore {
-  activities: ParsedItineraryActivity[];
-  setActivities: (activities: ParsedItineraryActivity[]) => void;
+  categories: ActivityCategoryType[];
+  setCategories: (categories: ActivityCategoryType[]) => void;
   addActivity: (activity: ParsedItineraryActivity) => void;
   removeActivity: (activityId: string) => void;
   updateActivityStatus: (activityId: string, status: ActivityStatus) => void;
@@ -16,33 +20,48 @@ interface ActivitiesStore {
 }
 
 export const useActivitiesStore = create<ActivitiesStore>((set, get) => ({
-  activities: [],
   trip: null,
-
-  setActivities: activities => set({ activities }),
-
+  categories: [],
   setTrip: trip => set({ trip }),
+  setCategories: categories => set({ categories }),
 
   addActivity: activity =>
     set(state => ({
-      activities: [...state.activities, activity],
+      ...state,
+      trip: state.trip
+        ? {
+            ...state.trip,
+            activities: [...state.trip.activities, activity],
+          }
+        : null,
     })),
 
   removeActivity: activityId =>
     set(state => ({
-      activities: state.activities.filter(a => a.id !== activityId),
+      ...state,
+      trip: state.trip
+        ? {
+            ...state.trip,
+            activities: state.trip.activities.filter(a => a.id !== activityId),
+          }
+        : null,
     })),
 
   updateActivityStatus: (activityId, status) =>
     set(state => ({
-      activities: state.activities.map(activity =>
-        activity.id === activityId ? { ...activity, status } : activity
-      ),
+      ...state,
+      trip: state.trip
+        ? {
+            ...state.trip,
+            activities: state.trip.activities.map(activity =>
+              activity.id === activityId ? { ...activity, status } : activity
+            ),
+          }
+        : null,
     })),
 
-  // Helper method to find an activity by its recommendation ID
   findActivityByRecommendationId: recommendationId => {
     const state = get();
-    return state.activities.find(activity => activity.recommendationId === recommendationId);
+    return state.trip?.activities.find(activity => activity.recommendationId === recommendationId);
   },
 }));

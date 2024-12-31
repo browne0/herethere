@@ -163,7 +163,7 @@ export default function EditPreferences() {
         avoided: preferences.cuisinePreferences.avoided,
       });
     },
-    [preferences.setCuisinePreferences, preferences.cuisinePreferences.avoided]
+    [preferences]
   );
 
   return (

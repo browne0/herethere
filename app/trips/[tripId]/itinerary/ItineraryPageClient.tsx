@@ -4,26 +4,27 @@ import { useEffect } from 'react';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { ParsedItineraryActivity, ParsedTrip } from '../types';
+import type { ParsedTrip, ParsedItineraryActivity } from '../types';
+import { ItineraryMap } from './components/ItineraryMap';
+import { ItineraryView } from './components/ItineraryView';
 
 interface ItineraryPageClientProps {
-  trip: ParsedTrip;
+  initialTrip: ParsedTrip;
   initialActivities: ParsedItineraryActivity[];
 }
 
-export function ItineraryPageClient({ trip, initialActivities }: ItineraryPageClientProps) {
-  const { setTrip, setActivities } = useActivitiesStore();
+export function ItineraryPageClient({ initialTrip, initialActivities }: ItineraryPageClientProps) {
+  const { setTrip } = useActivitiesStore();
 
   // Initialize store with server-fetched data
   useEffect(() => {
-    setTrip(trip);
-    setActivities(initialActivities);
-  }, [trip, initialActivities, setTrip, setActivities]);
+    setTrip(initialTrip);
+  }, [initialTrip, initialActivities, setTrip]);
 
   return (
-    <div className="w-full max-w-md border-r border-gray-200 h-screen overflow-y-auto bg-white">
-      {/* Re-use the itinerary view component content from before */}
-      {/* ... rest of the itinerary view implementation ... */}
+    <div className="flex h-screen">
+      <ItineraryView />
+      <ItineraryMap />
     </div>
   );
 }

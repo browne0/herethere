@@ -1,7 +1,5 @@
 import React from 'react';
 
-import { Info } from 'lucide-react';
-
 import {
   Select,
   SelectContent,
@@ -25,8 +23,6 @@ const MobileCategoryNavigation = ({
   onCategoryChange,
 }: MobileCategoryNavigationProps) => {
   if (!selectedCategory) return null;
-  // Find current category for title/description display
-  const currentCategory = categories.find(cat => cat.type === selectedCategory.type);
 
   return (
     <div className="px-4 pt-4 bg-white">

@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
-  ChevronUp,
   MapPin,
   Star,
   Info,
@@ -12,8 +11,9 @@ import {
   Plus,
   Search,
   X,
-  ChevronDown,
+  List,
 } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -194,16 +194,23 @@ const VirtualizedActivityList = ({
 const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { activities, updateActivityStatus, removeActivity } = useActivitiesStore();
+  const { trip, updateActivityStatus, removeActivity } = useActivitiesStore();
 
-  const addedActivities = activities.filter(act => act.status === 'planned');
-  const interestedActivities = activities.filter(act => act.status === 'interested');
+  const addedActivities = useMemo(() => {
+    return trip?.activities.filter(act => act.status === 'planned') ?? [];
+  }, [trip?.activities]);
+
+  const interestedActivities = useMemo(() => {
+    return trip?.activities.filter(act => act.status === 'interested') ?? [];
+  }, [trip?.activities]);
 
   const defaultTab = useMemo(() => {
     if (addedActivities.length > 0) return 'added';
     if (interestedActivities.length > 0) return 'interested';
     return 'added';
   }, [addedActivities.length, interestedActivities.length]);
+
+  if (!trip) return null;
 
   const filterActivities = (activities: ParsedItineraryActivity[]) => {
     if (!searchQuery) return activities;
@@ -216,16 +223,16 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
   const filteredAdded = filterActivities(addedActivities);
   const filteredInterested = filterActivities(interestedActivities);
 
-  const MINIMUM_ACTIVITIES = 5;
+  const MINIMUM_ACTIVITIES = 1;
   const canGenerateItinerary = addedActivities.length >= MINIMUM_ACTIVITIES;
 
   const ControlBarContent = () => (
     <div className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3">
       <div className="flex items-center justify-between space-x-6">
         {isExpanded ? (
-          <ChevronDown className="w-5 h-5 text-gray-400" />
+          <List className="w-5 h-5 text-gray-400" />
         ) : (
-          <ChevronUp className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-all transform group-hover:-translate-y-0.5" />
+          <List className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-all " />
         )}
         <div className="text-center">
           <span className="text-lg font-semibold">{addedActivities.length}</span>
@@ -238,20 +245,19 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
       </div>
 
       {canGenerateItinerary ? (
-        <Button
-          className="bg-blue-500 hover:bg-blue-600 text-white"
+        <Link
+          href={`/trips/${tripId}/itinerary`}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
           onClick={e => {
-            e.preventDefault();
             e.stopPropagation();
-            alert('Generate Itinerary clicked!');
           }}
         >
           View Itinerary
-        </Button>
+        </Link>
       ) : (
         <div className="flex items-center text-sm text-gray-500">
           <Info className="h-4 w-4 mr-2" />
-          Add {MINIMUM_ACTIVITIES - addedActivities.length} more activities
+          Add an activity to see your itinerary
         </div>
       )}
     </div>

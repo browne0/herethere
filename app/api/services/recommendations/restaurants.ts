@@ -5,7 +5,6 @@ import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types'
 import {
   CategoryMapping,
   CUISINE_PREFERENCES,
-  GOOGLE_RESTAURANT_TYPES,
   NON_VEGETARIAN_RESTAURANTS,
   PlaceCategory,
 } from '@/constants';
@@ -152,8 +151,8 @@ export const restaurantRecommendationService = {
     // Create clusters for each time slot
     return Object.entries(timeSlots).map(([timeSlot, slotActivities]) => {
       const locations = slotActivities.map(a => ({
-        latitude: (a.recommendation.location as any).latitude,
-        longitude: (a.recommendation.location as any).longitude,
+        latitude: a.recommendation.location.latitude,
+        longitude: a.recommendation.location.longitude,
       }));
 
       // Calculate center

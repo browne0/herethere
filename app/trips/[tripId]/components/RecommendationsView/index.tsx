@@ -14,13 +14,10 @@ import ActivityList from './ActivityList';
 import CategoryNavigation from './CategoryNavigation';
 import MobileActivityView from './MobileActivityView';
 import RecommendationsMapView from './RecommendationsMapView';
-import { ActivityCategoryType, ParsedTrip } from '../../types';
 import FloatingControlBar from '../FloatingControlBar';
 
 interface RecommendationsViewProps {
-  categories: ActivityCategoryType[];
   onDeleteClick: () => void;
-  trip: ParsedTrip;
   isEditModalOpen: boolean;
 }
 
@@ -63,12 +60,7 @@ const ResponsiveMapContainer = ({ children, snap, className }: ResponsiveMapCont
   );
 };
 
-export function RecommendationsView({
-  categories,
-  onDeleteClick,
-  trip,
-  isEditModalOpen,
-}: RecommendationsViewProps) {
+export function RecommendationsView({ onDeleteClick, isEditModalOpen }: RecommendationsViewProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -82,7 +74,7 @@ export function RecommendationsView({
   const activeSnapPercentage = typeof snap === 'number' ? snap : 0.5;
 
   // Global state
-  const { addActivity, updateActivityStatus, findActivityByRecommendationId } =
+  const { trip, addActivity, updateActivityStatus, findActivityByRecommendationId, categories } =
     useActivitiesStore();
 
   // URL update handler
@@ -224,7 +216,7 @@ export function RecommendationsView({
               trip={trip}
             />
           </div>
-          {!isEditModalOpen && <FloatingControlBar tripId={trip.id} />}
+          {!isEditModalOpen && trip && <FloatingControlBar tripId={trip.id} />}
         </div>
       </div>
 
@@ -248,7 +240,7 @@ export function RecommendationsView({
         </ResponsiveMapContainer>
 
         {/* Drawer */}
-        {typeof document !== 'undefined' && (
+        {typeof document !== 'undefined' && trip && (
           <Drawer.Root
             open
             modal={false}
@@ -269,7 +261,7 @@ export function RecommendationsView({
                 Activities for {trip.title}
               </Drawer.Description>
 
-              <div className={cn({ 'overflow-y-auto': snap! >= snapPoints[1] })}>
+              <div className={cn({ 'overflow-y-auto': activeSnapPercentage >= snapPoints[1] })}>
                 <MobileActivityView
                   categories={categories}
                   currentCategory={currentCategory}

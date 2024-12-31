@@ -1,6 +1,6 @@
 'use client';
 
-import { Bike, Sun, Moon, Footprints, Binoculars, Sunrise } from 'lucide-react';
+import { Sun, Moon, Sunrise } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { StartTime, usePreferences } from '@/lib/stores/preferences';

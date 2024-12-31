@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 import { DialogTitle } from '@radix-ui/react-dialog';
@@ -19,39 +21,40 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { BUDGET_OPTIONS, CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
-import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { DietaryRestriction } from '@/lib/stores/preferences';
 
 import { ParsedTrip, TripBudget } from '../types';
 
-
 interface TripEditModalProps {
-  trip: ParsedTrip;
   isOpen: boolean;
   onClose: () => void;
   onUpdateTrip: (updatedTrip: Partial<ParsedTrip>) => void;
 }
 
-export default function TripEditModal({ trip, isOpen, onClose, onUpdateTrip }: TripEditModalProps) {
-  // Basic trip details state
-  const [title, setTitle] = React.useState(trip.title);
-  const [city, setCity] = React.useState(trip.city);
+export default function TripEditModal({ isOpen, onClose, onUpdateTrip }: TripEditModalProps) {
+  const { trip } = useActivitiesStore();
+
+  // All hooks must be called before any conditional returns
+  const [title, setTitle] = React.useState(trip?.title ?? '');
+  const [city, setCity] = React.useState(trip?.city ?? null);
   const [selectedDates, setSelectedDates] = React.useState({
-    startDate: trip.startDate ? new Date(trip.startDate) : null,
-    endDate: trip.endDate ? new Date(trip.endDate) : null,
+    startDate: trip?.startDate ? new Date(trip.startDate) : null,
+    endDate: trip?.endDate ? new Date(trip.endDate) : null,
   });
 
-  // Preferences state
-  const [budget, setBudget] = React.useState<TripBudget>(trip.preferences?.budget || 'moderate');
+  const [budget, setBudget] = React.useState<TripBudget>(trip?.preferences?.budget || 'moderate');
   const [dietaryRestrictions, setDietaryRestrictions] = React.useState<DietaryRestriction[]>(
-    trip.preferences?.dietaryRestrictions || []
+    trip?.preferences?.dietaryRestrictions || []
   );
   const [cuisinePreferences, setCuisinePreferences] = React.useState({
-    preferred: trip.preferences?.cuisinePreferences?.preferred || [],
-    avoided: trip.preferences?.cuisinePreferences?.avoided || [],
+    preferred: trip?.preferences?.cuisinePreferences?.preferred || [],
+    avoided: trip?.preferences?.cuisinePreferences?.avoided || [],
   });
 
-  // Track changes for save button state
   const hasChanges = React.useMemo(() => {
+    if (!trip || !city) return false;
+
     const originalStartDate = trip.startDate ? new Date(trip.startDate) : null;
     const originalEndDate = trip.endDate ? new Date(trip.endDate) : null;
 
@@ -67,9 +70,10 @@ export default function TripEditModal({ trip, isOpen, onClose, onUpdateTrip }: T
     );
   }, [title, city, selectedDates, budget, dietaryRestrictions, cuisinePreferences, trip]);
 
-  // Update mutation
   const updateTripMutation = useMutation({
     mutationFn: async (updatedData: Partial<ParsedTrip>) => {
+      if (!trip) throw new Error('No trip found');
+
       const response = await fetch(`/api/trips/${trip.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -92,23 +96,13 @@ export default function TripEditModal({ trip, isOpen, onClose, onUpdateTrip }: T
       onClose();
       toast.success('Trip updated successfully');
     },
+    onError: () => {
+      toast.error('Failed to update trip');
+    },
   });
 
-  // Save handler
-  const handleSave = () => {
-    if (!selectedDates.startDate || !selectedDates.endDate || !title.trim()) return;
-
-    updateTripMutation.mutate({
-      startDate: selectedDates.startDate,
-      endDate: selectedDates.endDate,
-      cityId: city.id,
-      title: title.trim(),
-    });
-  };
-
-  // Reset state when modal is opened
   React.useEffect(() => {
-    if (isOpen) {
+    if (isOpen && trip) {
       setTitle(trip.title);
       setCity(trip.city);
       setSelectedDates({
@@ -123,6 +117,37 @@ export default function TripEditModal({ trip, isOpen, onClose, onUpdateTrip }: T
       });
     }
   }, [isOpen, trip]);
+
+  const handleSave = () => {
+    if (!trip || !city || !selectedDates.startDate || !selectedDates.endDate || !title.trim())
+      return;
+
+    updateTripMutation.mutate({
+      startDate: selectedDates.startDate,
+      endDate: selectedDates.endDate,
+      cityId: city.id,
+      title: title.trim(),
+    });
+  };
+
+  // After all hooks, we can do conditional rendering
+  if (!trip || !city) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Error</DialogTitle>
+            <DialogDescription>
+              Unable to load trip details. Please try again later.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end">
+            <Button onClick={onClose}>Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>

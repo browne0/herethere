@@ -1,4 +1,9 @@
-import { Client, TravelMode } from '@googlemaps/google-maps-services-js';
+import {
+  Client,
+  OpeningHours,
+  OpeningPeriod,
+  TravelMode,
+} from '@googlemaps/google-maps-services-js';
 
 import { Location } from '@/app/trips/[tripId]/types';
 
@@ -97,15 +102,43 @@ export async function getTransitTime(
   }
 }
 
-export function isOpenAtTime(openingHours: any, dateTime: Date): boolean {
+export function isOpenAtTime(openingHours: OpeningHours, dateTime: Date): boolean {
+  // If no opening hours data provided, conservatively return false
+  if (!openingHours?.periods) return false;
+
   const day = dateTime.getDay();
   const time = dateTime.getHours() * 100 + dateTime.getMinutes();
 
-  if (!openingHours?.[day]?.periods) return true; // If no hours data, assume open
+  // Check each period to see if the location is open
+  return openingHours.periods.some((period: OpeningPeriod) => {
+    // For 24/7 places (always open)
+    if (period.open.day === 0 && period.open.time === '0000' && !period.close) {
+      return true;
+    }
 
-  return openingHours[day].periods.some((period: any) => {
-    const openTime = parseInt(period.open.time);
-    const closeTime = parseInt(period.close.time);
-    return time >= openTime && time <= closeTime;
+    // Handle regular opening hours
+    if (period.open && period.close) {
+      const openDay = period.open.day;
+      const closeDay = period.close.day;
+      const openTime = parseInt(period.open.time || '0000');
+      const closeTime = parseInt(period.close.time || '2359');
+
+      // Same day period
+      if (openDay === closeDay && openDay === day) {
+        return time >= openTime && time <= closeTime;
+      }
+
+      // Overnight period (e.g., 2200-0300)
+      if (openDay !== closeDay) {
+        if (day === openDay) {
+          return time >= openTime;
+        }
+        if (day === closeDay) {
+          return time <= closeTime;
+        }
+      }
+    }
+
+    return false;
   });
 }

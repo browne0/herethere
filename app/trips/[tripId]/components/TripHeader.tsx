@@ -7,16 +7,15 @@ import Link from 'next/link';
 
 import { HereThereUserButton } from '@/components/nav';
 import { Button } from '@/components/ui/button';
-
-import { ParsedTrip } from '../types';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 interface TripHeaderProps {
-  trip: ParsedTrip;
-  onDeleteClick: () => void;
   onEditClick: () => void;
 }
 
-export const TripHeader = ({ trip, onDeleteClick, onEditClick }: TripHeaderProps) => {
+export const TripHeader = ({ onEditClick }: TripHeaderProps) => {
+  const { trip } = useActivitiesStore();
+
   const formatDate = (date: Date | string) => {
     if (!date) return '';
     const d = new Date(date);
@@ -25,6 +24,8 @@ export const TripHeader = ({ trip, onDeleteClick, onEditClick }: TripHeaderProps
       day: 'numeric',
     });
   };
+
+  if (!trip) return null;
 
   return (
     <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">

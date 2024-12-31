@@ -5,12 +5,7 @@ import { Utensils, Coffee } from 'lucide-react';
 
 import { Card } from '@/components/ui/card';
 import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
-import {
-  Cuisine,
-  DietaryRestriction,
-  MealImportance,
-  usePreferences,
-} from '@/lib/stores/preferences';
+import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 

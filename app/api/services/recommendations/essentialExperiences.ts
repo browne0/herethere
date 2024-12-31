@@ -89,8 +89,8 @@ export const essentialExperiencesRecommendationService = {
     // Simple clustering implementation
     // In practice, you might want to use a more sophisticated algorithm like DBSCAN
     const locations = activities.map(a => ({
-      latitude: (a.recommendation.location as any).latitude,
-      longitude: (a.recommendation.location as any).longitude,
+      latitude: a.recommendation.location.latitude,
+      longitude: a.recommendation.location.longitude,
     }));
 
     // For now, create a single cluster centered on the mean location

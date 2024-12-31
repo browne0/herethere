@@ -1,9 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   GoogleMap,
   InfoWindow,
-  Marker,
+  MarkerF,
   OVERLAY_MOUSE_TARGET,
   OverlayViewF,
 } from '@react-google-maps/api';
@@ -11,6 +11,7 @@ import { MapPin, Loader2 } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import CustomMarker from './CustomMarker';
@@ -93,19 +94,23 @@ const calculateVisibleLabels = (
 };
 
 const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
-  activities,
   currentCategory,
   onMarkerHover,
   onMarkerSelect,
   hoveredActivityId,
   selectedActivityId,
-  trip,
 }) => {
+  const { trip, categories } = useActivitiesStore();
+
+  const activities = useMemo(() => {
+    const currentCategoryData = categories.find(c => c.type === currentCategory);
+    return currentCategoryData?.activities || [];
+  }, [categories, currentCategory]);
+
   const [map, setMap] = useState<google.maps.Map | null>(null);
   const [zoom, setZoom] = useState(DEFAULT_ZOOM);
   const [selectedActivity, setSelectedActivity] = useState<ActivityRecommendation | null>(null);
   const [visibleLabels, setVisibleLabels] = useState<Set<string>>(new Set());
-  const [isMobile, setIsMobile] = useState(false);
   const { isLoaded, loadError } = useGoogleMapsStatus();
   const boundsSet = useRef<boolean>(false);
 
@@ -170,13 +175,6 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     boundsSet.current = true;
   }, [map, activities, trip]);
 
-  useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   if (!isLoaded) {
     return (
       <div className="h-full flex items-center justify-center bg-muted/20">
@@ -207,11 +205,11 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     mapTypeControl: false,
     keyboardShortcuts: false,
     fullscreenControl: false,
-    zoomControl: true,
+    zoomControl: false,
     zoomControlOptions: {
       position: google.maps.ControlPosition.TOP_RIGHT,
     },
-    gestureHandling: isMobile ? 'cooperative' : 'greedy',
+    gestureHandling: 'greedy',
     styles: [
       {
         featureType: 'poi',
@@ -261,7 +259,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
     // For non-trip activities, render a regular marker with OverlayViewF label
     return (
       <React.Fragment key={activity.id}>
-        <Marker
+        <MarkerF
           position={{
             lat: activity.location.latitude,
             lng: activity.location.longitude,

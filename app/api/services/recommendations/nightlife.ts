@@ -4,7 +4,7 @@ import _ from 'lodash';
 import { ParsedItineraryActivity, TripBudget } from '@/app/trips/[tripId]/types';
 import { CategoryMapping, PlaceCategory } from '@/constants';
 import { prisma } from '@/lib/db';
-import { InterestType, TransportMode, CrowdPreference } from '@/lib/stores/preferences';
+import { InterestType, CrowdPreference } from '@/lib/stores/preferences';
 
 import { DEFAULT_PAGE_SIZE, LocationContext, PaginationParams, ScoringParams } from './types';
 
@@ -91,8 +91,8 @@ export const nightlifeRecommendationService = {
 
     // Get locations from evening activities
     const locations = eveningActivities.map(a => ({
-      latitude: (a.recommendation.location as any).latitude,
-      longitude: (a.recommendation.location as any).longitude,
+      latitude: a.recommendation.location.latitude,
+      longitude: a.recommendation.location.longitude,
     }));
 
     // Create a single cluster centered on evening activities
