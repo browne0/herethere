@@ -14,6 +14,7 @@ import {
   List,
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -31,7 +32,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
 import { ParsedItineraryActivity } from '../types';
@@ -46,41 +47,29 @@ const MiniActivityCard = ({
   activity,
   isInterested = false,
   tripId,
-  updateActivityStatus,
-  removeActivity,
 }: {
   activity: ParsedItineraryActivity;
   isInterested: boolean;
   tripId: string;
-  updateActivityStatus: (id: string, status: ActivityStatus) => void;
-  removeActivity: (id: string) => void;
 }) => {
+  const { updateActivityStatus, removeActivity } = useActivitiesStore();
   const handleStatusChange = async () => {
-    const newStatus: ActivityStatus = isInterested ? 'planned' : 'interested';
     try {
-      const response = await fetch(`/api/trips/${tripId}/activities/${activity.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update activity');
-      updateActivityStatus(activity.id, newStatus);
+      await updateActivityStatus(tripId, activity.id, 'planned');
     } catch (error) {
-      console.error('Error updating activity:', error);
+      toast.error('Failed to update status', {
+        description: error instanceof Error ? error.message : 'An error occurred',
+      });
     }
   };
 
   const handleRemove = async () => {
     try {
-      const response = await fetch(`/api/trips/${tripId}/activities/${activity.id}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to remove activity');
-      removeActivity(activity.id);
+      await removeActivity(tripId, activity.id);
     } catch (error) {
-      console.error('Error removing activity:', error);
+      toast.error('Failed to remove activity', {
+        description: error instanceof Error ? error.message : 'An error occurred',
+      });
     }
   };
 
@@ -138,14 +127,10 @@ const VirtualizedActivityList = ({
   activities,
   isInterested,
   tripId,
-  updateActivityStatus,
-  removeActivity,
 }: {
   activities: ParsedItineraryActivity[];
   isInterested: boolean;
   tripId: string;
-  updateActivityStatus: (id: string, status: ActivityStatus) => void;
-  removeActivity: (id: string) => void;
 }) => {
   const parentRef = React.useRef<HTMLDivElement>(null);
 
@@ -181,8 +166,6 @@ const VirtualizedActivityList = ({
               activity={activities[virtualRow.index]}
               isInterested={isInterested}
               tripId={tripId}
-              updateActivityStatus={updateActivityStatus}
-              removeActivity={removeActivity}
             />
           </div>
         ))}
@@ -194,7 +177,7 @@ const VirtualizedActivityList = ({
 const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const { trip, updateActivityStatus, removeActivity } = useActivitiesStore();
+  const { trip } = useActivitiesStore();
 
   const addedActivities = useMemo(() => {
     return trip?.activities.filter(act => act.status === 'planned') ?? [];
@@ -338,8 +321,6 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
                   activities={filteredAdded}
                   isInterested={false}
                   tripId={tripId}
-                  updateActivityStatus={updateActivityStatus}
-                  removeActivity={removeActivity}
                 />
               )}
             </TabsContent>
@@ -360,8 +341,6 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
                   activities={filteredInterested}
                   isInterested={true}
                   tripId={tripId}
-                  updateActivityStatus={updateActivityStatus}
-                  removeActivity={removeActivity}
                 />
               )}
             </TabsContent>

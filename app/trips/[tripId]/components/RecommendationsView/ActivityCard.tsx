@@ -1,5 +1,3 @@
-import { useState } from 'react';
-
 import { Loader2, Star, MapPin, CalendarPlus, Check, Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -20,7 +18,6 @@ type MuseumType = keyof MuseumTypes;
 
 interface ActivityCardProps {
   activity: ActivityRecommendation;
-  onAdd: (activity: ActivityRecommendation, status: ActivityStatus) => Promise<void>;
   category: ActivityCategoryType;
   isHighlighted?: boolean;
   onHover: (activityId: string | null) => void;
@@ -114,39 +111,58 @@ export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string 
   return null;
 };
 
-export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCardProps) {
-  const [isLoading, setIsLoading] = useState(false);
-  const { findActivityByRecommendationId, trip, removeActivity } = useActivitiesStore();
+export function ActivityCard({ activity, category, onHover }: ActivityCardProps) {
+  const {
+    findActivityByRecommendationId,
+    trip,
+    removeActivity,
+    updateActivityStatus,
+    addActivity,
+    loadingActivities,
+  } = useActivitiesStore();
 
   const existingActivity = findActivityByRecommendationId(activity.id);
   const currentStatus = existingActivity?.status || 'none';
 
+  const isActivityLoading = loadingActivities.has(activity.id);
+
   const handleAction = async (newStatus: ActivityStatus) => {
-    if (isLoading) return;
-    setIsLoading(true);
+    if (!trip || isActivityLoading) return;
 
     try {
       // If clicking the same status, remove the activity
       if (existingActivity && currentStatus === newStatus) {
-        const response = await fetch(`/api/trips/${trip!.id}/activities/${existingActivity.id}`, {
-          method: 'DELETE',
-        });
-
-        if (!response.ok) throw new Error('Failed to remove activity');
-
-        removeActivity(existingActivity.id);
+        await removeActivity(trip.id, existingActivity.id);
         toast.success('Activity removed from trip');
       } else {
-        // Existing add/update logic
-        await onAdd(activity, newStatus);
+        // If activity exists, update its status
+        if (existingActivity) {
+          await updateActivityStatus(trip.id, existingActivity.id, newStatus);
+          toast.success('Activity status updated', {
+            description:
+              newStatus === 'planned'
+                ? "We'll schedule this at the best time."
+                : "We'll keep this in mind when planning.",
+          });
+        } else {
+          // Add new activity
+          await addActivity(trip.id, {
+            recommendationId: activity.id,
+            status: newStatus,
+          });
+          toast.success('Activity added!', {
+            description:
+              newStatus === 'planned'
+                ? "We'll optimize your schedule to fit this in."
+                : "We'll keep this in your interests list.",
+          });
+        }
       }
-    } catch (error) {
-      console.error('Error managing activity:', error);
+    } catch (_error) {
+      // The store is handling the error state, but we'll show a user-friendly toast
       toast.error('Error', {
         description: 'Failed to manage activity. Please try again.',
       });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -204,7 +220,7 @@ export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCar
           <div className="flex gap-2 mt-2.5">
             <Button
               onClick={() => handleAction('planned')}
-              disabled={isLoading}
+              disabled={isActivityLoading}
               variant={currentStatus === 'planned' ? 'default' : 'outline'}
               className={`w-1/2 text-xs ${
                 currentStatus === 'planned'
@@ -212,7 +228,7 @@ export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCar
                   : 'border-primary/20 hover:bg-primary/10'
               }`}
             >
-              {isLoading ? (
+              {isActivityLoading ? (
                 <Loader2 className="w-2.5 h-2.5 animate-spin" />
               ) : (
                 <>
@@ -230,7 +246,7 @@ export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCar
 
             <Button
               onClick={() => handleAction('interested')}
-              disabled={isLoading}
+              disabled={isActivityLoading}
               variant="outline"
               className={`w-1/2 text-xs ${
                 currentStatus === 'interested'
@@ -238,7 +254,7 @@ export function ActivityCard({ activity, onAdd, category, onHover }: ActivityCar
                   : 'border-primary/20 hover:bg-primary/10'
               }`}
             >
-              {isLoading ? (
+              {isActivityLoading ? (
                 <Loader2 className="w-2.5 h-2.5 animate-spin" />
               ) : (
                 <Bookmark

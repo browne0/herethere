@@ -1,4 +1,4 @@
-import { TripPreferences } from '@/app/trips/[tripId]/types';
+import { ParsedTrip, TripPreferences } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
 
 interface GetTripOptions {
@@ -56,7 +56,7 @@ export const tripService = {
       throw new Error('Trip not found');
     }
 
-    return trip;
+    return trip as unknown as ParsedTrip;
   },
 
   async updateTrip({ userId, tripId, data, include = [] }: UpdateTripOptions) {

@@ -1,3 +1,4 @@
+import { protos } from '@googlemaps/places';
 import {
   IndoorOutdoor,
   PriceLevel,
@@ -20,14 +21,6 @@ export interface ImageData {
     url: string;
     cdnUrl: string;
   }>;
-}
-
-export interface OpeningHours {
-  periods: Array<{
-    open: { day: number; time: string };
-    close: { day: number; time: string };
-  }>;
-  weekdayDescriptions: string[];
 }
 
 export interface ParkingFeatures {
@@ -73,7 +66,7 @@ export interface ActivityRecommendation {
   images: ImageData;
 
   // Operating hours
-  openingHours: OpeningHours | null;
+  openingHours: protos.google.maps.places.v1.Place.IOpeningHours | null;
   availableDays: number[]; // [0,1,2,3,4,5,6] for days of week
 
   // Business status

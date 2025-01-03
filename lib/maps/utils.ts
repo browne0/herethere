@@ -1,9 +1,4 @@
-import {
-  Client,
-  OpeningHours,
-  OpeningPeriod,
-  TravelMode,
-} from '@googlemaps/google-maps-services-js';
+import { protos } from '@googlemaps/places';
 
 import { Location } from '@/app/trips/[tripId]/types';
 
@@ -51,94 +46,68 @@ export function getGoogleMapsDirectionsUrl(destination: Location, origin?: Locat
   return `https://www.google.com/maps/dir/?api=1&destination=${destinationParam}&origin=${originParam}`;
 }
 
-export class GoogleMapsClient {
-  private static instance: Client;
-  private static initializationPromise: Promise<void> | null = null;
-
-  private constructor() {
-    // Private constructor to prevent direct construction calls with 'new'
-  }
-
-  public static async getInstance(): Promise<Client> {
-    // If we don't have an instance yet, create one
-    if (!this.instance) {
-      // If we're not already initializing, start initialization
-      if (!this.initializationPromise) {
-        this.initializationPromise = new Promise<void>(resolve => {
-          this.instance = new Client();
-          resolve();
-        });
-      }
-      // Wait for initialization to complete
-      await this.initializationPromise;
-    }
-    return this.instance;
-  }
-}
-
-export async function getTransitTime(
-  origin: { lat: number; lng: number },
-  destination: { lat: number; lng: number },
-  departureTime: Date
-) {
-  const client = await GoogleMapsClient.getInstance();
-
-  try {
-    const response = await client.distancematrix({
-      params: {
-        origins: [`${origin.lat},${origin.lng}`],
-        destinations: [`${destination.lat},${destination.lng}`],
-        mode: TravelMode.transit,
-        departure_time: departureTime,
-        key: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
-      },
-    });
-
-    const duration = response.data.rows[0].elements[0].duration.value;
-    return Math.ceil(duration / 60); // Convert seconds to minutes
-  } catch (error) {
-    console.error('Transit time calculation failed:', error);
-    return 30; // Fallback to 30 min buffer
-  }
-}
-
-export function isOpenAtTime(openingHours: OpeningHours, dateTime: Date): boolean {
+export function isOpenAtTime(
+  openingHours: protos.google.maps.places.v1.Place.IOpeningHours,
+  dateTime: Date
+): boolean {
   // If no opening hours data provided, conservatively return false
   if (!openingHours?.periods) return false;
 
   const day = dateTime.getDay();
-  const time = dateTime.getHours() * 100 + dateTime.getMinutes();
+  const hour = dateTime.getHours();
+  const minute = dateTime.getMinutes();
+  const timeInMinutes = hour * 60 + minute;
 
   // Check each period to see if the location is open
-  return openingHours.periods.some((period: OpeningPeriod) => {
-    // For 24/7 places (always open)
-    if (period.open.day === 0 && period.open.time === '0000' && !period.close) {
-      return true;
-    }
+  return openingHours.periods.some(
+    (period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod) => {
+      const open = period.open;
+      const close = period.close;
 
-    // Handle regular opening hours
-    if (period.open && period.close) {
-      const openDay = period.open.day;
-      const closeDay = period.close.day;
-      const openTime = parseInt(period.open.time || '0000');
-      const closeTime = parseInt(period.close.time || '2359');
-
-      // Same day period
-      if (openDay === closeDay && openDay === day) {
-        return time >= openTime && time <= closeTime;
+      // Safety check for required fields
+      if (
+        !open ||
+        typeof open.day !== 'number' ||
+        typeof open.hour !== 'number' ||
+        typeof open.minute !== 'number'
+      ) {
+        return false;
       }
 
-      // Overnight period (e.g., 2200-0300)
-      if (openDay !== closeDay) {
-        if (day === openDay) {
-          return time >= openTime;
+      // For 24/7 places (always open)
+      if (open.day === 0 && open.hour === 0 && open.minute === 0 && !close) {
+        return true;
+      }
+
+      // Handle regular opening hours
+      if (
+        close &&
+        typeof close.day === 'number' &&
+        typeof close.hour === 'number' &&
+        typeof close.minute === 'number'
+      ) {
+        const openTimeInMinutes = open.hour * 60 + open.minute;
+        const closeTimeInMinutes = close.hour * 60 + close.minute;
+
+        // Same day period
+        if (open.day === close.day && open.day === day) {
+          return timeInMinutes >= openTimeInMinutes && timeInMinutes <= closeTimeInMinutes;
         }
-        if (day === closeDay) {
-          return time <= closeTime;
+
+        // Overnight period (e.g., 11 PM - 3 AM)
+        if (open.day !== close.day) {
+          // If we're on the opening day, check if we're after opening time
+          if (day === open.day) {
+            return timeInMinutes >= openTimeInMinutes;
+          }
+          // If we're on the closing day, check if we're before closing time
+          if (day === close.day) {
+            return timeInMinutes <= closeTimeInMinutes;
+          }
         }
       }
-    }
 
-    return false;
-  });
+      return false;
+    }
+  );
 }

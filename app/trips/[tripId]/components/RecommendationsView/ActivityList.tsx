@@ -10,8 +10,6 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { ActivityStatus } from '@/lib/stores/activitiesStore';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { cn } from '@/lib/utils';
 
 import ActivityCard from './ActivityCard';
@@ -21,10 +19,9 @@ interface ActivityListProps {
   currentCategory?: ActivityCategoryType;
   onPageChange: (page: number) => void;
   onHover: (id: string | null) => void;
-  onAdd: (activity: ActivityRecommendation, newStatus: ActivityStatus) => Promise<void>;
 }
 
-const ActivityList = ({ currentCategory, onPageChange, onHover, onAdd }: ActivityListProps) => {
+const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListProps) => {
   const PaginationComponent = () => {
     if (!currentCategory) return null;
 
@@ -45,12 +42,6 @@ const ActivityList = ({ currentCategory, onPageChange, onHover, onAdd }: Activit
                   'pointer-events-none opacity-50': currentPage === 1,
                 })}
               />
-            </PaginationItem>
-
-            <PaginationItem>
-              <PaginationLink href="#" onClick={e => e.preventDefault()} isActive>
-                {currentPage}
-              </PaginationLink>
             </PaginationItem>
 
             <PaginationItem>
@@ -103,7 +94,6 @@ const ActivityList = ({ currentCategory, onPageChange, onHover, onAdd }: Activit
               activity={activity}
               category={currentCategory}
               onHover={onHover}
-              onAdd={onAdd}
             />
           ))}
         </div>

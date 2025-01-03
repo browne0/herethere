@@ -18,7 +18,6 @@ export async function DELETE(
     await activityService.deleteActivity({
       tripId,
       activityId,
-      userId,
     });
 
     return new NextResponse(null, { status: 204 });

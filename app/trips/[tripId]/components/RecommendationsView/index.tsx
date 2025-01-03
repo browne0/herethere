@@ -2,12 +2,10 @@ import React, { useCallback, useMemo, useState } from 'react';
 
 import { Sliders, Trash2 } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { toast } from 'sonner';
 import { Drawer } from 'vaul';
 
 import { Button } from '@/components/ui/button';
-import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
 import ActivityList from './ActivityList';
@@ -74,8 +72,7 @@ export function RecommendationsView({ onDeleteClick, isEditModalOpen }: Recommen
   const activeSnapPercentage = typeof snap === 'number' ? snap : 0.5;
 
   // Global state
-  const { trip, addActivity, updateActivityStatus, findActivityByRecommendationId, categories } =
-    useActivitiesStore();
+  const { trip, categories } = useActivitiesStore();
 
   // URL update handler
   const updateURL = useCallback(
@@ -112,58 +109,6 @@ export function RecommendationsView({ onDeleteClick, isEditModalOpen }: Recommen
   const currentCategory = useMemo(() => {
     return categories.find(category => category.type === selectedCategory);
   }, [categories, selectedCategory]);
-
-  // Activity management handlers
-  const handleAddActivity = async (activity: ActivityRecommendation, newStatus: ActivityStatus) => {
-    if (!trip) return;
-
-    try {
-      const existingActivity = findActivityByRecommendationId(activity.id);
-
-      if (existingActivity) {
-        const response = await fetch(`/api/trips/${trip.id}/activities/${existingActivity.id}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ status: newStatus }),
-        });
-
-        if (!response.ok) throw new Error('Failed to update activity');
-
-        updateActivityStatus(existingActivity.id, newStatus);
-        toast.success('Activity updated!', {
-          description:
-            newStatus === 'planned'
-              ? "We'll schedule this at the best time."
-              : "We'll keep this in mind when planning.",
-        });
-      } else {
-        const response = await fetch(`/api/trips/${trip.id}/activities`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            recommendationId: activity.id,
-            status: newStatus,
-          }),
-        });
-
-        if (!response.ok) throw new Error('Failed to add activity');
-
-        const { activity: newActivity } = await response.json();
-        addActivity(newActivity);
-        toast.success('Activity added!', {
-          description:
-            newStatus === 'planned'
-              ? "We'll optimize your schedule to fit this in."
-              : "We'll keep this in your interests list.",
-        });
-      }
-    } catch (error) {
-      console.error('Error managing activity:', error);
-      toast.error('Error', {
-        description: 'Failed to manage activity. Please try again.',
-      });
-    }
-  };
 
   return (
     <div className="relative bg-gray-50">
@@ -202,7 +147,6 @@ export function RecommendationsView({ onDeleteClick, isEditModalOpen }: Recommen
               currentCategory={currentCategory}
               onPageChange={handlePageChange}
               onHover={setHoveredActivityId}
-              onAdd={handleAddActivity}
             />
           </div>
           <div className="w-5/12 fixed top-[144px] right-0 bottom-0">
@@ -268,7 +212,6 @@ export function RecommendationsView({ onDeleteClick, isEditModalOpen }: Recommen
                   onCategoryChange={handleCategoryChange}
                   onPageChange={handlePageChange}
                   onHover={setHoveredActivityId}
-                  onAdd={handleAddActivity}
                   trip={trip}
                 />
               </div>

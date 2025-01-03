@@ -163,10 +163,10 @@ model ItineraryActivity {
   recommendationId String
   recommendation   ActivityRecommendation @relation(fields: [recommendationId], references: [id])
 
-  startTime               DateTime // When this activity is scheduled
-  endTime                 DateTime
+  startTime               DateTime? // When this activity is scheduled
+  endTime                 DateTime?
   notes                   String? // User notes for this instance
-  status                  String   @default("planned") // planned, interested, confirmed, completed, cancelled
+  status                  String    @default("planned") // planned, interested, confirmed, completed, cancelled
   customizations          Json? // Any customizations from the recommendation template
   transitTimeFromPrevious Int
 

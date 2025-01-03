@@ -25,7 +25,6 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { cn } from '@/lib/utils';
 
 import ActivityList from './ActivityList';
@@ -44,7 +43,6 @@ interface MobileActivityViewProps {
   currentCategory: ActivityCategoryType | undefined;
   onCategoryChange: (category: string) => void;
   onPageChange: (page: number) => void;
-  onAdd: (activity: ActivityRecommendation, newStatus: ActivityStatus) => Promise<void>;
   onHover: (id: string | null) => void;
   trip: ParsedTrip;
 }
@@ -114,11 +112,26 @@ const ItineraryProgress = ({
   );
 };
 
-const MiniActivityCard: React.FC<MiniActivityCardProps> = ({
-  activity,
-  onStatusChange,
-  onRemove,
-}) => {
+const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity, tripId }) => {
+  const { updateActivityStatus, removeActivity } = useActivitiesStore();
+
+  const handleStatusChange = async () => {
+    const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
+    try {
+      await updateActivityStatus(tripId, activity.id, newStatus);
+    } catch (error) {
+      console.error('Error updating activity:', error);
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      await removeActivity(tripId, activity.id);
+    } catch (error) {
+      console.error('Error removing activity:', error);
+    }
+  };
+
   return (
     <div className="p-4 border-b">
       <div className="flex justify-between items-start">
@@ -142,7 +155,7 @@ const MiniActivityCard: React.FC<MiniActivityCardProps> = ({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onStatusChange}>
+            <DropdownMenuItem onClick={handleStatusChange}>
               {activity.status === 'interested' ? (
                 <>
                   <Plus className="h-4 w-4 mr-2" />
@@ -155,7 +168,7 @@ const MiniActivityCard: React.FC<MiniActivityCardProps> = ({
                 </>
               )}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={onRemove} className="text-red-600 focus:text-red-600">
+            <DropdownMenuItem onClick={handleRemove} className="text-red-600 focus:text-red-600">
               <Trash2 className="h-4 w-4 mr-2" />
               Remove activity
             </DropdownMenuItem>
@@ -216,7 +229,7 @@ const VirtualizedActivityList: React.FC<VirtualizedActivityListProps> = ({
 };
 
 const MyActivitiesContent = () => {
-  const { updateActivityStatus, removeActivity, trip } = useActivitiesStore();
+  const { trip, updateActivityStatus, removeActivity } = useActivitiesStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'name', direction: 'asc' });
 
@@ -278,32 +291,21 @@ const MyActivitiesContent = () => {
     };
   }, [trip, searchQuery, sortConfig]);
 
-  const handleStatusChange = async (activity: ParsedItineraryActivity): Promise<void> => {
+  const handleStatusChange = async (activity: ParsedItineraryActivity) => {
     if (!trip) return;
     const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
     try {
-      const response = await fetch(`/api/trips/${trip.id}/activities/${activity.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus }),
-      });
-
-      if (!response.ok) throw new Error('Failed to update activity');
-      updateActivityStatus(activity.id, newStatus);
+      await updateActivityStatus(trip.id, activity.id, newStatus);
     } catch (error) {
+      // The store handles error state, we just need to handle UI feedback
       console.error('Error updating activity:', error);
     }
   };
 
-  const handleRemove = async (activityId: string): Promise<void> => {
+  const handleRemove = async (activityId: string) => {
     if (!trip) return;
     try {
-      const response = await fetch(`/api/trips/${trip.id}/activities/${activityId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) throw new Error('Failed to remove activity');
-      removeActivity(activityId);
+      await removeActivity(trip.id, activityId);
     } catch (error) {
       console.error('Error removing activity:', error);
     }
@@ -418,7 +420,6 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
   onCategoryChange,
   onPageChange,
   onHover,
-  onAdd,
 }) => {
   const { categories, trip } = useActivitiesStore();
 
@@ -453,7 +454,6 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
               currentCategory={currentCategory}
               onPageChange={onPageChange}
               onHover={onHover}
-              onAdd={onAdd}
             />
           </div>
         </TabsContent>

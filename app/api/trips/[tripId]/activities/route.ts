@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: { tripId: str
       status,
     });
 
-    return NextResponse.json({ activity });
+    return NextResponse.json(activity);
   } catch (error) {
     console.error('Error in POST /api/trips/[tripId]/activities:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

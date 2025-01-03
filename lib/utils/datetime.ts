@@ -22,47 +22,6 @@ export function getTimeOfDay(time?: string | Date): TimeOfDay {
   return 'night';
 }
 
-interface OpeningPeriod {
-  open: { day: number; time: string };
-  close: { day: number; time: string };
-}
-
-interface OpeningHours {
-  periods: OpeningPeriod[];
-  weekdayText?: string[];
-}
-
-/**
- * Check if a place is operating at a given time
- * @param openingHours - Google Places-style opening hours object
- * @param checkTime - Time to check (in 24-hour format, e.g., "14:30")
- */
-export function isOperatingNow(openingHours?: OpeningHours | null, checkTime?: string): boolean {
-  if (!openingHours?.periods || !checkTime) return true; // If no hours data, assume it's open
-
-  const now = new Date();
-  const currentDay = now.getDay();
-  const [hours, minutes] = checkTime.split(':').map(Number);
-
-  // Find the period for the current day
-  const todayPeriod = openingHours.periods.find(period => period.open.day === currentDay);
-
-  if (!todayPeriod) return false; // Closed on this day
-
-  // Convert times to comparable numbers (e.g., "1430" for 14:30)
-  const checkTimeNumber = hours * 100 + minutes;
-  const openTimeNumber = parseInt(todayPeriod.open.time);
-  const closeTimeNumber = parseInt(todayPeriod.close.time);
-
-  // Handle normal case (open and close times on same day)
-  if (closeTimeNumber > openTimeNumber) {
-    return checkTimeNumber >= openTimeNumber && checkTimeNumber <= closeTimeNumber;
-  }
-
-  // Handle overnight case (e.g., opens at 18:00, closes at 02:00)
-  return checkTimeNumber >= openTimeNumber || checkTimeNumber <= closeTimeNumber;
-}
-
 /**
  * Format a date range into a human-readable string
  */
