@@ -751,7 +751,7 @@ export async function findBestTimeSlot(
         .filter(a => {
           if (!a.endTime) return false;
           const endTime = new Date(a.endTime);
-          return endTime <= slot && endTime >= tripStart; // Only consider activities within trip
+          return endTime <= slot && endTime >= tripStart && isSameDay(endTime, slot);
         })
         .sort((a, b) => {
           if (!a.endTime || !b.endTime) return 0;

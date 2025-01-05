@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { ChevronDown, ChevronUp, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +15,43 @@ export function ItineraryView() {
   const { trip, updateActivityStatus, removeActivity } = useActivitiesStore();
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [isInterestedCollapsed, setIsInterestedCollapsed] = useState(false);
+  const [isRebalancing, setIsRebalancing] = useState(false);
+
+  useEffect(() => {
+    if (!trip) return;
+
+    // Check if any activities have been updated since the last rebalance
+    const needsRebalance = trip.activities.some(activity => {
+      return !trip.lastRebalanced || new Date(activity.updatedAt) > new Date(trip.lastRebalanced);
+    });
+
+    if (needsRebalance) {
+      const rebalanceSchedule = async () => {
+        setIsRebalancing(true);
+        try {
+          const response = await fetch(`/api/trips/${trip.id}/activities/rebalance`, {
+            method: 'POST',
+          });
+
+          if (response.ok) {
+            const { trip: updatedTrip, rebalanceResults } = await response.json();
+            useActivitiesStore.setState({ trip: updatedTrip });
+
+            if (rebalanceResults.warnings.length > 0) {
+              rebalanceResults.warnings.forEach((warning: string) => toast.warning(warning));
+            }
+          }
+        } catch (error) {
+          toast.error('Failed to rebalance schedule');
+          console.error('Rebalance error:', error);
+        } finally {
+          setIsRebalancing(false);
+        }
+      };
+
+      rebalanceSchedule();
+    }
+  }, [trip?.id, trip?.activities, trip]);
 
   if (!trip) return null;
 
@@ -40,6 +77,8 @@ export function ItineraryView() {
     },
     {}
   );
+
+  console.log(groupedActivities);
 
   const formatTime = (date: string | Date) => {
     return new Date(date).toLocaleTimeString([], {
@@ -122,6 +161,66 @@ export function ItineraryView() {
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
         <h1 className="text-xl font-semibold">Itinerary</h1>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            const rebalanceSchedule = async () => {
+              setIsRebalancing(true);
+              try {
+                const response = await fetch(`/api/trips/${trip.id}/activities/rebalance`, {
+                  method: 'POST',
+                });
+
+                if (response.ok) {
+                  const { trip: updatedTrip, rebalanceResults } = await response.json();
+                  useActivitiesStore.setState({ trip: updatedTrip });
+
+                  if (rebalanceResults.warnings.length > 0) {
+                    rebalanceResults.warnings.forEach((warning: string) => toast.warning(warning));
+                  }
+                  toast.success('Schedule optimized successfully');
+                }
+              } catch (error) {
+                toast.error('Failed to rebalance schedule');
+                console.error('Rebalance error:', error);
+              } finally {
+                setIsRebalancing(false);
+              }
+            };
+            rebalanceSchedule();
+          }}
+          disabled={isRebalancing}
+          className="text-sm"
+        >
+          {isRebalancing ? (
+            <span className="flex items-center">
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Optimizing...
+            </span>
+          ) : (
+            'Optimize Schedule'
+          )}
+        </Button>
         <div className="flex items-center mt-2 text-sm text-gray-500">
           <span>
             {trip?.startDate &&

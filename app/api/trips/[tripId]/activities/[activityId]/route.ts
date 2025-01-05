@@ -67,7 +67,7 @@ export async function PATCH(
       status,
     });
 
-    return NextResponse.json({ activity });
+    return NextResponse.json(activity);
   } catch (error) {
     console.error('Error in PATCH /api/trips/[tripId]/activities/[activityId]:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

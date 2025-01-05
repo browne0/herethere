@@ -62,18 +62,19 @@ model User {
 }
 
 model Trip {
-  id          String              @id @default(cuid())
-  userId      String
-  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cityId      String
-  city        City                @relation(fields: [cityId], references: [id])
-  title       String
-  startDate   DateTime
-  endDate     DateTime
-  preferences Json?
-  createdAt   DateTime            @default(now())
-  updatedAt   DateTime            @updatedAt
-  activities  ItineraryActivity[]
+  id             String              @id @default(cuid())
+  userId         String
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cityId         String
+  city           City                @relation(fields: [cityId], references: [id])
+  title          String
+  startDate      DateTime
+  endDate        DateTime
+  preferences    Json?
+  lastRebalanced DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  activities     ItineraryActivity[]
 
   @@index([userId])
   @@index([cityId])
@@ -165,9 +166,7 @@ model ItineraryActivity {
 
   startTime               DateTime? // When this activity is scheduled
   endTime                 DateTime?
-  notes                   String? // User notes for this instance
   status                  String    @default("planned") // planned, interested, confirmed, completed, cancelled
-  customizations          Json? // Any customizations from the recommendation template
   transitTimeFromPrevious Int
 
   createdAt DateTime @default(now())

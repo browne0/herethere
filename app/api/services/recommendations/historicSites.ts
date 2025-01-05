@@ -34,18 +34,34 @@ export const historicSitesRecommendationService = {
         businessStatus: 'OPERATIONAL',
         OR: [
           {
-            placeTypes: {
-              hasSome: CategoryMapping[PlaceCategory.HISTORIC].includedTypes,
-            },
+            AND: [
+              {
+                placeTypes: {
+                  hasSome: CategoryMapping[PlaceCategory.HISTORIC].includedTypes,
+                },
+              },
+              {
+                OR: [
+                  { isMustSee: true },
+                  { rating: { gte: 4.3 } },
+                  {
+                    description: {
+                      contains: Array.from(PLACE_INDICATORS.HISTORICAL.TIME_PERIODS).join('|'),
+                      mode: 'insensitive',
+                    },
+                  },
+                ],
+              },
+            ],
           },
           {
             AND: [
-              { isMustSee: true },
               {
                 placeTypes: {
-                  hasSome: CategoryMapping[PlaceCategory.ATTRACTION].includedTypes,
+                  hasSome: ['cultural_landmark', 'monument'],
                 },
               },
+              { rating: { gte: 4.0 } },
             ],
           },
         ],
