@@ -32,7 +32,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
 import { ParsedItineraryActivity } from '../types';
@@ -52,10 +52,10 @@ const MiniActivityCard = ({
   isInterested: boolean;
   tripId: string;
 }) => {
-  const { updateActivityStatus, removeActivity } = useActivitiesStore();
-  const handleStatusChange = async () => {
+  const { updateActivity, removeActivity } = useActivitiesStore();
+  const handleStatusChange = async (status: ActivityStatus) => {
     try {
-      await updateActivityStatus(tripId, activity.id, 'planned');
+      await updateActivity(tripId, activity.id, { status });
     } catch (error) {
       toast.error('Failed to update status', {
         description: error instanceof Error ? error.message : 'An error occurred',
@@ -86,12 +86,12 @@ const MiniActivityCard = ({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               {isInterested ? (
-                <DropdownMenuItem onClick={handleStatusChange}>
+                <DropdownMenuItem onClick={() => handleStatusChange('planned')}>
                   <Plus className="h-4 w-4 mr-2" />
                   Add to trip
                 </DropdownMenuItem>
               ) : (
-                <DropdownMenuItem onClick={handleStatusChange}>
+                <DropdownMenuItem onClick={() => handleStatusChange('interested')}>
                   <Heart className="h-4 w-4 mr-2" />
                   Save for later
                 </DropdownMenuItem>

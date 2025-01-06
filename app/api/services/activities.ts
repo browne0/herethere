@@ -1,6 +1,6 @@
 import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
-import { ActivityStatus } from '@/lib/stores/activitiesStore';
+import { ActivityStatus, UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
 import {
@@ -15,7 +15,7 @@ interface UpdateActivityParams {
   tripId: string;
   activityId: string;
   userId: string;
-  status: ActivityStatus;
+  updates: UpdateableActivityFields;
 }
 
 interface CreateActivityParams {
@@ -109,24 +109,35 @@ export const activityService = {
     });
   },
 
-  async updateActivity({ activityId, status }: UpdateActivityParams) {
-    const currentActivity = await prisma.itineraryActivity.findUnique({
-      where: { id: activityId },
-      include: { recommendation: true },
+  async updateActivity({ tripId, activityId, userId, updates }: UpdateActivityParams) {
+    // Verify the trip exists and belongs to the user
+    const trip = await prisma.trip.findUnique({
+      where: {
+        id: tripId,
+        userId,
+      },
     });
 
-    if (!currentActivity) {
-      throw new Error('Activity not found');
+    if (!trip) {
+      throw new Error('Trip not found');
     }
 
-    // Just update the status, clear any scheduling data
-    return await prisma.itineraryActivity.update({
-      where: { id: activityId },
-      data: {
-        status,
+    const updatedActivity = await prisma.itineraryActivity.update({
+      where: {
+        id: activityId,
+        tripId,
       },
-      include: { recommendation: true },
+      data: {
+        ...updates,
+        startTime: updates.startTime != undefined ? new Date(updates.startTime) : undefined,
+        endTime: updates.endTime != undefined ? new Date(updates.endTime) : undefined,
+      },
+      include: {
+        recommendation: true, // Include the associated recommendation data
+      },
     });
+
+    return updatedActivity;
   },
 
   async deleteActivity({ tripId, activityId }: { tripId: string; activityId: string }) {

@@ -113,12 +113,12 @@ const ItineraryProgress = ({
 };
 
 const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity, tripId }) => {
-  const { updateActivityStatus, removeActivity } = useActivitiesStore();
+  const { updateActivity: updateActivityStatus, removeActivity } = useActivitiesStore();
 
   const handleStatusChange = async () => {
     const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
     try {
-      await updateActivityStatus(tripId, activity.id, newStatus);
+      await updateActivityStatus(tripId, activity.id, { status: newStatus });
     } catch (error) {
       console.error('Error updating activity:', error);
     }
@@ -229,7 +229,7 @@ const VirtualizedActivityList: React.FC<VirtualizedActivityListProps> = ({
 };
 
 const MyActivitiesContent = () => {
-  const { trip, updateActivityStatus, removeActivity } = useActivitiesStore();
+  const { trip, updateActivity, removeActivity } = useActivitiesStore();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'name', direction: 'asc' });
 
@@ -295,7 +295,7 @@ const MyActivitiesContent = () => {
     if (!trip) return;
     const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
     try {
-      await updateActivityStatus(trip.id, activity.id, newStatus);
+      await updateActivity(trip.id, activity.id, { status: newStatus });
     } catch (error) {
       // The store handles error state, we just need to handle UI feedback
       console.error('Error updating activity:', error);

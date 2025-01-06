@@ -2,20 +2,69 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { ChevronDown, ChevronUp, Clock, MapPin, ExternalLink } from 'lucide-react';
+import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list';
+import FullCalendar from '@fullcalendar/react';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import { addDays, addHours } from 'date-fns';
+import { Calendar, Clock, List, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 
+import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { Button } from '@/components/ui/button';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { cn } from '@/lib/utils';
+import { Card } from '@/components/ui/card';
+import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { ParsedItineraryActivity } from '../../types';
+// Event colors based on activity status
+const statusColors: Record<ActivityStatus, string> = {
+  interested: '#fcd34d',
+  planned: '#93c5fd',
+  confirmed: '#86efac',
+  completed: '#d1d5db',
+  cancelled: '#ef4444',
+};
 
 export function ItineraryView() {
-  const { trip, updateActivityStatus, removeActivity, setTrip } = useActivitiesStore();
-  const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
-  const [isInterestedCollapsed, setIsInterestedCollapsed] = useState(false);
+  const { trip, updateActivity, setTrip } = useActivitiesStore();
+  const [view, setView] = useState<'listWeek' | 'timeGridTwoDay'>('timeGridTwoDay');
   const [isRebalancing, setIsRebalancing] = useState(false);
+
+  // Convert scheduled activities to FullCalendar events
+  const scheduledEvents =
+    trip?.activities
+      .filter(activity => activity.status === 'planned' && activity.startTime && activity.endTime)
+      .map(activity => ({
+        id: activity.id,
+        title: activity.recommendation.name,
+        start: activity.startTime as Date,
+        end: activity.endTime as Date,
+        backgroundColor: statusColors[activity.status],
+        extendedProps: {
+          status: activity.status,
+          location: activity.recommendation.location.address,
+          duration: activity.recommendation.duration,
+          recommendationId: activity.recommendationId,
+        },
+        editable: activity.status === 'planned',
+      })) || [];
+
+  // Get interested activities
+  const interestedActivities = trip?.activities.filter(
+    activity => activity.status === 'interested'
+  );
+
+  const handleEventDrop = async info => {
+    try {
+      await updateActivity(trip!.id, info.event.id, {
+        startTime: info.event.start,
+        endTime: info.event.end,
+      });
+      toast.success('Activity rescheduled');
+    } catch (_error) {
+      toast.error('Failed to reschedule activity');
+      info.revert();
+    }
+  };
 
   const rebalanceSchedule = useCallback(async () => {
     if (!trip) return;
@@ -38,348 +87,163 @@ export function ItineraryView() {
     }
   }, [setTrip, trip]);
 
-  useEffect(() => {
-    if (!trip) return;
-    console.log(trip.activities);
+  // useEffect(() => {
+  //   if (!trip) return;
 
-    // Check if any activities have been updated since the last rebalance
-    const needsRebalance = trip.activities.some(activity => {
-      if (trip.lastRebalanced) {
-        return new Date(activity.updatedAt).getTime() > new Date(trip.lastRebalanced).getTime();
-      }
-    });
+  //   // Check if any activities have been updated since the last rebalance
+  //   const needsRebalance = trip.activities.some(activity => {
+  //     if (trip.lastRebalanced) {
+  //       return new Date(activity.updatedAt).getTime() > new Date(trip.lastRebalanced).getTime();
+  //     }
+  //   });
 
-    if (needsRebalance) {
-      rebalanceSchedule();
-    }
-  }, [trip?.id, trip?.activities, trip, rebalanceSchedule]);
-
-  if (!trip) return null;
-
-  // Separate scheduled and interested activities
-  const interestedActivities = trip.activities.filter(activity => activity.status === 'interested');
-
-  const scheduledActivities = trip.activities.filter(
-    activity => activity.status === 'planned' && activity.startTime
-  );
-
-  // Group activities by day
-  const groupedActivities = scheduledActivities.reduce<Record<string, typeof trip.activities>>(
-    (acc, activity) => {
-      if (!activity.startTime || !activity.endTime) {
-        return acc;
-      }
-      const date = new Date(activity.startTime).toLocaleDateString();
-      if (!acc[date]) {
-        acc[date] = [];
-      }
-      acc[date].push(activity);
-
-      // Sort activities within each day by start time
-      acc[date].sort((a, b) => {
-        return new Date(a.startTime!).getTime() - new Date(b.startTime!).getTime();
-      });
-      return acc;
-    },
-    {}
-  );
-
-  const formatTime = (date: string | Date) => {
-    return new Date(date).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
-  const formatDayDate = (date: string) => {
-    const dayDate = new Date(date);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(today.getDate() + 1);
-
-    // Check if it's today or tomorrow
-    if (dayDate.toDateString() === today.toDateString()) {
-      return 'Today';
-    } else if (dayDate.toDateString() === tomorrow.toDateString()) {
-      return 'Tomorrow';
-    }
-
-    // Otherwise return full date
-    return dayDate.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const toggleDay = (date: string) => {
-    setCollapsedDays(prev => ({
-      ...prev,
-      [date]: !prev[date],
-    }));
-  };
-
-  const getDurationString = (minutes: number) => {
-    if (minutes < 60) {
-      return `${minutes}min`;
-    }
-    const hours = Math.floor(minutes / 60);
-    const remainingMinutes = minutes % 60;
-    if (remainingMinutes === 0) {
-      return `${hours}h`;
-    }
-    return `${hours}h ${remainingMinutes}min`;
-  };
+  //   if (needsRebalance) {
+  //     rebalanceSchedule();
+  //   }
+  // }, [trip?.id, trip?.activities, trip, rebalanceSchedule]);
 
   const handleAddToSchedule = async (activity: ParsedItineraryActivity) => {
     if (!trip) return;
 
     try {
-      await updateActivityStatus(trip.id, activity.id, 'planned');
+      await updateActivity(trip.id, activity.id, { status: 'planned' });
       toast.success('Added to schedule!', {
         description: "We'll find the best time for this activity.",
       });
     } catch (_error) {
-      toast.error('Failed to add to schedule', {
-        description: 'Please try again later.',
-      });
+      toast.error('Failed to add to schedule');
     }
   };
 
-  const handleRemoveActivity = async (activityId: string) => {
-    if (!trip) return;
+  // Custom event rendering for list view
+  const renderEventContent = eventInfo => {
+    const { event } = eventInfo;
+    const duration = event.extendedProps.duration;
 
-    try {
-      await removeActivity(trip.id, activityId);
-      toast.success('Activity removed');
-    } catch (_error) {
-      toast.error('Failed to remove activity', {
-        description: 'Please try again later.',
-      });
-    }
+    // if (view === 'listWeek') {
+    //   return (
+    //     <div className="flex flex-col space-y-1 py-1">
+    //       <div className="font-medium">{event.title}</div>
+    //       <div className="flex flex-col space-y-2 text-sm text-gray-600">
+    //         <div className="flex items-center">
+    //           <Clock className="h-4 w-4 mr-1.5" />
+    //           <span>{`${Math.floor(duration / 60)}h ${duration % 60}min`}</span>
+    //         </div>
+    //         <div className="flex items-center">
+    //           <MapPin className="h-4 w-4 mr-1.5" />
+    //           <span>{event.extendedProps.location}</span>
+    //         </div>
+    //       </div>
+    //     </div>
+    //   );
+    // }
+
+    // Grid view event rendering
+    return (
+      <div className="p-1 overflow-hidden">
+        <div className="font-medium text-sm truncate">{event.title}</div>
+        <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
+      </div>
+    );
   };
+
+  if (!trip) return null;
+
+  console.log(trip.endDate);
 
   return (
-    <div className="mt-[65px] w-full max-w-md border-r border-gray-200 h-[calc(100vh-65px)] overflow-y-auto bg-white">
+    <div className="mt-[65px] w-1/2 h-[calc(100vh-65px)] flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
-        <h1 className="text-xl font-semibold">{trip.title}</h1>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={rebalanceSchedule}
-          disabled={isRebalancing}
-          className="text-sm my-2"
-        >
-          {isRebalancing ? (
-            <span className="flex items-center">
-              <svg
-                className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Optimizing...
-            </span>
-          ) : (
-            'Optimize Schedule'
-          )}
-        </Button>
-        <div className="flex items-center mt-2 text-sm text-gray-500">
-          <span>
-            {trip?.startDate &&
-              new Date(trip.startDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-            {' - '}
-            {trip?.endDate &&
-              new Date(trip.endDate).toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric',
-              })}
-          </span>
-          <span className="mx-2">•</span>
-          <span>{`${scheduledActivities.length} activities`}</span>
-        </div>
-      </div>
-
-      {/* Days */}
-      <div className="divide-y divide-gray-200">
-        {Object.entries(groupedActivities)
-          .sort(([dateA], [dateB]) => {
-            return new Date(dateA).getTime() - new Date(dateB).getTime();
-          })
-          .map(([date, dayActivities]) => (
-            <div key={date} className="bg-white">
-              {/* Day header */}
-              <button
-                className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
-                onClick={() => toggleDay(date)}
-              >
-                <div className="flex items-center space-x-2">
-                  <h2 className="font-medium">{formatDayDate(date)}</h2>
-                  <span className="text-sm text-gray-500">{`${dayActivities.length} activities`}</span>
-                </div>
-                {collapsedDays[date] ? (
-                  <ChevronDown className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <ChevronUp className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
-
-              {/* Activities for the day */}
-              <div
-                className={cn(
-                  'px-4 space-y-6 transition-all duration-200',
-                  collapsedDays[date] ? 'h-0 invisible opacity-0' : 'pb-4 visible opacity-100'
-                )}
-              >
-                {dayActivities.map((activity, index) => (
-                  <div key={activity.id} className="relative">
-                    {/* Time connector line */}
-                    {index !== dayActivities.length - 1 && (
-                      <div className="absolute left-2 top-8 bottom-0 w-px bg-gray-200" />
-                    )}
-
-                    <div className="flex items-start space-x-4">
-                      {/* Time */}
-                      <div className="flex-shrink-0 w-16 pt-1">
-                        <span className="text-sm text-gray-500">
-                          {activity.startTime && formatTime(activity.startTime)}
-                        </span>
-                      </div>
-
-                      {/* Activity card */}
-                      <div className="flex-1">
-                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                          <div className="p-4">
-                            <h3 className="font-medium">{activity.recommendation?.name}</h3>
-
-                            <div className="mt-2 space-y-1">
-                              <div className="flex items-center text-sm text-gray-600">
-                                <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                                <span>
-                                  Duration:{' '}
-                                  {getDurationString(activity.recommendation?.duration || 0)}
-                                </span>
-                              </div>
-
-                              <div className="flex items-start text-sm text-gray-600">
-                                <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 mt-0.5" />
-                                <span className="line-clamp-2">
-                                  {activity.recommendation?.location?.address}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="mt-3 flex items-center justify-end space-x-2">
-                              <Button variant="outline" size="sm" className="text-sm">
-                                Details
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-gray-500 hover:text-gray-600"
-                              >
-                                <ExternalLink className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-      </div>
-
-      {/* Interested Activities Section */}
-      {interestedActivities.length > 0 && (
-        <div className="border-t border-gray-200 mt-4">
-          <button
-            className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
-            onClick={() => setIsInterestedCollapsed(!isInterestedCollapsed)}
-          >
-            <div className="flex items-center space-x-2">
-              <h2 className="font-medium">Interested Activities</h2>
-              <span className="text-sm text-gray-500">
-                {`${interestedActivities.length} activities`}
+      <div className="px-4 py-3 border-b bg-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-xl font-semibold">{trip.title}</h1>
+            <div className="flex items-center mt-1 text-sm text-gray-500">
+              <span>
+                {new Date(trip.startDate).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
+                {' - '}
+                {new Date(trip.endDate).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </span>
+              <span className="mx-2">•</span>
+              <span>{`${scheduledEvents.length} activities`}</span>
             </div>
-            {isInterestedCollapsed ? (
-              <ChevronDown className="h-5 w-5 text-gray-400" />
-            ) : (
-              <ChevronUp className="h-5 w-5 text-gray-400" />
-            )}
-          </button>
+          </div>
 
-          <div
-            className={cn(
-              'px-4 space-y-4 transition-all duration-200',
-              isInterestedCollapsed ? 'h-0 invisible opacity-0' : 'pb-4 visible opacity-100'
-            )}
-          >
-            {interestedActivities.map(activity => (
-              <div key={activity.id} className="bg-white rounded-lg border border-gray-200">
-                <div className="p-4">
-                  <h3 className="font-medium">{activity.recommendation?.name}</h3>
-
-                  <div className="mt-2 space-y-1">
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                      <span>{getDurationString(activity.recommendation?.duration || 0)}</span>
-                    </div>
-
-                    <div className="flex items-start text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 mt-0.5" />
-                      <span className="line-clamp-2">
-                        {activity.recommendation?.location?.address}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center justify-end space-x-2">
-                    <Button
-                      variant="default"
-                      size="sm"
-                      className="text-sm"
-                      onClick={() => handleAddToSchedule(activity)}
-                    >
-                      Add to Schedule
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700"
-                      onClick={() => handleRemoveActivity(activity.id)}
-                    >
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={rebalanceSchedule}
+              disabled={isRebalancing}
+            >
+              {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
+            </Button>
+            <div className="border rounded-lg">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setView('listWeek')}
+                className={view === 'listWeek' ? 'bg-gray-100' : ''}
+              >
+                <List className="w-4 h-4 mr-2" />
+                List
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setView('timeGridTwoDay')}
+                className={view === 'timeGridTwoDay' ? 'bg-gray-100' : ''}
+              >
+                <Calendar className="w-4 h-4 mr-2" />
+                Calendar
+              </Button>
+            </div>
           </div>
         </div>
-      )}
+      </div>
+
+      {/* Calendar */}
+      <div className="flex-1 overflow-hidden">
+        <FullCalendar
+          plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
+          initialView={view}
+          views={{
+            timeGridTwoDay: {
+              type: 'timeGrid',
+              duration: { days: 2 },
+            },
+            listWeek: {
+              type: 'list',
+              titleFormat: { month: 'long', day: 'numeric' },
+            },
+          }}
+          headerToolbar={{
+            right: 'prev,next',
+            center: 'title',
+            left: 'timeGridTwoDay,timeGridDay',
+          }}
+          events={scheduledEvents}
+          editable={true}
+          eventDrop={handleEventDrop}
+          eventContent={renderEventContent}
+          slotMinTime="00:00:00"
+          slotMaxTime="23:59:59"
+          allDaySlot={false}
+          eventOverlap={true}
+          height="100%"
+          validRange={{
+            start: trip.startDate,
+            end: addDays(trip.endDate, 1),
+          }}
+          scrollTime="08:00:00"
+        />
+      </div>
     </div>
   );
 }

@@ -116,7 +116,7 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
     findActivityByRecommendationId,
     trip,
     removeActivity,
-    updateActivityStatus,
+    updateActivity,
     addActivity,
     loadingActivities,
   } = useActivitiesStore();
@@ -137,7 +137,7 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
       } else {
         // If activity exists, update its status
         if (existingActivity) {
-          await updateActivityStatus(trip.id, existingActivity.id, newStatus);
+          await updateActivity(trip.id, existingActivity.id, { status: newStatus });
           toast.success('Activity status updated', {
             description:
               newStatus === 'planned'

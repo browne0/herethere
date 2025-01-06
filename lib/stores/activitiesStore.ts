@@ -8,6 +8,10 @@ import type {
 
 export type ActivityStatus = 'interested' | 'planned' | 'confirmed' | 'completed' | 'cancelled';
 
+export type UpdateableActivityFields = Partial<
+  Pick<ParsedItineraryActivity, 'status' | 'startTime' | 'endTime' | 'transitTimeFromPrevious'>
+>;
+
 interface ActivitiesStore {
   categories: ActivityCategoryType[];
   setCategories: (categories: ActivityCategoryType[]) => void;
@@ -16,10 +20,10 @@ interface ActivitiesStore {
     activity: Pick<ParsedItineraryActivity, 'recommendationId' | 'status'>
   ) => Promise<void>;
   removeActivity: (tripId: string, activityId: string) => Promise<void>;
-  updateActivityStatus: (
+  updateActivity: (
     tripId: string,
     activityId: string,
-    status: ActivityStatus
+    updates: UpdateableActivityFields
   ) => Promise<void>;
   findActivityByRecommendationId: (recommendationId: string) => ParsedItineraryActivity | undefined;
   trip: ParsedTrip | null;
@@ -100,7 +104,7 @@ export const useActivitiesStore = create<ActivitiesStore>((set, get) => ({
     }
   },
 
-  updateActivityStatus: async (tripId, activityId, status) => {
+  updateActivity: async (tripId, activityId, updates) => {
     set(state => ({
       loadingActivities: new Set(state.loadingActivities).add(activityId),
     }));
@@ -109,13 +113,12 @@ export const useActivitiesStore = create<ActivitiesStore>((set, get) => ({
       const response = await fetch(`/api/trips/${tripId}/activities/${activityId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(updates),
       });
 
-      if (!response.ok) throw new Error('Failed to update activity status');
+      if (!response.ok) throw new Error('Failed to update activity');
       const updatedActivity = await response.json();
 
-      // On success, update the activity and clear its loading state
       set(state => ({
         trip: state.trip
           ? {
@@ -128,7 +131,6 @@ export const useActivitiesStore = create<ActivitiesStore>((set, get) => ({
         loadingActivities: new Set([...state.loadingActivities].filter(id => id !== activityId)),
       }));
     } catch (error) {
-      // On error, clear loading state but keep original activity state
       set(state => ({
         error: error instanceof Error ? error.message : 'Failed to update activity',
         loadingActivities: new Set([...state.loadingActivities].filter(id => id !== activityId)),

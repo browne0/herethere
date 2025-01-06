@@ -38,7 +38,7 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
     <div className="flex h-screen">
       <TripHeader onEditClick={() => setIsEditModalOpen(true)} />
       <ItineraryView />
-      <ItineraryMap />
+      {/* <ItineraryMap /> */}
       <TripEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
