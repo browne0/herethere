@@ -142,7 +142,7 @@ export const restaurantRecommendationService = {
 
     // Group activities by day/time slots
     const timeSlots = _.groupBy(activities, activity => {
-      const hour = new Date(activity.startTime).getHours();
+      const hour = new Date(activity.startTime as Date).getHours();
       if (hour < 11) return 'breakfast' as const;
       if (hour < 16) return 'lunch' as const;
       return 'dinner' as const;

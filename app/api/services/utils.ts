@@ -2,6 +2,7 @@ import { protos } from '@googlemaps/places';
 import { addMinutes, differenceInDays } from 'date-fns';
 
 import { ParsedItineraryActivity, ParsedTrip } from '@/app/trips/[tripId]/types';
+import { CategoryMapping, PlaceCategory } from '@/constants';
 import { prisma } from '@/lib/db';
 import { StartTime, UserPreferences } from '@/lib/stores/preferences';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
@@ -56,6 +57,8 @@ const MEAL_WINDOWS = {
     required: true,
   },
 } as const;
+
+const MINIMUM_ACCEPTABLE_SCORE = 30;
 
 // Updated intensity weights based on your place types
 const INTENSITY_WEIGHTS: Record<string, number> = {
@@ -231,6 +234,16 @@ function scoreTimeSlot(
   userPreferences: UserPreferences
 ): number {
   let score = 100;
+  const hour = slot.getHours();
+
+  const EVENING_VENUE_TYPES = CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes;
+
+  const isEveningVenue = recommendation.placeTypes.some(type => EVENING_VENUE_TYPES.includes(type));
+
+  // Base scoring logic
+  if (hour < 11) score += 10; // Early morning bonus
+  if (hour > 14 && hour < 17) score -= 10; // Afternoon penalty
+  if (hour >= 19 && isEveningVenue) score += 20;
 
   if (recommendation.placeTypes.includes('art_gallery')) {
     // Check for museums and galleries on the same day
@@ -261,8 +274,6 @@ function scoreTimeSlot(
     }
   }
 
-  const hour = slot.getHours();
-
   // Calculate schedule fullness
   const totalMinutes = calculateAvailableTime({ startDate: tripStart, endDate: tripEnd });
   const scheduledMinutes = existingActivities.reduce(
@@ -271,18 +282,14 @@ function scoreTimeSlot(
   );
   const scheduleFullness = Math.min(scheduledMinutes / totalMinutes, 1);
 
-  // Base scoring logic
-  if (hour < 11) score += 10; // Early morning bonus
-  if (hour > 14 && hour < 17) score -= 10; // Afternoon penalty
-
   const energyLevel = userPreferences.energyLevel;
   const dayBalance = getDayBalance(existingActivities, slot);
 
   if (energyLevel === 1) {
-    if (dayBalance.activityCount > 3) score -= 30;
+    if (dayBalance.activityCount > 4) score -= 30;
     if (dayBalance.totalDuration > 240) score -= 20;
   } else if (energyLevel === 2) {
-    if (dayBalance.activityCount > 4) score -= 20;
+    if (dayBalance.activityCount > 5) score -= 20;
     if (dayBalance.totalDuration > 360) score -= 15;
   } else if (energyLevel === 3) {
     if (dayBalance.activityCount > 6) score -= 10;

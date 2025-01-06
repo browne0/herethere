@@ -27,14 +27,10 @@ export async function POST(_request: Request, { params }: { params: { tripId: st
     const updatedTrip = await prisma.trip.findUnique({
       where: { id: tripId },
       include: {
+        city: true,
         activities: {
           include: {
             recommendation: true,
-            trip: {
-              include: {
-                city: true,
-              },
-            },
           },
         },
       },

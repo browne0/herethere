@@ -28,7 +28,6 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CUISINE_PREFERENCES } from '@/constants';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import {
   usePreferences,
   InterestType,

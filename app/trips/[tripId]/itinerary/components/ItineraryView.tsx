@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { ChevronDown, ChevronUp, Clock, MapPin, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,73 +12,47 @@ import { cn } from '@/lib/utils';
 import { ParsedItineraryActivity } from '../../types';
 
 export function ItineraryView() {
-  const { trip, updateActivityStatus, removeActivity } = useActivitiesStore();
+  const { trip, updateActivityStatus, removeActivity, setTrip } = useActivitiesStore();
   const [collapsedDays, setCollapsedDays] = useState<Record<string, boolean>>({});
   const [isInterestedCollapsed, setIsInterestedCollapsed] = useState(false);
   const [isRebalancing, setIsRebalancing] = useState(false);
 
-  useEffect(() => {
+  const rebalanceSchedule = useCallback(async () => {
     if (!trip) return;
 
-    // Check if any activities have been updated since the last rebalance
-    const needsRebalance = trip.activities.some(activity => {
-      return !trip.lastRebalanced || new Date(activity.updatedAt) > new Date(trip.lastRebalanced);
-    });
+    setIsRebalancing(true);
+    try {
+      const response = await fetch(`/api/trips/${trip.id}/activities/rebalance`, {
+        method: 'POST',
+      });
 
-    if (needsRebalance) {
-      const rebalanceSchedule = async () => {
-        setIsRebalancing(true);
-        try {
-          const response = await fetch(`/api/trips/${trip.id}/activities/rebalance`, {
-            method: 'POST',
-          });
-
-          if (response.ok) {
-            const { trip: updatedTrip } = await response.json();
-            useActivitiesStore.setState({ trip: updatedTrip });
-          }
-        } catch (error) {
-          toast.error('Failed to rebalance schedule');
-          console.error('Rebalance error:', error);
-        } finally {
-          setIsRebalancing(false);
-        }
-      };
-
-      rebalanceSchedule();
+      if (response.ok) {
+        const { trip: updatedTrip } = await response.json();
+        setTrip(updatedTrip);
+      }
+    } catch (error) {
+      toast.error('Failed to rebalance schedule');
+      console.error('Rebalance error:', error);
+    } finally {
+      setIsRebalancing(false);
     }
-  }, [trip?.id, trip?.activities, trip]);
+  }, [setTrip, trip]);
 
   useEffect(() => {
     if (!trip) return;
     console.log(trip.activities);
 
-    const scheduledActivities = trip.activities.filter(
-      activity => activity.status === 'planned' && activity.startTime
-    );
+    // Check if any activities have been updated since the last rebalance
+    const needsRebalance = trip.activities.some(activity => {
+      if (trip.lastRebalanced) {
+        return new Date(activity.updatedAt).getTime() > new Date(trip.lastRebalanced).getTime();
+      }
+    });
 
-    // Group activities by day
-    const groupedActivities = scheduledActivities.reduce<Record<string, typeof trip.activities>>(
-      (acc, activity) => {
-        if (!activity.startTime || !activity.endTime) {
-          return acc;
-        }
-        const date = new Date(activity.startTime).toLocaleDateString();
-        if (!acc[date]) {
-          acc[date] = [];
-        }
-        acc[date].push(activity);
-
-        // Sort activities within each day by start time
-        acc[date].sort((a, b) => {
-          return new Date(a.startTime!).getTime() - new Date(b.startTime!).getTime();
-        });
-        return acc;
-      },
-      {}
-    );
-    console.log(JSON.stringify(groupedActivities));
-  }, [trip]);
+    if (needsRebalance) {
+      rebalanceSchedule();
+    }
+  }, [trip?.id, trip?.activities, trip, rebalanceSchedule]);
 
   if (!trip) return null;
 
@@ -194,29 +168,7 @@ export function ItineraryView() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => {
-            const rebalanceSchedule = async () => {
-              setIsRebalancing(true);
-              try {
-                const response = await fetch(`/api/trips/${trip.id}/activities/rebalance`, {
-                  method: 'POST',
-                });
-
-                if (response.ok) {
-                  const { trip: updatedTrip } = await response.json();
-                  useActivitiesStore.setState({ trip: updatedTrip });
-
-                  toast.success('Schedule optimized successfully');
-                }
-              } catch (error) {
-                toast.error('Failed to rebalance schedule');
-                console.error('Rebalance error:', error);
-              } finally {
-                setIsRebalancing(false);
-              }
-            };
-            rebalanceSchedule();
-          }}
+          onClick={rebalanceSchedule}
           disabled={isRebalancing}
           className="text-sm my-2"
         >

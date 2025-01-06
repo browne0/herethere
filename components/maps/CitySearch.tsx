@@ -113,6 +113,7 @@ export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProp
           onChange={e => handleSearch(e.target.value)}
           placeholder="Search for a city"
           className="pl-10 pr-10"
+          disabled
         />
         {searchInput && (
           <Button
@@ -130,7 +131,7 @@ export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProp
         <Card className="absolute z-50 w-full mt-1 overflow-hidden">
           <ul className="py-2 max-h-64 overflow-auto">
             {suggestions.map(suggestion => (
-              <li
+              <button
                 key={suggestion.place_id}
                 className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
                 onClick={() => handleSelect(suggestion)}
@@ -139,7 +140,7 @@ export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProp
                 <div className="text-sm text-gray-500">
                   {suggestion.structured_formatting.secondary_text}
                 </div>
-              </li>
+              </button>
             ))}
           </ul>
         </Card>

@@ -8,6 +8,7 @@ import { CitySearch } from '@/components/maps/CitySearch';
 import { Button } from '@/components/ui/button';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { popularDestinations } from '@/lib/trips';
+import { cn } from '@/lib/utils';
 
 export default function CitySelectionPage() {
   const router = useRouter();
@@ -34,8 +35,9 @@ export default function CitySelectionPage() {
         <CitySearch value={city} onCitySelect={handleCitySelect} />
         <div className="flex flex-wrap justify-center gap-2 animate-fade-in">
           {popularDestinations.map(destination => (
-            <button
+            <Button
               key={destination.placeId}
+              disabled={destination.name !== 'New York'}
               onClick={() =>
                 handleCitySelect({
                   name: destination.name,
@@ -45,13 +47,15 @@ export default function CitySelectionPage() {
                   countryCode: destination.countryCode,
                 })
               }
-              className="group h-9 px-3 rounded-full bg-white text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 shadow-sm border border-gray-100 flex items-center gap-1.5 text-sm"
+              className={cn(
+                'group h-9 px-3 rounded-full bg-white text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all duration-200 shadow-sm border border-gray-100 flex items-center gap-1.5 text-sm'
+              )}
             >
               <MapPin className="w-3.5 h-3.5 text-gray-400 group-hover:text-indigo-500" />
               <span className="font-medium">{destination.name}</span>
               <span className="text-gray-400 text-xs">·</span>
               <span className="text-gray-400 text-xs">{destination.country}</span>
-            </button>
+            </Button>
           ))}
         </div>
 

@@ -1,33 +1,9 @@
 import React from 'react';
 
 import { OverlayViewF, OVERLAY_MOUSE_TARGET } from '@react-google-maps/api';
-import {
-  Camera,
-  MapPin,
-  type LucideIcon,
-  Martini,
-  Landmark,
-  Star,
-  Palette,
-  Flower2,
-  Check,
-  Bookmark,
-  HandPlatter,
-} from 'lucide-react';
+import { Check, Bookmark } from 'lucide-react';
 
 import { ActivityRecommendation } from '@/lib/types/recommendations';
-
-// Activity type icons mapping
-const ACTIVITY_ICONS: Record<string, LucideIcon> = {
-  'must-see': Star,
-  restaurants: HandPlatter,
-  'tourist-attractions': Camera,
-  culture: Palette,
-  'historic-sites': Landmark,
-  nightlife: Martini,
-  'spas-&-wellness': Flower2,
-  default: MapPin,
-};
 
 interface CustomMarkerProps {
   activity: ActivityRecommendation;
@@ -45,7 +21,6 @@ interface CustomMarkerProps {
 const CustomMarker = React.memo(
   ({
     activity,
-    categoryType,
     isHighlighted,
     isInTrip,
     tripStatus,
@@ -53,8 +28,6 @@ const CustomMarker = React.memo(
     labelPosition,
     showLabel = false,
   }: CustomMarkerProps) => {
-    const IconComponent = ACTIVITY_ICONS[categoryType] || ACTIVITY_ICONS.default;
-
     const getMarkerContent = () => {
       if (tripStatus === 'planned') {
         return (
@@ -75,20 +48,6 @@ const CustomMarker = React.memo(
           </div>
         );
       }
-
-      return (
-        <div
-          className={`flex h-7 w-7 items-center justify-center rounded-full 
-            shadow-lg border border-gray-200 transition-colors duration-300
-            ${
-              isHighlighted
-                ? 'border-foreground/10 bg-foreground text-background'
-                : 'border-foreground/10 bg-background text-foreground hover:bg-foreground hover:text-background'
-            }`}
-        >
-          <IconComponent className="h-5 w-5" />
-        </div>
-      );
     };
 
     return (
