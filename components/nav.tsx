@@ -16,14 +16,14 @@ const LANDING_PAGE_LINKS = [
   { href: '#faq', label: 'FAQ' },
 ] as const;
 
-// Helper to check if current page is a trip details page
-const isTripDetailsPage = (pathname: string): boolean => {
+const shouldHideNavigation = (pathname: string): boolean => {
   // Return false for /trips/new/* and /trips exactly
   if (pathname.startsWith('/trips/new') || pathname === '/trips') {
     return false;
   }
-  // Check for trip detail pages like /trips/[tripId]
-  return /^\/trips\/[^/]+$/.test(pathname);
+
+  // Check for trip detail pages (/trips/[tripId]) and itinerary pages (/trips/[tripId]/itinerary)
+  return /^\/trips\/[^/]+($|\/itinerary$)/.test(pathname);
 };
 
 // Subcomponents for better organization
@@ -131,7 +131,7 @@ export function Nav() {
 
   const isOnboardingPage = /\/onboarding(\/|$)/.test(pathname);
 
-  if (isTripDetailsPage(pathname)) {
+  if (shouldHideNavigation(pathname)) {
     return null;
   }
 

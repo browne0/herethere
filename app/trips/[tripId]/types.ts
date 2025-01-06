@@ -13,13 +13,8 @@ export interface Location {
   placeId?: string;
 }
 
-export interface ParsedItineraryActivity extends Omit<ItineraryActivity, 'customizations'> {
+export interface ParsedItineraryActivity extends ItineraryActivity {
   recommendation: ActivityRecommendation;
-  customizations?: {
-    duration?: number;
-    notes?: string;
-    private?: boolean;
-  };
 }
 
 export interface ActivityCategoryType {

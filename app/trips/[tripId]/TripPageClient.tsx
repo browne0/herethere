@@ -50,7 +50,7 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
     }
   };
 
-  const handleTripUpdate = (updatedTrip: Partial<ParsedTrip>) => {
+  const handleTripUpdate = (updatedTrip: ParsedTrip) => {
     // Update local store
     setTrip({ ...trip, ...updatedTrip });
     // Refresh the page data

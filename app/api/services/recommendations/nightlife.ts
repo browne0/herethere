@@ -83,6 +83,7 @@ export const nightlifeRecommendationService = {
 
     // Focus on evening activities for nightlife clustering
     const eveningActivities = activities.filter(activity => {
+      if (!activity.startTime) return false;
       const hour = new Date(activity.startTime).getHours();
       return hour >= 17; // After 5 PM
     });

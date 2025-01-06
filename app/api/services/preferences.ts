@@ -50,6 +50,8 @@ export const preferencesService = {
       select: { preferences: true },
     });
 
-    return user?.preferences || {};
+    const userPreferences = user?.preferences || {};
+
+    return userPreferences as unknown as UserPreferences;
   },
 };

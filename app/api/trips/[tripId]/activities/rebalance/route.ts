@@ -30,6 +30,11 @@ export async function POST(_request: Request, { params }: { params: { tripId: st
         activities: {
           include: {
             recommendation: true,
+            trip: {
+              include: {
+                city: true,
+              },
+            },
           },
         },
       },
@@ -42,7 +47,6 @@ export async function POST(_request: Request, { params }: { params: { tripId: st
     return NextResponse.json({
       trip: updatedTrip,
       rebalanceResults: {
-        warnings: results.warnings,
         unscheduledCount: results.unscheduled.length,
       },
     });

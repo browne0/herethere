@@ -3,8 +3,10 @@ import { addMinutes, differenceInDays } from 'date-fns';
 
 import { ParsedItineraryActivity, ParsedTrip } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
+import { StartTime, UserPreferences } from '@/lib/stores/preferences';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
+import { preferencesService } from './preferences';
 import { getTransitTime } from './scheduling/transitTime';
 
 interface DayBalance {
@@ -59,7 +61,7 @@ const MEAL_WINDOWS = {
 const INTENSITY_WEIGHTS: Record<string, number> = {
   historic_site: 60,
   museum: 40,
-  art_gallery: 40,
+  art_gallery: 25,
   restaurant: 20,
   beach: 70,
   night_club: 80,
@@ -68,6 +70,19 @@ const INTENSITY_WEIGHTS: Record<string, number> = {
   landmark: 50,
   market: 60,
 } as const;
+
+const getPreferredStartHour = (startTime: StartTime) => {
+  switch (startTime) {
+    case 'early':
+      return 7; // Early bird - before 8am
+    case 'mid':
+      return 9; // Mid-morning - 9-10am
+    case 'late':
+      return 10; // Later start - after 10am
+    default:
+      return 9; // Default to mid-morning if not specified
+  }
+};
 
 function isSameDay(date1: Date | null, date2: Date | null): boolean {
   if (!date1 || !date2) return false;
@@ -210,11 +225,42 @@ function scoreTimeSlot(
   slot: Date,
   transitTime: number,
   existingActivities: ParsedItineraryActivity[],
-  isRestaurant: boolean,
+  recommendation: ActivityRecommendation,
   tripStart: Date,
-  tripEnd: Date
+  tripEnd: Date,
+  userPreferences: UserPreferences
 ): number {
   let score = 100;
+
+  if (recommendation.placeTypes.includes('art_gallery')) {
+    // Check for museums and galleries on the same day
+    const culturalActivitiesToday = existingActivities.filter(
+      activity =>
+        activity.startTime &&
+        isSameDay(new Date(activity.startTime), slot) &&
+        activity.recommendation.placeTypes.some(type => type === 'museum' || type === 'art_gallery')
+    );
+
+    const museumsToday = culturalActivitiesToday.filter(a =>
+      a.recommendation.placeTypes.includes('museum')
+    ).length;
+
+    const galleriesScheduled = culturalActivitiesToday.filter(a =>
+      a.recommendation.placeTypes.includes('art_gallery')
+    ).length;
+
+    // Heavily penalize scheduling galleries after museums (fatigue)
+    if (museumsToday > 0) {
+      score -= 40;
+    }
+    // Modest penalty for each additional gallery, but allow up to 6
+    else if (galleriesScheduled >= 6) {
+      score -= 50;
+    } else {
+      score -= galleriesScheduled * 10;
+    }
+  }
+
   const hour = slot.getHours();
 
   // Calculate schedule fullness
@@ -229,8 +275,24 @@ function scoreTimeSlot(
   if (hour < 11) score += 10; // Early morning bonus
   if (hour > 14 && hour < 17) score -= 10; // Afternoon penalty
 
-  // Get day's activity balance
+  const energyLevel = userPreferences.energyLevel;
   const dayBalance = getDayBalance(existingActivities, slot);
+
+  if (energyLevel === 1) {
+    if (dayBalance.activityCount > 3) score -= 30;
+    if (dayBalance.totalDuration > 240) score -= 20;
+  } else if (energyLevel === 2) {
+    if (dayBalance.activityCount > 4) score -= 20;
+    if (dayBalance.totalDuration > 360) score -= 15;
+  } else if (energyLevel === 3) {
+    if (dayBalance.activityCount > 6) score -= 10;
+    if (dayBalance.totalDuration > 480) score -= 10;
+  }
+
+  const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime);
+  if (hour < preferredStartHour) {
+    score -= 30; // Heavy penalty for scheduling before preferred start time
+  }
 
   // Reduced density penalty as schedule fills up
   if (dayBalance.activityCount > 4) {
@@ -246,7 +308,7 @@ function scoreTimeSlot(
   score -= distancePenalty;
 
   // Restaurant-specific timing
-  if (isRestaurant) {
+  if (recommendation.placeTypes.includes('restaurant')) {
     const inMealWindow = isInMealWindow(slot);
     if (!inMealWindow) score -= 30;
   }
@@ -309,7 +371,8 @@ export function findAvailableSlots(
   openingHours: protos.google.maps.places.v1.Place.IOpeningHours | null | undefined,
   isRestaurant: boolean,
   tripStart: Date,
-  tripEnd: Date
+  tripEnd: Date,
+  userPreferences: UserPreferences
 ): Date[] {
   // Early return if the date is outside trip bounds
   if (date < tripStart || date > tripEnd) {
@@ -333,13 +396,14 @@ export function findAvailableSlots(
     period => period.open?.hour === 0 && period.open?.minute === 0 && !period.close
   );
 
+  const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime);
+
   // For 24-hour locations, we'll use reasonable time slots between 8 AM and 10 PM
   if (is24Hours) {
-    const startHour = 8; // 8 AM
     const endHour = 22; // 10 PM
 
     let currentTime = new Date(date);
-    currentTime.setHours(startHour, 0, 0, 0);
+    currentTime.setHours(preferredStartHour, 0, 0, 0);
 
     // If we're on the start date and it's after our start time,
     // begin from the current time rounded up to the next half hour
@@ -461,6 +525,11 @@ export function findAvailableSlots(
     // Ensure we don't start before trip start
     if (startTime < tripStart) startTime = new Date(tripStart);
 
+    // Don't start before user's preferred time
+    if (startTime.getHours() < preferredStartHour) {
+      startTime.setHours(preferredStartHour, 0, 0, 0);
+    }
+
     const periodEnd = new Date(date);
     periodEnd.setHours(period.close.hour, period.close.minute, 0, 0);
     // Ensure we don't go past trip end
@@ -580,19 +649,45 @@ export async function scheduleActivities(
   activities: ParsedItineraryActivity[],
   trip: ParsedTrip
 ): Promise<number> {
+  const userPreferences = await preferencesService.getPreferences(trip.userId);
+
   let scheduledMinutes = 0;
   const scheduledActivities: ParsedItineraryActivity[] = [];
 
   const sortedActivities = activities.sort((a, b) => {
+    // First priority: Must-see attractions
     if (a.recommendation.isMustSee !== b.recommendation.isMustSee) {
       return a.recommendation.isMustSee ? -1 : 1;
     }
+
+    // Second priority: Restaurants (to ensure proper meal timing)
     if (
       a.recommendation.placeTypes.includes('restaurant') !==
       b.recommendation.placeTypes.includes('restaurant')
     ) {
       return a.recommendation.placeTypes.includes('restaurant') ? -1 : 1;
     }
+
+    // Third priority: Activity intensity based on user's energy level
+    const getIntensityScore = (activity: ParsedItineraryActivity) => {
+      const intensity = Math.max(
+        ...activity.recommendation.placeTypes.map(type => INTENSITY_WEIGHTS[type] || 50)
+      );
+      // Adjust intensity score based on user preference
+      switch (userPreferences.energyLevel) {
+        case 1:
+          return -intensity;
+        case 3:
+          return intensity;
+        default:
+          return 0;
+      }
+    };
+
+    const intensityDiff = getIntensityScore(b) - getIntensityScore(a);
+    if (intensityDiff !== 0) return intensityDiff;
+
+    // Finally, sort by rating
     return b.recommendation.rating - a.recommendation.rating;
   });
 
@@ -600,7 +695,8 @@ export async function scheduleActivities(
     const { bestSlot, bestTransitTime } = await findBestTimeSlot(
       trip,
       activity.recommendation,
-      scheduledActivities
+      scheduledActivities,
+      userPreferences
     );
 
     if (!bestSlot) {
@@ -666,6 +762,8 @@ export async function tryFitInterestedActivities(
     }),
   ]);
 
+  const userPreferences = await preferencesService.getPreferences(trip.userId);
+
   let availableMinutes = remainingMinutes;
   const currentSchedule = plannedActivities as unknown as ParsedItineraryActivity[];
 
@@ -677,7 +775,8 @@ export async function tryFitInterestedActivities(
         const { bestSlot, bestTransitTime } = await findBestTimeSlot(
           trip,
           activity.recommendation as unknown as ActivityRecommendation,
-          currentSchedule
+          currentSchedule,
+          userPreferences
         );
 
         if (bestSlot) {
@@ -710,7 +809,8 @@ export async function tryFitInterestedActivities(
 export async function findBestTimeSlot(
   trip: ParsedTrip,
   recommendation: ActivityRecommendation,
-  existingActivities: ParsedItineraryActivity[]
+  existingActivities: ParsedItineraryActivity[],
+  userPreferences: UserPreferences
 ): Promise<TimeSlotResult> {
   let bestSlot: Date | null = null;
   let bestScore = -Infinity;
@@ -738,7 +838,8 @@ export async function findBestTimeSlot(
       recommendation.openingHours as protos.google.maps.places.v1.Place.IOpeningHours,
       isRestaurant,
       tripStart,
-      tripEnd
+      tripEnd,
+      userPreferences
     );
 
     for (const slot of availableSlots) {
@@ -786,9 +887,10 @@ export async function findBestTimeSlot(
         slot,
         transitTime,
         existingActivities,
-        recommendation.placeTypes.includes('restaurant'),
+        recommendation,
         tripStart,
-        tripEnd
+        tripEnd,
+        userPreferences
       );
 
       if (score > bestScore) {

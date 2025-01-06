@@ -34,12 +34,8 @@ export function ItineraryView() {
           });
 
           if (response.ok) {
-            const { trip: updatedTrip, rebalanceResults } = await response.json();
+            const { trip: updatedTrip } = await response.json();
             useActivitiesStore.setState({ trip: updatedTrip });
-
-            if (rebalanceResults.warnings.length > 0) {
-              rebalanceResults.warnings.forEach((warning: string) => toast.warning(warning));
-            }
           }
         } catch (error) {
           toast.error('Failed to rebalance schedule');
@@ -52,6 +48,37 @@ export function ItineraryView() {
       rebalanceSchedule();
     }
   }, [trip?.id, trip?.activities, trip]);
+
+  useEffect(() => {
+    if (!trip) return;
+    console.log(trip.activities);
+
+    const scheduledActivities = trip.activities.filter(
+      activity => activity.status === 'planned' && activity.startTime
+    );
+
+    // Group activities by day
+    const groupedActivities = scheduledActivities.reduce<Record<string, typeof trip.activities>>(
+      (acc, activity) => {
+        if (!activity.startTime || !activity.endTime) {
+          return acc;
+        }
+        const date = new Date(activity.startTime).toLocaleDateString();
+        if (!acc[date]) {
+          acc[date] = [];
+        }
+        acc[date].push(activity);
+
+        // Sort activities within each day by start time
+        acc[date].sort((a, b) => {
+          return new Date(a.startTime!).getTime() - new Date(b.startTime!).getTime();
+        });
+        return acc;
+      },
+      {}
+    );
+    console.log(JSON.stringify(groupedActivities));
+  }, [trip]);
 
   if (!trip) return null;
 
@@ -66,19 +93,22 @@ export function ItineraryView() {
   const groupedActivities = scheduledActivities.reduce<Record<string, typeof trip.activities>>(
     (acc, activity) => {
       if (!activity.startTime || !activity.endTime) {
-        return acc; // Skip unscheduled activities
+        return acc;
       }
       const date = new Date(activity.startTime).toLocaleDateString();
       if (!acc[date]) {
         acc[date] = [];
       }
       acc[date].push(activity);
+
+      // Sort activities within each day by start time
+      acc[date].sort((a, b) => {
+        return new Date(a.startTime!).getTime() - new Date(b.startTime!).getTime();
+      });
       return acc;
     },
     {}
   );
-
-  console.log(groupedActivities);
 
   const formatTime = (date: string | Date) => {
     return new Date(date).toLocaleTimeString([], {
@@ -157,10 +187,10 @@ export function ItineraryView() {
   };
 
   return (
-    <div className="w-full max-w-md border-r border-gray-200 h-screen overflow-y-auto bg-white">
+    <div className="mt-[65px] w-full max-w-md border-r border-gray-200 h-[calc(100vh-65px)] overflow-y-auto bg-white">
       {/* Header */}
       <div className="sticky top-0 bg-white border-b border-gray-200 p-4 z-10">
-        <h1 className="text-xl font-semibold">Itinerary</h1>
+        <h1 className="text-xl font-semibold">{trip.title}</h1>
         <Button
           variant="outline"
           size="sm"
@@ -173,12 +203,9 @@ export function ItineraryView() {
                 });
 
                 if (response.ok) {
-                  const { trip: updatedTrip, rebalanceResults } = await response.json();
+                  const { trip: updatedTrip } = await response.json();
                   useActivitiesStore.setState({ trip: updatedTrip });
 
-                  if (rebalanceResults.warnings.length > 0) {
-                    rebalanceResults.warnings.forEach((warning: string) => toast.warning(warning));
-                  }
                   toast.success('Schedule optimized successfully');
                 }
               } catch (error) {
@@ -191,7 +218,7 @@ export function ItineraryView() {
             rebalanceSchedule();
           }}
           disabled={isRebalancing}
-          className="text-sm"
+          className="text-sm my-2"
         >
           {isRebalancing ? (
             <span className="flex items-center">
@@ -242,89 +269,94 @@ export function ItineraryView() {
 
       {/* Days */}
       <div className="divide-y divide-gray-200">
-        {Object.entries(groupedActivities).map(([date, dayActivities]) => (
-          <div key={date} className="bg-white">
-            {/* Day header */}
-            <button
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
-              onClick={() => toggleDay(date)}
-            >
-              <div className="flex items-center space-x-2">
-                <h2 className="font-medium">{formatDayDate(date)}</h2>
-                <span className="text-sm text-gray-500">{`${dayActivities.length} activities`}</span>
-              </div>
-              {collapsedDays[date] ? (
-                <ChevronDown className="h-5 w-5 text-gray-400" />
-              ) : (
-                <ChevronUp className="h-5 w-5 text-gray-400" />
-              )}
-            </button>
+        {Object.entries(groupedActivities)
+          .sort(([dateA], [dateB]) => {
+            return new Date(dateA).getTime() - new Date(dateB).getTime();
+          })
+          .map(([date, dayActivities]) => (
+            <div key={date} className="bg-white">
+              {/* Day header */}
+              <button
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50"
+                onClick={() => toggleDay(date)}
+              >
+                <div className="flex items-center space-x-2">
+                  <h2 className="font-medium">{formatDayDate(date)}</h2>
+                  <span className="text-sm text-gray-500">{`${dayActivities.length} activities`}</span>
+                </div>
+                {collapsedDays[date] ? (
+                  <ChevronDown className="h-5 w-5 text-gray-400" />
+                ) : (
+                  <ChevronUp className="h-5 w-5 text-gray-400" />
+                )}
+              </button>
 
-            {/* Activities for the day */}
-            <div
-              className={cn(
-                'px-4 space-y-6 transition-all duration-200',
-                collapsedDays[date] ? 'h-0 invisible opacity-0' : 'pb-4 visible opacity-100'
-              )}
-            >
-              {dayActivities.map((activity, index) => (
-                <div key={activity.id} className="relative">
-                  {/* Time connector line */}
-                  {index !== dayActivities.length - 1 && (
-                    <div className="absolute left-2 top-8 bottom-0 w-px bg-gray-200" />
-                  )}
+              {/* Activities for the day */}
+              <div
+                className={cn(
+                  'px-4 space-y-6 transition-all duration-200',
+                  collapsedDays[date] ? 'h-0 invisible opacity-0' : 'pb-4 visible opacity-100'
+                )}
+              >
+                {dayActivities.map((activity, index) => (
+                  <div key={activity.id} className="relative">
+                    {/* Time connector line */}
+                    {index !== dayActivities.length - 1 && (
+                      <div className="absolute left-2 top-8 bottom-0 w-px bg-gray-200" />
+                    )}
 
-                  <div className="flex items-start space-x-4">
-                    {/* Time */}
-                    <div className="flex-shrink-0 w-16 pt-1">
-                      <span className="text-sm text-gray-500">
-                        {activity.startTime && formatTime(activity.startTime)}
-                      </span>
-                    </div>
+                    <div className="flex items-start space-x-4">
+                      {/* Time */}
+                      <div className="flex-shrink-0 w-16 pt-1">
+                        <span className="text-sm text-gray-500">
+                          {activity.startTime && formatTime(activity.startTime)}
+                        </span>
+                      </div>
 
-                    {/* Activity card */}
-                    <div className="flex-1">
-                      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-                        <div className="p-4">
-                          <h3 className="font-medium">{activity.recommendation?.name}</h3>
+                      {/* Activity card */}
+                      <div className="flex-1">
+                        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                          <div className="p-4">
+                            <h3 className="font-medium">{activity.recommendation?.name}</h3>
 
-                          <div className="mt-2 space-y-1">
-                            <div className="flex items-center text-sm text-gray-600">
-                              <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
-                              <span>
-                                {getDurationString(activity.recommendation?.duration || 0)}
-                              </span>
+                            <div className="mt-2 space-y-1">
+                              <div className="flex items-center text-sm text-gray-600">
+                                <Clock className="h-4 w-4 mr-1.5 flex-shrink-0" />
+                                <span>
+                                  Duration:{' '}
+                                  {getDurationString(activity.recommendation?.duration || 0)}
+                                </span>
+                              </div>
+
+                              <div className="flex items-start text-sm text-gray-600">
+                                <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 mt-0.5" />
+                                <span className="line-clamp-2">
+                                  {activity.recommendation?.location?.address}
+                                </span>
+                              </div>
                             </div>
 
-                            <div className="flex items-start text-sm text-gray-600">
-                              <MapPin className="h-4 w-4 mr-1.5 flex-shrink-0 mt-0.5" />
-                              <span className="line-clamp-2">
-                                {activity.recommendation?.location?.address}
-                              </span>
+                            <div className="mt-3 flex items-center justify-end space-x-2">
+                              <Button variant="outline" size="sm" className="text-sm">
+                                Details
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-gray-500 hover:text-gray-600"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </Button>
                             </div>
-                          </div>
-
-                          <div className="mt-3 flex items-center justify-end space-x-2">
-                            <Button variant="outline" size="sm" className="text-sm">
-                              Details
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-gray-500 hover:text-gray-600"
-                            >
-                              <ExternalLink className="h-4 w-4" />
-                            </Button>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
       </div>
 
       {/* Interested Activities Section */}

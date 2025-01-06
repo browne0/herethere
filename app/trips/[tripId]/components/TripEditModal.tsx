@@ -29,7 +29,7 @@ import { ParsedTrip, TripBudget } from '../types';
 interface TripEditModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onUpdateTrip: (updatedTrip: Partial<ParsedTrip>) => void;
+  onUpdateTrip: (updatedTrip: ParsedTrip) => void;
 }
 
 export default function TripEditModal({ isOpen, onClose, onUpdateTrip }: TripEditModalProps) {
