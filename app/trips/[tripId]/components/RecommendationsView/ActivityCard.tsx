@@ -212,7 +212,6 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
               {(activity.location as { neighborhood: string })?.neighborhood ||
                 'Location unavailable'}
             </span>
-            <p>{activity.priceLevel}</p>
           </p>
 
           {/* Push button to bottom */}
