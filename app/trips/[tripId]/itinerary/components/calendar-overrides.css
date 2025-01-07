@@ -1,0 +1,45 @@
+.fc .fc-toolbar.fc-header-toolbar {
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+  padding: 0px 4px;
+}
+
+.fc .fc-next-button,
+.fc .fc-prev-button {
+  padding: 0 2px;
+  background-color: transparent;
+  border: none;
+  color: rgb(58, 58, 58);
+  outline: none;
+}
+
+.fc .fc-next-button:disabled,
+.fc .fc-prev-button:disabled {
+  background-color: transparent;
+  color: rgb(143, 143, 143);
+}
+
+.fc .fc-next-button:hover,
+.fc .fc-prev-button:hover {
+  background-color: transparent;
+  border: none;
+  color: rgb(58, 58, 58);
+}
+
+.fc .fc-next-button:disabled:hover,
+.fc .fc-prev-button:disabled:hover {
+  background-color: transparent;
+  color: rgb(143, 143, 143);
+}
+
+.fc .fc-scroller {
+  overflow: auto !important;
+}
+
+.fc .fc-scrollgrid {
+  border-radius: 4px;
+}
+
+.fc .fc-list-sticky .fc-list-day > * {
+  top: 40px;
+}

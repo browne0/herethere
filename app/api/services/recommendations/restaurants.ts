@@ -51,15 +51,6 @@ export const restaurantRecommendationService = {
     const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
     const { cityId, dietaryRestrictions } = params;
 
-    // Check for null mealImportance
-    if (!params.mealImportance) {
-      params.mealImportance = {
-        breakfast: false,
-        lunch: false,
-        dinner: false,
-      };
-    }
-
     const isVegetarian = (dietaryRestrictions as DietaryRestriction[]).includes('vegetarian');
 
     let locationContext = params.locationContext;
@@ -208,10 +199,10 @@ export const restaurantRecommendationService = {
   calculateWeights(params: ScoringParams) {
     // Base weights with increased emphasis on match (cuisine preferences)
     const weights = {
-      quality: 0.25,
-      price: 0.2,
-      match: 0.35,
-      location: 0.15,
+      quality: 0.2,
+      price: 0.35,
+      match: 0.3,
+      location: 0.1,
       mustSee: 0.05,
     };
 

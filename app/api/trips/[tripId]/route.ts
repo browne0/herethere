@@ -46,16 +46,16 @@ export async function PATCH(request: NextRequest, { params }: { params: { tripId
     const include = searchParams.get('include')?.split(',') || [];
 
     const body = await request.json();
-    const { startDate, endDate, cityId, preferences } = body;
+    const { startDate, endDate, cityId } = body;
 
     const updatedTrip = await tripService.updateTrip({
       userId,
       tripId,
       data: {
+        ...body,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         cityId,
-        preferences,
       },
       include,
     });

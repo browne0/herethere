@@ -42,7 +42,7 @@ export const TripHeader = ({ onEditClick }: TripHeaderProps) => {
           >
             <div className="text-sm">{trip.city.name}</div>
             <div className="text-xs text-gray-500">
-              {formatDate(trip.startDate)} – {formatDate(trip.endDate)} · 1 guest
+              {formatDate(trip.startDate)} – {formatDate(trip.endDate)} · 1 traveler
             </div>
           </button>
           <HereThereUserButton />

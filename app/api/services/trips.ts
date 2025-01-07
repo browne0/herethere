@@ -69,6 +69,9 @@ export const tripService = {
       select: {
         id: true,
         cityId: true,
+        startDate: true,
+        endDate: true,
+        lastRebalanced: true,
       },
     });
 
@@ -128,6 +131,7 @@ export const tripService = {
             cityId: data.cityId,
             title: data.title,
             preferences: data.preferences as any,
+            lastRebalanced: null,
           },
           include: includeQuery,
         });
@@ -146,6 +150,10 @@ export const tripService = {
         endDate: data.endDate,
         title: data.title,
         preferences: data.preferences as any,
+        lastRebalanced:
+          data.startDate !== existingTrip.startDate || data.endDate !== existingTrip.endDate
+            ? null
+            : existingTrip.lastRebalanced,
       },
       include: includeQuery,
     });

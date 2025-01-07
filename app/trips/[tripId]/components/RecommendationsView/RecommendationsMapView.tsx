@@ -240,7 +240,6 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
         <CustomMarker
           key={activity.id}
           activity={activity}
-          categoryType={currentCategory}
           isInTrip={true}
           tripStatus={tripActivity?.status as 'planned' | 'interested'}
           isHighlighted={isHighlighted}

@@ -91,9 +91,9 @@ export default function TripEditModal({ isOpen, onClose, onUpdateTrip }: TripEdi
       if (!response.ok) throw new Error('Failed to update trip');
       return response.json();
     },
-    onSuccess: data => {
-      onUpdateTrip(data);
-      onClose();
+    onSuccess: async data => {
+      await onUpdateTrip(data);
+      await onClose();
       toast.success('Trip updated successfully');
     },
     onError: () => {
@@ -130,11 +130,10 @@ export default function TripEditModal({ isOpen, onClose, onUpdateTrip }: TripEdi
     });
   };
 
-  // After all hooks, we can do conditional rendering
   if (!trip || !city) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl focus:outline-none">
           <DialogHeader>
             <DialogTitle>Error</DialogTitle>
             <DialogDescription>
@@ -151,7 +150,7 @@ export default function TripEditModal({ isOpen, onClose, onUpdateTrip }: TripEdi
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-2xl p-0 gap-0 sm:h-auto max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-2xl p-0 gap-0 sm:h-auto max-h-[90vh] flex flex-col focus-visible:ring-0">
         <DialogHeader className="flex justify-between border-b p-4 bg-white rounded-t-lg">
           <DialogTitle className="text-lg font-semibold text-center sm:text-left">
             Your Trip Details

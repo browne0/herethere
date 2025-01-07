@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import type { ParsedTrip, ParsedItineraryActivity } from '../types';
-import { ItineraryMap } from './components/ItineraryMap';
+import ItineraryMap from './components/ItineraryMap';
 import { ItineraryView } from './components/ItineraryView';
 import TripEditModal from '../components/TripEditModal';
 import TripHeader from '../components/TripHeader';
@@ -38,7 +38,9 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
     <div className="flex h-screen">
       <TripHeader onEditClick={() => setIsEditModalOpen(true)} />
       <ItineraryView />
-      {/* <ItineraryMap /> */}
+      <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)]">
+        <ItineraryMap />
+      </div>
       <TripEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}

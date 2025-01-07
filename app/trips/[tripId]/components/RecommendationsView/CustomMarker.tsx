@@ -10,7 +10,6 @@ interface CustomMarkerProps {
   isHighlighted: boolean;
   isInTrip: boolean;
   tripStatus?: 'planned' | 'interested';
-  categoryType: string;
   onClick: () => void;
   onMouseEnter: () => void;
   onMouseLeave: () => void;

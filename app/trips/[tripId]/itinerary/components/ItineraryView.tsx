@@ -1,24 +1,45 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { EventContentArg, EventDropArg } from '@fullcalendar/core/index.js';
 import interactionPlugin from '@fullcalendar/interaction';
 import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { addDays, addHours } from 'date-fns';
+import { addDays } from 'date-fns';
 import { Calendar, Clock, List, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
+import './calendar-overrides.css';
 
 import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
 import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
+
+import ItineraryLoading from './ItineraryLoading';
+
+function isValidActivityStatus(status: string): status is ActivityStatus {
+  return ['interested', 'planned', 'confirmed', 'completed', 'cancelled'].includes(status);
+}
+
+function getDaysBetweenDates(date1: Date, date2: Date) {
+  // Parse the dates
+  const startDate = new Date(date1).getTime();
+  const endDate = new Date(date2).getTime();
+
+  // Calculate the difference in milliseconds
+  const timeDifference = Math.abs(endDate - startDate);
+
+  // Convert the difference to days
+  const daysDifference = timeDifference / (1000 * 60 * 60 * 24);
+
+  return daysDifference + 1;
+}
 
 // Event colors based on activity status
 const statusColors: Record<ActivityStatus, string> = {
   interested: '#fcd34d',
-  planned: '#93c5fd',
+  planned: '#4285f4',
   confirmed: '#86efac',
   completed: '#d1d5db',
   cancelled: '#ef4444',
@@ -26,45 +47,9 @@ const statusColors: Record<ActivityStatus, string> = {
 
 export function ItineraryView() {
   const { trip, updateActivity, setTrip } = useActivitiesStore();
-  const [view, setView] = useState<'listWeek' | 'timeGridTwoDay'>('timeGridTwoDay');
+  const [view, setView] = useState<'listMonth' | 'timeGrid'>('listMonth');
   const [isRebalancing, setIsRebalancing] = useState(false);
-
-  // Convert scheduled activities to FullCalendar events
-  const scheduledEvents =
-    trip?.activities
-      .filter(activity => activity.status === 'planned' && activity.startTime && activity.endTime)
-      .map(activity => ({
-        id: activity.id,
-        title: activity.recommendation.name,
-        start: activity.startTime as Date,
-        end: activity.endTime as Date,
-        backgroundColor: statusColors[activity.status],
-        extendedProps: {
-          status: activity.status,
-          location: activity.recommendation.location.address,
-          duration: activity.recommendation.duration,
-          recommendationId: activity.recommendationId,
-        },
-        editable: activity.status === 'planned',
-      })) || [];
-
-  // Get interested activities
-  const interestedActivities = trip?.activities.filter(
-    activity => activity.status === 'interested'
-  );
-
-  const handleEventDrop = async info => {
-    try {
-      await updateActivity(trip!.id, info.event.id, {
-        startTime: info.event.start,
-        endTime: info.event.end,
-      });
-      toast.success('Activity rescheduled');
-    } catch (_error) {
-      toast.error('Failed to reschedule activity');
-      info.revert();
-    }
-  };
+  const calendarRef = useRef<FullCalendar>(null);
 
   const rebalanceSchedule = useCallback(async () => {
     if (!trip) return;
@@ -87,20 +72,56 @@ export function ItineraryView() {
     }
   }, [setTrip, trip]);
 
-  // useEffect(() => {
-  //   if (!trip) return;
+  useEffect(() => {
+    if (!trip) return;
 
-  //   // Check if any activities have been updated since the last rebalance
-  //   const needsRebalance = trip.activities.some(activity => {
-  //     if (trip.lastRebalanced) {
-  //       return new Date(activity.updatedAt).getTime() > new Date(trip.lastRebalanced).getTime();
-  //     }
-  //   });
+    if (!trip.lastRebalanced) {
+      rebalanceSchedule();
+    }
+  }, [rebalanceSchedule, trip]);
 
-  //   if (needsRebalance) {
-  //     rebalanceSchedule();
-  //   }
-  // }, [trip?.id, trip?.activities, trip, rebalanceSchedule]);
+  if (!trip) return <ItineraryLoading />;
+
+  // Convert scheduled activities to FullCalendar events
+  const scheduledEvents = trip?.activities
+    .filter(activity => activity.status === 'planned' && activity.startTime && activity.endTime)
+    .map(activity => {
+      // Ensure we have a valid status before accessing statusColors
+      const status = isValidActivityStatus(activity.status) ? activity.status : 'planned';
+
+      return {
+        id: activity.id,
+        title: activity.recommendation.name,
+        start: activity.startTime as Date,
+        end: activity.endTime as Date,
+        backgroundColor: statusColors[status], // Now TypeScript knows this is safe
+        extendedProps: {
+          status: activity.status,
+          location: activity.recommendation.location.address,
+          duration: activity.recommendation.duration,
+          recommendationId: activity.recommendationId,
+        },
+        editable: activity.status === 'planned',
+      };
+    });
+
+  // Get interested activities
+  const interestedActivities = trip?.activities.filter(
+    activity => activity.status === 'interested'
+  );
+
+  const handleEventDrop = async (info: EventDropArg) => {
+    try {
+      await updateActivity(trip!.id, info.event.id, {
+        startTime: info.event.start,
+        endTime: info.event.end,
+      });
+      toast.success('Activity rescheduled');
+    } catch (_error) {
+      toast.error('Failed to reschedule activity');
+      info.revert();
+    }
+  };
 
   const handleAddToSchedule = async (activity: ParsedItineraryActivity) => {
     if (!trip) return;
@@ -116,43 +137,38 @@ export function ItineraryView() {
   };
 
   // Custom event rendering for list view
-  const renderEventContent = eventInfo => {
+  const renderEventContent = (eventInfo: EventContentArg) => {
     const { event } = eventInfo;
     const duration = event.extendedProps.duration;
 
-    // if (view === 'listWeek') {
-    //   return (
-    //     <div className="flex flex-col space-y-1 py-1">
-    //       <div className="font-medium">{event.title}</div>
-    //       <div className="flex flex-col space-y-2 text-sm text-gray-600">
-    //         <div className="flex items-center">
-    //           <Clock className="h-4 w-4 mr-1.5" />
-    //           <span>{`${Math.floor(duration / 60)}h ${duration % 60}min`}</span>
-    //         </div>
-    //         <div className="flex items-center">
-    //           <MapPin className="h-4 w-4 mr-1.5" />
-    //           <span>{event.extendedProps.location}</span>
-    //         </div>
-    //       </div>
-    //     </div>
-    //   );
-    // }
+    if (view === 'listMonth') {
+      return (
+        <div className="flex flex-col space-y-1 py-1">
+          <div className="font-medium">{event.title}</div>
+          <div className="flex flex-col space-y-2 text-sm text-gray-600">
+            <div className="flex items-center">
+              <MapPin className="h-4 w-4 mr-1" />
+              <span>{event.extendedProps.location}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     // Grid view event rendering
     return (
       <div className="p-1 overflow-hidden">
         <div className="font-medium text-sm truncate">{event.title}</div>
         <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
+        <div className="text-xs opacity-75 truncate">{event.extendedProps.location}</div>
       </div>
     );
   };
 
-  if (!trip) return null;
-
-  console.log(trip.endDate);
+  const numDays = getDaysBetweenDates(trip.startDate, trip.endDate);
 
   return (
-    <div className="mt-[65px] w-1/2 h-[calc(100vh-65px)] flex flex-col">
+    <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)] flex flex-col">
       {/* Header */}
       <div className="px-4 py-3 border-b bg-white">
         <div className="flex items-center justify-between">
@@ -176,31 +192,30 @@ export function ItineraryView() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={rebalanceSchedule}
-              disabled={isRebalancing}
-            >
-              {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
-            </Button>
+            <span>{isRebalancing ? 'Optimizing...' : ''}</span>
             <div className="border rounded-lg">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setView('listWeek')}
-                className={view === 'listWeek' ? 'bg-gray-100' : ''}
+                onClick={() => {
+                  setView('listMonth');
+                  calendarRef.current!.getApi().changeView('listMonth');
+                }}
+                className={view === 'listMonth' ? 'bg-gray-100' : ''}
               >
-                <List className="w-4 h-4 mr-2" />
+                <List className="w-4 h-4 mr-1" />
                 List
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setView('timeGridTwoDay')}
-                className={view === 'timeGridTwoDay' ? 'bg-gray-100' : ''}
+                onClick={() => {
+                  setView('timeGrid');
+                  calendarRef.current!.getApi().changeView('timeGrid');
+                }}
+                className={view === 'timeGrid' ? 'bg-gray-100' : ''}
               >
-                <Calendar className="w-4 h-4 mr-2" />
+                <Calendar className="w-4 h-4 mr-1" />
                 Calendar
               </Button>
             </div>
@@ -209,39 +224,38 @@ export function ItineraryView() {
       </div>
 
       {/* Calendar */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-hidden bg-white px-4 mb-4">
         <FullCalendar
-          plugins={[timeGridPlugin, listPlugin, interactionPlugin]}
+          plugins={[timeGridPlugin, interactionPlugin, listPlugin]}
           initialView={view}
-          views={{
-            timeGridTwoDay: {
-              type: 'timeGrid',
-              duration: { days: 2 },
-            },
-            listWeek: {
-              type: 'list',
-              titleFormat: { month: 'long', day: 'numeric' },
-            },
-          }}
           headerToolbar={{
             right: 'prev,next',
-            center: 'title',
-            left: 'timeGridTwoDay,timeGridDay',
+            center: '',
+            left: '',
+          }}
+          views={{
+            timeGrid: {
+              type: 'timeGrid',
+              duration: { days: numDays > 7 ? 7 : numDays },
+            },
           }}
           events={scheduledEvents}
           editable={true}
           eventDrop={handleEventDrop}
           eventContent={renderEventContent}
           slotMinTime="00:00:00"
-          slotMaxTime="23:59:59"
           allDaySlot={false}
           eventOverlap={true}
+          stickyHeaderDates={false}
           height="100%"
+          dayHeaderFormat={{ weekday: 'long', month: 'numeric', day: 'numeric', omitCommas: true }}
           validRange={{
             start: trip.startDate,
             end: addDays(trip.endDate, 1),
           }}
+          nowIndicator
           scrollTime="08:00:00"
+          ref={calendarRef}
         />
       </div>
     </div>
