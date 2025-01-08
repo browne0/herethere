@@ -83,6 +83,8 @@ export function ItineraryView() {
 
   if (!trip) return <ItineraryLoading />;
 
+  console.log(trip.activities);
+
   // Convert scheduled activities to FullCalendar events
   const scheduledEvents = trip?.activities
     .filter(activity => activity.status === 'planned' && activity.startTime && activity.endTime)
@@ -105,11 +107,6 @@ export function ItineraryView() {
         editable: activity.status === 'planned',
       };
     });
-
-  // Get interested activities
-  const interestedActivities = trip?.activities.filter(
-    activity => activity.status === 'interested'
-  );
 
   const handleEventDrop = async (info: EventDropArg) => {
     try {
@@ -143,7 +140,6 @@ export function ItineraryView() {
   // Custom event rendering for list view
   const renderEventContent = (eventInfo: EventContentArg) => {
     const { event } = eventInfo;
-    const duration = event.extendedProps.duration;
 
     if (view === 'listMonth') {
       return (
@@ -196,7 +192,14 @@ export function ItineraryView() {
           </div>
 
           <div className="flex items-center space-x-2">
-            <span>{isRebalancing ? 'Optimizing...' : ''}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={rebalanceSchedule}
+              disabled={isRebalancing}
+            >
+              {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
+            </Button>
             <div className="border rounded-lg">
               <Button
                 variant="ghost"

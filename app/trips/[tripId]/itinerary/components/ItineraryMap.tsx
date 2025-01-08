@@ -116,7 +116,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
     const endDate = new Date(trip.endDate);
     const dayCount = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
 
-    for (let i = 0; i < dayCount; i++) {
+    for (let i = 0; i <= dayCount; i++) {
       const currentDate = new Date(startDate);
       currentDate.setDate(startDate.getDate() + i);
 
@@ -248,11 +248,9 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
 
   // Render markers for each day's activities
   const renderDayMarkers = (day: DayActivities) => {
-    const isCurrentDay = currentDayIndex === day.dayIndex;
-
     return day.activities.map(({ activity, status }) => {
       const isHighlighted = hoveredActivityId === activity.id || selectedActivityId === activity.id;
-      const shouldShowLabel = visibleLabels.has(activity.id) || isHighlighted || isCurrentDay;
+      const shouldShowLabel = visibleLabels.has(activity.id) || isHighlighted;
 
       return (
         <CustomMarker

@@ -206,7 +206,7 @@ function determineDuration(
   const durations: Record<PlaceCategory, number> = {
     MUSEUM: 120,
     HISTORIC: 60,
-    ATTRACTION: 120,
+    ATTRACTION: 90,
     PARK: 90,
     NIGHTLIFE: 120,
     BEACH: 180,
