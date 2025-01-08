@@ -160,7 +160,7 @@ export function RecommendationsView({ onDeleteClick, isEditModalOpen }: Recommen
               trip={trip}
             />
           </div>
-          {!isEditModalOpen && trip && <FloatingControlBar tripId={trip.id} />}
+          {!isEditModalOpen && trip && <FloatingControlBar />}
         </div>
       </div>
 

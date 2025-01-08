@@ -4,7 +4,6 @@ import type { Trip, ItineraryActivity, City } from '@prisma/client';
 import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { ActivityCategoryDetails } from '@/lib/types/activities';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
-
 export interface Location {
   latitude: number;
   longitude: number;
@@ -13,8 +12,12 @@ export interface Location {
   placeId?: string;
 }
 
+export type ActivityStatus = 'interested' | 'planned' | 'confirmed' | 'completed' | 'cancelled';
+
 export interface ParsedItineraryActivity extends ItineraryActivity {
   recommendation: ActivityRecommendation;
+  status: ActivityStatus;
+  city: City;
 }
 
 export interface ActivityCategoryType {

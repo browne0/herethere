@@ -1,6 +1,6 @@
-import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
+import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
-import { ActivityStatus, UpdateableActivityFields } from '@/lib/stores/activitiesStore';
+import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
 import {

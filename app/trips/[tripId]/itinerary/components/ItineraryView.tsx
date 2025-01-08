@@ -8,13 +8,13 @@ import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { addDays } from 'date-fns';
-import { Calendar, Clock, List, MapPin } from 'lucide-react';
+import { Calendar, List, MapPin } from 'lucide-react';
 import { toast } from 'sonner';
 import './calendar-overrides.css';
 
-import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
+import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { Button } from '@/components/ui/button';
-import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
 import ItineraryLoading from './ItineraryLoading';
 
@@ -46,7 +46,8 @@ const statusColors: Record<ActivityStatus, string> = {
 };
 
 export function ItineraryView() {
-  const { trip, updateActivity, setTrip } = useActivitiesStore();
+  const { trip, setTrip } = useActivitiesStore();
+  const { updateActivity } = useActivityMutations();
   const [view, setView] = useState<'listMonth' | 'timeGrid'>('listMonth');
   const [isRebalancing, setIsRebalancing] = useState(false);
   const calendarRef = useRef<FullCalendar>(null);
@@ -75,7 +76,7 @@ export function ItineraryView() {
   useEffect(() => {
     if (!trip) return;
 
-    if (!trip.lastRebalanced) {
+    if (trip.lastRebalanced === null) {
       rebalanceSchedule();
     }
   }, [rebalanceSchedule, trip]);
@@ -112,9 +113,12 @@ export function ItineraryView() {
 
   const handleEventDrop = async (info: EventDropArg) => {
     try {
-      await updateActivity(trip!.id, info.event.id, {
-        startTime: info.event.start,
-        endTime: info.event.end,
+      await updateActivity.mutateAsync({
+        activityId: info.event.id,
+        updates: {
+          startTime: info.event.start,
+          endTime: info.event.end,
+        },
       });
       toast.success('Activity rescheduled');
     } catch (_error) {
@@ -127,7 +131,7 @@ export function ItineraryView() {
     if (!trip) return;
 
     try {
-      await updateActivity(trip.id, activity.id, { status: 'planned' });
+      await updateActivity.mutateAsync({ activityId: activity.id, updates: { status: 'planned' } });
       toast.success('Added to schedule!', {
         description: "We'll find the best time for this activity.",
       });

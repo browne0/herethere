@@ -68,7 +68,9 @@ export function HowItWorks() {
           <h2 className="text-3xl md:text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
             How It Works
           </h2>
-          <p className="text-lg text-gray-600">From wishlist to perfect daily plan in minutes</p>
+          <p className="text-lg text-gray-600">
+            From wishlist to your perfect daily plan in minutes
+          </p>
         </div>
 
         {/* Steps Grid */}

@@ -43,7 +43,7 @@ export function FAQ() {
     {
       question: 'How does HereThere create personalized itineraries?',
       answer:
-        'HereThere uses advanced AI technology to analyze your preferences, dietary requirements, and travel style to create a custom itinerary. We consider factors like your chosen pace, budget, and specific interests to ensure every recommendation is perfectly suited to you.',
+        'HereThere uses advanced algorithms and AI assistants to analyze your preferences, dietary requirements, and travel style to create a curated list of recommendations for your itinerary. We consider factors like your chosen pace, budget, and specific interests to ensure every recommendation is perfectly suited to you.',
     },
     {
       question: "Can I modify my itinerary after it's generated?",
@@ -53,7 +53,7 @@ export function FAQ() {
     {
       question: 'What dietary restrictions can HereThere accommodate?',
       answer:
-        'HereThere supports a wide range of dietary requirements including vegetarian, vegan, gluten-free, kosher, halal, and various food allergies. Our system ensures all restaurant recommendations align with your specific dietary needs and preferences.',
+        'HereThere supports a wide range of dietary requirements including vegetarian, and vegan. Our system ensures all restaurant recommendations align with your specific dietary needs and preferences.',
     },
     {
       question: 'How far in advance should I plan my trip?',

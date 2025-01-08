@@ -1,4 +1,10 @@
+'use client';
+import { useRouter } from 'next/navigation';
+
+import { Button } from '../ui/button';
+
 export function MainCTA() {
+  const router = useRouter();
   return (
     <section className="py-20 bg-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -14,16 +20,16 @@ export function MainCTA() {
               Ready to Turn Your Travel Dreams Into Reality?
             </h2>
             <p className="text-lg text-indigo-100 mb-8">
-              Create your perfect daily plan, all in one place. No more endless research or
-              complicated spreadsheets & docs.
+              Create your perfect daily travel plan, all in one place. No more spending countless
+              hours on research or complicated spreadsheets & docs.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-              <a
-                href="#hero"
+              <Button
+                onClick={() => router.push('/sign-up')}
                 className="px-8 py-4 bg-white text-indigo-600 rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-0.5"
               >
                 Start Planning Your Dream Trip Today
-              </a>
+              </Button>
               <p className="text-sm text-indigo-100">No credit card required</p>
             </div>
           </div>

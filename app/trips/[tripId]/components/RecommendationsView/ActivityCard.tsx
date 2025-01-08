@@ -5,11 +5,15 @@ import ImageSlider from '@/components/ImageSlider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { GOOGLE_RESTAURANT_TYPES, MUSEUM_TYPES, RESTAURANT_TYPES } from '@/constants';
-import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
+import {
+  useActivitiesStore,
+  useActivityLoading,
+  useActivityMutations,
+} from '@/lib/stores/activitiesStore';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { formatNumberIntl } from '@/lib/utils';
 
-import { ActivityCategoryType } from '../../types';
+import { ActivityCategoryType, ActivityStatus } from '../../types';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -112,19 +116,14 @@ export const getPrimaryTypeDisplay = (activity: ActivityRecommendation): string 
 };
 
 export function ActivityCard({ activity, category, onHover }: ActivityCardProps) {
-  const {
-    findActivityByRecommendationId,
-    trip,
-    removeActivity,
-    updateActivity,
-    addActivity,
-    loadingActivities,
-  } = useActivitiesStore();
+  const { findActivityByRecommendationId, trip } = useActivitiesStore();
+
+  const { removeActivity, updateActivity, addActivity } = useActivityMutations();
 
   const existingActivity = findActivityByRecommendationId(activity.id);
   const currentStatus = existingActivity?.status || 'none';
 
-  const isActivityLoading = loadingActivities.has(activity.id);
+  const isActivityLoading = useActivityLoading(activity.id);
 
   const handleAction = async (newStatus: ActivityStatus) => {
     if (!trip || isActivityLoading) return;
@@ -132,12 +131,15 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
     try {
       // If clicking the same status, remove the activity
       if (existingActivity && currentStatus === newStatus) {
-        await removeActivity(trip.id, existingActivity.id);
+        await removeActivity.mutateAsync(existingActivity.id);
         toast.success('Activity removed from trip');
       } else {
         // If activity exists, update its status
         if (existingActivity) {
-          await updateActivity(trip.id, existingActivity.id, { status: newStatus });
+          await updateActivity.mutateAsync({
+            updates: { status: newStatus },
+            activityId: existingActivity.id,
+          });
           toast.success('Activity status updated', {
             description:
               newStatus === 'planned'
@@ -146,10 +148,7 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
           });
         } else {
           // Add new activity
-          await addActivity(trip.id, {
-            recommendationId: activity.id,
-            status: newStatus,
-          });
+          await addActivity.mutateAsync({ activity, status: newStatus });
           toast.success('Activity added!', {
             description:
               newStatus === 'planned'
@@ -159,6 +158,7 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
         }
       }
     } catch (_error) {
+      console.log(_error);
       // The store is handling the error state, but we'll show a user-friendly toast
       toast.error('Error', {
         description: 'Failed to manage activity. Please try again.',

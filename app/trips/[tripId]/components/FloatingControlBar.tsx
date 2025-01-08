@@ -32,30 +32,27 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
-import { ParsedItineraryActivity } from '../types';
-
-interface FloatingControlBarProps {
-  tripId: string;
-}
+import { ActivityStatus, ParsedItineraryActivity } from '../types';
 
 const ITEM_HEIGHT = 116; // Height of each MiniActivityCard in pixels
 
 const MiniActivityCard = ({
   activity,
   isInterested = false,
-  tripId,
 }: {
   activity: ParsedItineraryActivity;
   isInterested: boolean;
-  tripId: string;
 }) => {
-  const { updateActivity, removeActivity } = useActivitiesStore();
+  const { updateActivity, removeActivity } = useActivityMutations();
   const handleStatusChange = async (status: ActivityStatus) => {
     try {
-      await updateActivity(tripId, activity.id, { status });
+      await updateActivity.mutateAsync({
+        updates: { status },
+        activityId: activity.id,
+      });
     } catch (error) {
       toast.error('Failed to update status', {
         description: error instanceof Error ? error.message : 'An error occurred',
@@ -65,7 +62,7 @@ const MiniActivityCard = ({
 
   const handleRemove = async () => {
     try {
-      await removeActivity(tripId, activity.id);
+      await removeActivity.mutateAsync(activity.id);
     } catch (error) {
       toast.error('Failed to remove activity', {
         description: error instanceof Error ? error.message : 'An error occurred',
@@ -126,11 +123,9 @@ const MiniActivityCard = ({
 const VirtualizedActivityList = ({
   activities,
   isInterested,
-  tripId,
 }: {
   activities: ParsedItineraryActivity[];
   isInterested: boolean;
-  tripId: string;
 }) => {
   const parentRef = React.useRef<HTMLDivElement>(null);
 
@@ -162,11 +157,7 @@ const VirtualizedActivityList = ({
               transform: `translateY(${virtualRow.start}px)`,
             }}
           >
-            <MiniActivityCard
-              activity={activities[virtualRow.index]}
-              isInterested={isInterested}
-              tripId={tripId}
-            />
+            <MiniActivityCard activity={activities[virtualRow.index]} isInterested={isInterested} />
           </div>
         ))}
       </div>
@@ -174,7 +165,7 @@ const VirtualizedActivityList = ({
   );
 };
 
-const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
+const FloatingControlBar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const { trip } = useActivitiesStore();
@@ -229,7 +220,7 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
 
       {canGenerateItinerary ? (
         <Link
-          href={`/trips/${tripId}/itinerary`}
+          href={`/trips/${trip.id}/itinerary`}
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
           onClick={e => {
             e.stopPropagation();
@@ -317,11 +308,7 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
                   subMessage="Try adjusting your search"
                 />
               ) : (
-                <VirtualizedActivityList
-                  activities={filteredAdded}
-                  isInterested={false}
-                  tripId={tripId}
-                />
+                <VirtualizedActivityList activities={filteredAdded} isInterested={false} />
               )}
             </TabsContent>
 
@@ -337,11 +324,7 @@ const FloatingControlBar = ({ tripId }: FloatingControlBarProps) => {
                   subMessage="Try adjusting your search"
                 />
               ) : (
-                <VirtualizedActivityList
-                  activities={filteredInterested}
-                  isInterested={true}
-                  tripId={tripId}
-                />
+                <VirtualizedActivityList activities={filteredInterested} isInterested={true} />
               )}
             </TabsContent>
           </Tabs>

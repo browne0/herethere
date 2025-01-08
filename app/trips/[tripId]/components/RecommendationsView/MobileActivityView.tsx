@@ -24,16 +24,20 @@ import {
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ActivityStatus, useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
 import ActivityList from './ActivityList';
 import MobileCategoryNavigation from './MobileCategoryNavigation';
-import { ActivityCategoryType, ParsedTrip, ParsedItineraryActivity } from '../../types';
+import {
+  ActivityCategoryType,
+  ParsedTrip,
+  ParsedItineraryActivity,
+  ActivityStatus,
+} from '../../types';
 
 interface MiniActivityCardProps {
   activity: ParsedItineraryActivity;
-  tripId: string;
   onStatusChange: () => Promise<void>;
   onRemove: () => Promise<void>;
 }
@@ -54,7 +58,6 @@ interface SortConfig {
 
 interface VirtualizedActivityListProps {
   activities: ParsedItineraryActivity[];
-  tripId: string;
   onStatusChange: (activity: ParsedItineraryActivity) => Promise<void>;
   onRemove: (activityId: string) => Promise<void>;
 }
@@ -112,13 +115,16 @@ const ItineraryProgress = ({
   );
 };
 
-const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity, tripId }) => {
-  const { updateActivity: updateActivityStatus, removeActivity } = useActivitiesStore();
+const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity }) => {
+  const { updateActivity, removeActivity } = useActivityMutations();
 
   const handleStatusChange = async () => {
     const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
     try {
-      await updateActivityStatus(tripId, activity.id, { status: newStatus });
+      await updateActivity.mutateAsync({
+        updates: { status: newStatus },
+        activityId: activity.id,
+      });
     } catch (error) {
       console.error('Error updating activity:', error);
     }
@@ -126,7 +132,7 @@ const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity, tripId })
 
   const handleRemove = async () => {
     try {
-      await removeActivity(tripId, activity.id);
+      await removeActivity.mutateAsync(activity.id);
     } catch (error) {
       console.error('Error removing activity:', error);
     }
@@ -181,7 +187,6 @@ const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity, tripId })
 
 const VirtualizedActivityList: React.FC<VirtualizedActivityListProps> = ({
   activities,
-  tripId,
   onStatusChange,
   onRemove,
 }) => {
@@ -217,7 +222,6 @@ const VirtualizedActivityList: React.FC<VirtualizedActivityListProps> = ({
           >
             <MiniActivityCard
               activity={activities[virtualItem.index]}
-              tripId={tripId}
               onStatusChange={() => onStatusChange(activities[virtualItem.index])}
               onRemove={() => onRemove(activities[virtualItem.index].id)}
             />
@@ -229,7 +233,8 @@ const VirtualizedActivityList: React.FC<VirtualizedActivityListProps> = ({
 };
 
 const MyActivitiesContent = () => {
-  const { trip, updateActivity, removeActivity } = useActivitiesStore();
+  const { trip } = useActivitiesStore();
+  const { updateActivity, removeActivity } = useActivityMutations();
   const [searchQuery, setSearchQuery] = useState('');
   const [sortConfig, setSortConfig] = useState<SortConfig>({ field: 'name', direction: 'asc' });
 
@@ -295,7 +300,10 @@ const MyActivitiesContent = () => {
     if (!trip) return;
     const newStatus: ActivityStatus = activity.status === 'interested' ? 'planned' : 'interested';
     try {
-      await updateActivity(trip.id, activity.id, { status: newStatus });
+      await updateActivity.mutateAsync({
+        updates: { status: newStatus },
+        activityId: activity.id,
+      });
     } catch (error) {
       // The store handles error state, we just need to handle UI feedback
       console.error('Error updating activity:', error);
@@ -305,7 +313,7 @@ const MyActivitiesContent = () => {
   const handleRemove = async (activityId: string) => {
     if (!trip) return;
     try {
-      await removeActivity(trip.id, activityId);
+      await removeActivity.mutateAsync(activityId);
     } catch (error) {
       console.error('Error removing activity:', error);
     }
@@ -389,7 +397,6 @@ const MyActivitiesContent = () => {
             </div>
             <VirtualizedActivityList
               activities={filteredAndSortedActivities.added}
-              tripId={trip.id}
               onStatusChange={handleStatusChange}
               onRemove={handleRemove}
             />
@@ -404,7 +411,6 @@ const MyActivitiesContent = () => {
             </div>
             <VirtualizedActivityList
               activities={filteredAndSortedActivities.saved}
-              tripId={trip.id}
               onStatusChange={handleStatusChange}
               onRemove={handleRemove}
             />
