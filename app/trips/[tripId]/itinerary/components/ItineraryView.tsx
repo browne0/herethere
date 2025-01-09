@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 
 import { EventContentArg, EventDropArg } from '@fullcalendar/core/index.js';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -82,32 +82,72 @@ export function ItineraryView({ isEditModalOpen }: { isEditModalOpen: boolean })
     }
   }, [rebalanceSchedule, trip]);
 
-  if (!trip) return <ItineraryLoading />;
+  const scheduledEvents = useMemo(() => {
+    if (!trip) return [];
+
+    return trip?.activities
+      .filter(activity => activity.status === 'planned' && activity.startTime && activity.endTime)
+      .map(activity => {
+        const status = isValidActivityStatus(activity.status) ? activity.status : 'planned';
+        return {
+          id: activity.id,
+          title: activity.recommendation.name,
+          start: activity.startTime as Date,
+          end: activity.endTime as Date,
+          backgroundColor: statusColors[status],
+          extendedProps: {
+            status: activity.status,
+            location: activity.recommendation.location.address,
+            duration: activity.recommendation.duration,
+            recommendationId: activity.recommendationId,
+          },
+          editable: activity.status === 'planned',
+        };
+      });
+  }, [trip]);
+
+  const renderEventContent = useCallback(
+    (eventInfo: EventContentArg) => {
+      const { event } = eventInfo;
+
+      const getStreetAddress = (fullAddress: string) => {
+        // Split by commas and take the first part which is typically the street address
+        return fullAddress.split(',')[0].trim();
+      };
+
+      if (view === 'listMonth') {
+        return (
+          <div className="flex flex-col space-y-1 py-1">
+            <div className="font-medium">{event.title}</div>
+            <div className="flex flex-col space-y-2 text-sm text-gray-600">
+              <div className="flex items-center">
+                <MapPin className="h-4 w-4 mr-1" />
+                <span>{event.extendedProps.location}</span>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // Grid view event rendering
+      return (
+        <div className="p-1 overflow-hidden">
+          <div className="font-medium text-xs break-words">{event.title}</div>
+          <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
+          <div className="text-xs opacity-75 truncate">
+            {getStreetAddress(event.extendedProps.location)}
+          </div>
+        </div>
+      );
+    },
+    [view]
+  );
+
+  if (!trip || isRebalancing) return <ItineraryLoading />;
 
   console.log(trip.activities);
 
-  // Convert scheduled activities to FullCalendar events
-  const scheduledEvents = trip?.activities
-    .filter(activity => activity.status === 'planned' && activity.startTime && activity.endTime)
-    .map(activity => {
-      // Ensure we have a valid status before accessing statusColors
-      const status = isValidActivityStatus(activity.status) ? activity.status : 'planned';
-
-      return {
-        id: activity.id,
-        title: activity.recommendation.name,
-        start: activity.startTime as Date,
-        end: activity.endTime as Date,
-        backgroundColor: statusColors[status], // Now TypeScript knows this is safe
-        extendedProps: {
-          status: activity.status,
-          location: activity.recommendation.location.address,
-          duration: activity.recommendation.duration,
-          recommendationId: activity.recommendationId,
-        },
-        editable: activity.status === 'planned',
-      };
-    });
+  // Memoize the events array
 
   const handleEventDrop = async (info: EventDropArg) => {
     try {
@@ -136,41 +176,6 @@ export function ItineraryView({ isEditModalOpen }: { isEditModalOpen: boolean })
     } catch (_error) {
       toast.error('Failed to add to schedule');
     }
-  };
-
-  // Custom event rendering for list view
-  const renderEventContent = (eventInfo: EventContentArg) => {
-    const { event } = eventInfo;
-
-    const getStreetAddress = (fullAddress: string) => {
-      // Split by commas and take the first part which is typically the street address
-      return fullAddress.split(',')[0].trim();
-    };
-
-    if (view === 'listMonth') {
-      return (
-        <div className="flex flex-col space-y-1 py-1">
-          <div className="font-medium">{event.title}</div>
-          <div className="flex flex-col space-y-2 text-sm text-gray-600">
-            <div className="flex items-center">
-              <MapPin className="h-4 w-4 mr-1" />
-              <span>{event.extendedProps.location}</span>
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Grid view event rendering
-    return (
-      <div className="p-1 overflow-hidden">
-        <div className="font-medium text-xs break-words">{event.title}</div>
-        <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
-        <div className="text-xs opacity-75 truncate">
-          {getStreetAddress(event.extendedProps.location)}
-        </div>
-      </div>
-    );
   };
 
   const numDays = getDaysBetweenDates(trip.startDate, trip.endDate);
@@ -241,6 +246,7 @@ export function ItineraryView({ isEditModalOpen }: { isEditModalOpen: boolean })
       {/* Calendar */}
       <div className="flex-1 overflow-hidden bg-white px-4 mb-4">
         <FullCalendar
+          key={`calendar-${view}`}
           plugins={[timeGridPlugin, interactionPlugin, listPlugin]}
           initialView={view}
           headerToolbar={{

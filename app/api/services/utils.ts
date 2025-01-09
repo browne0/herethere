@@ -130,21 +130,16 @@ function isTimeWithinAnyPeriod(
   const dayOfWeek = time.getDay();
 
   return periods.some(period => {
-    // For 24-hour locations where we just have an opening time with no close
-    if (period.open && !period.close) {
-      return period.open.day === dayOfWeek;
-    }
-
-    // For regular hours
     if (!period.open || !period.close) return false;
 
     const openDay = period.open.day;
+    const closeDay = period.close.day;
     const openHour = period.open.hour;
     const openMinute = period.open.minute || 0;
     const closeHour = period.close.hour;
     const closeMinute = period.close.minute || 0;
 
-    if (openDay !== dayOfWeek || typeof openHour !== 'number' || typeof closeHour !== 'number') {
+    if (typeof openHour !== 'number' || typeof closeHour !== 'number') {
       return false;
     }
 
@@ -153,9 +148,23 @@ function isTimeWithinAnyPeriod(
     const openInMinutes = openHour * 60 + openMinute;
     const closeInMinutes = closeHour * 60 + closeMinute;
 
+    // Handle overnight periods
+    if (closeDay !== openDay) {
+      // If we're checking the start day
+      if (dayOfWeek === openDay) {
+        return timeInMinutes >= openInMinutes;
+      }
+      // If we're checking the end day
+      if (dayOfWeek === closeDay) {
+        return timeInMinutes <= closeInMinutes;
+      }
+    }
+
+    // Same day period
     return timeInMinutes >= openInMinutes && timeInMinutes <= closeInMinutes;
   });
 }
+
 function getReservedMealBlocks(activities: ParsedItineraryActivity[], date: Date): TimeBlock[] {
   const blocks: TimeBlock[] = [];
   const dayActivities = activities.filter(activity =>
@@ -387,25 +396,168 @@ function conflictsWithMeals(requiredMealBlocks: TimeBlock[], start: Date, end: D
   });
 }
 
-function hasActivityConflict(
-  start: Date,
-  end: Date,
-  activities: ParsedItineraryActivity[]
-): boolean {
-  return activities.some(activity => {
-    if (!activity.startTime || !activity.endTime) return false;
+// First, let's create an Interval Tree implementation
+class Interval {
+  constructor(
+    public start: Date,
+    public end: Date,
+    public activity?: ParsedItineraryActivity
+  ) {}
 
-    const activityStart = new Date(activity.startTime);
-    const activityEnd = new Date(activity.endTime);
+  overlaps(other: Interval): boolean {
+    return this.start < other.end && this.end > other.start;
+  }
 
-    // Check if either the start or end of the new slot overlaps with an existing activity
-    // or if the new slot completely encompasses an existing activity
-    return (
-      (start >= activityStart && start < activityEnd) ||
-      (end > activityStart && end <= activityEnd) ||
-      (start <= activityStart && end >= activityEnd)
-    );
-  });
+  containsTime(time: Date): boolean {
+    return time >= this.start && time < this.end;
+  }
+}
+
+class IntervalTreeNode {
+  public left: IntervalTreeNode | null = null;
+  public right: IntervalTreeNode | null = null;
+  public max: Date;
+
+  constructor(
+    public interval: Interval,
+    public height: number = 1
+  ) {
+    this.max = interval.end;
+  }
+}
+
+class IntervalTree {
+  private root: IntervalTreeNode | null = null;
+
+  insert(interval: Interval): void {
+    this.root = this._insert(this.root, interval);
+  }
+
+  private _insert(node: IntervalTreeNode | null, interval: Interval): IntervalTreeNode {
+    if (!node) {
+      return new IntervalTreeNode(interval);
+    }
+
+    if (interval.start < node.interval.start) {
+      node.left = this._insert(node.left, interval);
+    } else {
+      node.right = this._insert(node.right, interval);
+    }
+
+    // Update height and max
+    node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+    node.max = this.getMaxEnd(node);
+
+    // Balance the tree
+    return this.balance(node);
+  }
+
+  findOverlapping(interval: Interval): Interval[] {
+    const result: Interval[] = [];
+    this._findOverlapping(this.root, interval, result);
+    return result;
+  }
+
+  private _findOverlapping(
+    node: IntervalTreeNode | null,
+    interval: Interval,
+    result: Interval[]
+  ): void {
+    if (!node) return;
+
+    // If current node's max is less than interval start, no overlaps possible
+    if (node.max <= interval.start) return;
+
+    // Check left subtree
+    if (node.left && node.left.max > interval.start) {
+      this._findOverlapping(node.left, interval, result);
+    }
+
+    // Check current node
+    if (node.interval.overlaps(interval)) {
+      result.push(node.interval);
+    }
+
+    // Check right subtree if needed
+    if (node.right && node.interval.start < interval.end) {
+      this._findOverlapping(node.right, interval, result);
+    }
+  }
+
+  // Helper methods for AVL tree balancing
+  private getHeight(node: IntervalTreeNode | null): number {
+    return node ? node.height : 0;
+  }
+
+  private getMaxEnd(node: IntervalTreeNode): Date {
+    const leftMax = node.left ? node.left.max : new Date(0);
+    const rightMax = node.right ? node.right.max : new Date(0);
+    return new Date(Math.max(node.interval.end.getTime(), leftMax.getTime(), rightMax.getTime()));
+  }
+
+  private balance(node: IntervalTreeNode): IntervalTreeNode {
+    const balance = this.getHeight(node.left) - this.getHeight(node.right);
+
+    if (balance > 1) {
+      if (this.getHeight(node.left!.left) >= this.getHeight(node.left!.right)) {
+        return this.rightRotate(node);
+      } else {
+        node.left = this.leftRotate(node.left!);
+        return this.rightRotate(node);
+      }
+    }
+
+    if (balance < -1) {
+      if (this.getHeight(node.right!.right) >= this.getHeight(node.right!.left)) {
+        return this.leftRotate(node);
+      } else {
+        node.right = this.rightRotate(node.right!);
+        return this.leftRotate(node);
+      }
+    }
+
+    return node;
+  }
+
+  private leftRotate(node: IntervalTreeNode): IntervalTreeNode {
+    const rightChild = node.right!;
+    const rightLeftChild = rightChild.left;
+
+    rightChild.left = node;
+    node.right = rightLeftChild;
+
+    node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+    rightChild.height =
+      1 + Math.max(this.getHeight(rightChild.left), this.getHeight(rightChild.right));
+
+    node.max = this.getMaxEnd(node);
+    rightChild.max = this.getMaxEnd(rightChild);
+
+    return rightChild;
+  }
+
+  private rightRotate(node: IntervalTreeNode): IntervalTreeNode {
+    const leftChild = node.left!;
+    const leftRightChild = leftChild.right;
+
+    leftChild.right = node;
+    node.left = leftRightChild;
+
+    node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
+    leftChild.height =
+      1 + Math.max(this.getHeight(leftChild.left), this.getHeight(leftChild.right));
+
+    node.max = this.getMaxEnd(node);
+    leftChild.max = this.getMaxEnd(leftChild);
+
+    return leftChild;
+  }
+}
+
+// Now let's modify the conflict checking functions to use the interval tree
+function hasActivityConflict(start: Date, end: Date, intervalTree: IntervalTree): boolean {
+  const newInterval = new Interval(start, end);
+  return intervalTree.findOverlapping(newInterval).length > 0;
 }
 
 function handleRestaurantSlots(
@@ -521,29 +673,54 @@ export function findAvailableSlots(
   tripStart: Date,
   tripEnd: Date,
   userPreferences: UserPreferences,
-  isLateNightVenue: boolean = false
+  recommendation: ActivityRecommendation
 ): Date[] {
   // Early return if the date is outside trip bounds
   if (date < tripStart || date > tripEnd) {
     return [];
   }
 
+  // Create interval tree at start of function
+  const intervalTree = new IntervalTree();
+  activities.forEach(activity => {
+    if (activity.startTime && activity.endTime) {
+      intervalTree.insert(
+        new Interval(new Date(activity.startTime), new Date(activity.endTime), activity)
+      );
+    }
+  });
+
   const slots: Date[] = [];
   const periods = openingHours?.periods || [];
 
-  // For late night venues, include periods that start on current day OR end on next day
-  const dayPeriods = isLateNightVenue
-    ? periods.filter(
-        period =>
-          period?.open?.day === date.getDay() ||
-          (period?.close?.day === (date.getDay() + 1) % 7 &&
-            typeof period?.close?.hour === 'number' &&
-            period.close.hour <= 4)
-      )
+  const EVENING_VENUE_TYPES = CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes;
+  const isEveningVenue = recommendation.placeTypes.some(type => EVENING_VENUE_TYPES.includes(type));
+
+  // Update period filtering for evening venues
+  const dayPeriods = isEveningVenue
+    ? periods.filter(period => {
+        if (!period?.open) return false;
+
+        // For evening venues, we want periods that:
+        // 1. Start on current day
+        // 2. OR end on next day (for overnight venues)
+        const currentDay = date.getDay();
+        const nextDay = (currentDay + 1) % 7;
+
+        return (
+          period.open.day === currentDay ||
+          (period.close?.day === nextDay && period.open.day === currentDay)
+        );
+      })
     : periods.filter(period => period?.open?.day === date.getDay());
 
   if (!dayPeriods.length) {
-    console.warn(`No opening hours found for day ${date.getDay()}`);
+    console.warn(
+      `No opening hours found for day ${date.getDay()} for ${recommendation.name}`,
+      `isEveningVenue: ${isEveningVenue}`,
+      `Available periods:`,
+      periods.map(p => `${p?.open?.day}->${p?.close?.day}`)
+    );
     return slots;
   }
 
@@ -555,7 +732,7 @@ export function findAvailableSlots(
 
   // Handle 24-hour locations
   if (is24Hours) {
-    const endHour = isLateNightVenue ? 1 : 22;
+    const endHour = isEveningVenue ? 1 : 22;
     let currentTime = new Date(date);
     currentTime.setHours(preferredStartHour, 0, 0, 0);
 
@@ -566,7 +743,7 @@ export function findAvailableSlots(
     }
 
     const endTime = new Date(date);
-    if (isLateNightVenue) {
+    if (isEveningVenue) {
       endTime.setDate(endTime.getDate() + 1);
       endTime.setHours(endHour, 0, 0, 0);
     } else {
@@ -582,7 +759,7 @@ export function findAvailableSlots(
       potentialEndTime.setMinutes(potentialEndTime.getMinutes() + duration);
 
       if (
-        !hasActivityConflict(currentTime, potentialEndTime, activities) &&
+        !hasActivityConflict(currentTime, potentialEndTime, intervalTree) &&
         !conflictsWithMeals(getReservedMealBlocks(activities, date), currentTime, potentialEndTime)
       ) {
         slots.push(new Date(currentTime));
@@ -594,14 +771,14 @@ export function findAvailableSlots(
     return slots;
   }
 
-  // Get activities for just this day and potentially early morning next day
+  // 3. Update activity filtering
   const relevantActivities = activities.filter(activity => {
     if (!activity.startTime || !activity.endTime) return false;
     const activityStart = new Date(activity.startTime);
-    if (isLateNightVenue) {
+    if (isEveningVenue) {
       const nextDay = new Date(date);
       nextDay.setDate(nextDay.getDate() + 1);
-      nextDay.setHours(4, 0, 0, 0);
+      nextDay.setHours(1, 0, 0, 0); // Allow scheduling until 1 AM
       return (
         isSameDay(activityStart, date) ||
         (activityStart <= nextDay && activityStart.getDate() === date.getDate() + 1)
@@ -645,23 +822,30 @@ export function findAvailableSlots(
 
     let startTime = new Date(date);
     startTime.setHours(openHour, openMinute, 0, 0);
-    if (startTime < tripStart) startTime = new Date(tripStart);
 
-    if (startTime.getHours() < preferredStartHour && !isLateNightVenue) {
-      startTime.setHours(preferredStartHour, 0, 0, 0);
+    // For evening venues, ensure we start no earlier than 7 PM
+    if (isEveningVenue) {
+      const eveningStart = new Date(date);
+      eveningStart.setHours(19, 0, 0, 0);
+      startTime = startTime < eveningStart ? eveningStart : startTime;
     }
 
     let periodEnd = new Date(date);
-    if (period.close.day !== period.open.day) {
-      // Handle periods that cross midnight
+    if (period.close?.day !== period.open?.day) {
+      // Handle overnight venues properly
       periodEnd.setDate(periodEnd.getDate() + 1);
     }
     periodEnd.setHours(closeHour, closeMinute, 0, 0);
 
-    // For late night venues, don't go past 4 AM
-    if (isLateNightVenue && periodEnd.getHours() >= 4 && periodEnd.getDate() > date.getDate()) {
-      periodEnd = new Date(periodEnd);
-      periodEnd.setHours(4, 0, 0, 0);
+    // For evening venues, allow slots until 2 AM next day maximum
+    if (isEveningVenue) {
+      const nextDay2AM = new Date(date);
+      nextDay2AM.setDate(nextDay2AM.getDate() + 1);
+      nextDay2AM.setHours(2, 0, 0, 0);
+
+      if (periodEnd > nextDay2AM) {
+        periodEnd = nextDay2AM;
+      }
     }
 
     const effectiveEndTime = periodEnd > tripEnd ? tripEnd : periodEnd;
@@ -670,6 +854,18 @@ export function findAvailableSlots(
     while (currentTime <= effectiveEndTime) {
       const potentialEndTime = new Date(currentTime);
       potentialEndTime.setMinutes(potentialEndTime.getMinutes() + duration);
+
+      // Debug logging
+      console.log('Checking time slot:', {
+        venueName: recommendation.name,
+        currentTime: currentTime.toISOString(),
+        potentialEndTime: potentialEndTime.toISOString(),
+        effectiveEndTime: effectiveEndTime.toISOString(),
+        isWithinPeriods: {
+          start: isTimeWithinAnyPeriod(currentTime, dayPeriods),
+          end: isTimeWithinAnyPeriod(potentialEndTime, dayPeriods),
+        },
+      });
 
       if (
         potentialEndTime <= tripEnd &&
@@ -681,17 +877,7 @@ export function findAvailableSlots(
           currentTime,
           potentialEndTime
         );
-
-        const hasConflict = relevantActivities.some(activity => {
-          if (!activity.startTime || !activity.endTime) return false;
-          const activityStart = new Date(activity.startTime);
-          const activityEnd = new Date(activity.endTime);
-          return (
-            (currentTime >= activityStart && currentTime < activityEnd) ||
-            (potentialEndTime > activityStart && potentialEndTime <= activityEnd) ||
-            (currentTime <= activityStart && potentialEndTime >= activityEnd)
-          );
-        });
+        const hasConflict = hasActivityConflict(currentTime, potentialEndTime, intervalTree);
 
         if (!hasMealConflict && !hasConflict) {
           slots.push(new Date(currentTime));
@@ -704,6 +890,7 @@ export function findAvailableSlots(
 
   return slots;
 }
+
 // Calculate total available time in the trip
 export function calculateAvailableTime(trip: Pick<ParsedTrip, 'endDate' | 'startDate'>): number {
   const startDate = new Date(trip.startDate);
@@ -782,6 +969,7 @@ export async function scheduleActivities(
   let scheduledMinutes = 0;
   const scheduledActivities: ParsedItineraryActivity[] = [];
   const unscheduledActivities: ParsedItineraryActivity[] = [];
+  const activityIntervals = new IntervalTree();
 
   const sortedActivities = activities.sort((a, b) => {
     // First priority: Must-see attractions
@@ -826,7 +1014,8 @@ export async function scheduleActivities(
         trip,
         activity.recommendation,
         scheduledActivities,
-        userPreferences
+        userPreferences,
+        activityIntervals // Pass the interval tree
       );
 
       if (!bestSlot) {
@@ -835,11 +1024,16 @@ export async function scheduleActivities(
         continue;
       }
 
+      const endTime = addMinutes(bestSlot, activity.recommendation.duration);
+
+      // Add the scheduled activity to the interval tree
+      activityIntervals.insert(new Interval(bestSlot, endTime, activity));
+
       await prisma.itineraryActivity.update({
         where: { id: activity.id },
         data: {
           startTime: bestSlot,
-          endTime: addMinutes(bestSlot, activity.recommendation.duration),
+          endTime,
           transitTimeFromPrevious: bestTransitTime,
         },
       });
@@ -847,7 +1041,7 @@ export async function scheduleActivities(
       const updatedActivity = {
         ...activity,
         startTime: bestSlot,
-        endTime: addMinutes(bestSlot, activity.recommendation.duration),
+        endTime,
         transitTimeFromPrevious: bestTransitTime,
       };
       scheduledActivities.push(updatedActivity);
@@ -865,7 +1059,8 @@ export async function findBestTimeSlot(
   trip: ParsedTrip,
   recommendation: ActivityRecommendation,
   existingActivities: ParsedItineraryActivity[],
-  userPreferences: UserPreferences
+  userPreferences: UserPreferences,
+  activityIntervals: IntervalTree
 ): Promise<TimeSlotResult> {
   let bestSlot: Date | null = null;
   let bestScore = -Infinity;
@@ -907,12 +1102,12 @@ export async function findBestTimeSlot(
       scheduledActivities,
       currentDate,
       recommendation.duration,
-      recommendation.openingHours as protos.google.maps.places.v1.Place.IOpeningHours,
+      recommendation.openingHours,
       isRestaurant,
       tripStart,
       tripEnd,
       userPreferences,
-      isEveningVenue
+      recommendation
     );
 
     for (const slot of availableSlots) {
@@ -949,6 +1144,7 @@ export async function findBestTimeSlot(
         previousActivity,
         existingActivities: scheduledActivities,
         transitTime,
+        intervalTree: activityIntervals,
       });
 
       // Skip this slot if it's not valid
@@ -991,7 +1187,8 @@ export async function validateActivityTimeSlot({
   previousActivity,
   existingActivities,
   transitTime = 30,
-}: ValidateTimeSlotParams): Promise<ValidationResult> {
+  intervalTree,
+}: ValidateTimeSlotParams & { intervalTree: IntervalTree }): Promise<ValidationResult> {
   if (!startTime) {
     return { isValid: false, reason: 'No start time provided' };
   }
@@ -999,40 +1196,64 @@ export async function validateActivityTimeSlot({
   const endTime = new Date(startTime);
   endTime.setMinutes(endTime.getMinutes() + duration);
 
-  if (startTime < tripStart || endTime > tripEnd) {
+  // Adjust end time validation for evening venues that go past midnight
+  const adjustedTripEnd = new Date(tripEnd);
+  if (startTime.getHours() >= 19) {
+    adjustedTripEnd.setDate(adjustedTripEnd.getDate() + 1);
+    adjustedTripEnd.setHours(2, 0, 0, 0);
+  }
+
+  if (startTime < tripStart || endTime > adjustedTripEnd) {
     return {
       isValid: false,
       reason: 'Activity falls outside trip dates',
     };
   }
 
-  // Check transit time with reduced buffer
-  if (previousActivity && previousActivity.endTime) {
+  // Strengthen transit time check
+  if (previousActivity?.endTime) {
     const previousEndTime = new Date(previousActivity.endTime);
     const minimumStartTime = new Date(previousEndTime);
     minimumStartTime.setMinutes(minimumStartTime.getMinutes() + transitTime + BUFFER_TIME_MINUTES);
 
-    if (startTime < minimumStartTime) {
+    if (startTime <= minimumStartTime) {
+      // Changed from < to <= to prevent exact same time scheduling
       return {
         isValid: false,
-        reason: `Insufficient transit time from previous activity`,
+        reason: `Insufficient transit time from previous activity (needs ${transitTime + BUFFER_TIME_MINUTES} minutes)`,
       };
     }
   }
 
-  // Check for direct conflicts with existing activities
-  const hasConflict = existingActivities.some(activity => {
-    if (!activity.startTime || !activity.endTime) return false;
-
-    const activityStart = new Date(activity.startTime);
+  // Also check for any activities that end right before this one
+  const previousEndingActivities = existingActivities.filter(activity => {
+    if (!activity.endTime) return false;
     const activityEnd = new Date(activity.endTime);
-
-    return (
-      (startTime >= activityStart && startTime < activityEnd) ||
-      (endTime > activityStart && endTime <= activityEnd) ||
-      (startTime <= activityStart && endTime >= activityEnd)
-    );
+    return activityEnd <= startTime && isSameDay(activityEnd, startTime);
   });
+
+  if (previousEndingActivities.length > 0) {
+    const lastEndingActivity = previousEndingActivities.reduce((latest, current) => {
+      if (!latest.endTime || !current.endTime) return current;
+      return new Date(latest.endTime) > new Date(current.endTime) ? latest : current;
+    });
+
+    if (lastEndingActivity.endTime) {
+      const lastEnd = new Date(lastEndingActivity.endTime);
+      const minimumGap = transitTime + BUFFER_TIME_MINUTES;
+      const actualGap = (startTime.getTime() - lastEnd.getTime()) / (1000 * 60); // Convert to minutes
+
+      if (actualGap < minimumGap) {
+        return {
+          isValid: false,
+          reason: `Need at least ${minimumGap} minutes between activities (currently ${Math.floor(actualGap)} minutes)`,
+        };
+      }
+    }
+  }
+
+  // Rest of the validation remains the same...
+  const hasConflict = hasActivityConflict(startTime, endTime, intervalTree);
 
   if (hasConflict) {
     return {
@@ -1041,7 +1262,6 @@ export async function validateActivityTimeSlot({
     };
   }
 
-  // Convert meal time conflicts to score adjustments instead of hard failures
   const mealtimeConflict = conflictsWithMeals(
     getReservedMealBlocks(existingActivities, startTime),
     startTime,
