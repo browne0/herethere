@@ -17,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
 import ItineraryLoading from './ItineraryLoading';
-import FloatingControlBar from '../../components/FloatingControlBar';
 
 function isValidActivityStatus(status: string): status is ActivityStatus {
   return ['interested', 'planned', 'confirmed', 'completed', 'cancelled'].includes(status);
@@ -46,7 +45,7 @@ const statusColors: Record<ActivityStatus, string> = {
   cancelled: '#ef4444',
 };
 
-export function ItineraryView({ isEditModalOpen }: { isEditModalOpen: boolean }) {
+export function ItineraryView() {
   const { trip, setTrip } = useActivitiesStore();
   const { updateActivity } = useActivityMutations();
   const [view, setView] = useState<'listMonth' | 'timeGrid'>('listMonth');
@@ -279,7 +278,6 @@ export function ItineraryView({ isEditModalOpen }: { isEditModalOpen: boolean })
           ref={calendarRef}
         />
       </div>
-      {!isEditModalOpen && trip && <FloatingControlBar />}
     </div>
   );
 }

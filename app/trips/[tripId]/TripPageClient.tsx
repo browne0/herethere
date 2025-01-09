@@ -60,10 +60,7 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
   return (
     <div className="bg-white">
       <TripHeader onEditClick={() => setIsEditModalOpen(true)} />
-      <RecommendationsView
-        onDeleteClick={() => setIsDeleteDialogOpen(true)}
-        isEditModalOpen={isEditModalOpen}
-      />
+      <RecommendationsView onDeleteClick={() => setIsDeleteDialogOpen(true)} />
       <DeleteTripDialog
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}

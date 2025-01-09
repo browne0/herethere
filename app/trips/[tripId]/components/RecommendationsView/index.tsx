@@ -12,11 +12,9 @@ import ActivityList from './ActivityList';
 import CategoryNavigation from './CategoryNavigation';
 import MobileActivityView from './MobileActivityView';
 import RecommendationsMapView from './RecommendationsMapView';
-import FloatingControlBar from '../FloatingControlBar';
 
 interface RecommendationsViewProps {
   onDeleteClick: () => void;
-  isEditModalOpen: boolean;
 }
 
 interface ResponsiveMapContainerProps {
@@ -58,7 +56,7 @@ const ResponsiveMapContainer = ({ children, snap, className }: ResponsiveMapCont
   );
 };
 
-export function RecommendationsView({ onDeleteClick, isEditModalOpen }: RecommendationsViewProps) {
+export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -160,7 +158,6 @@ export function RecommendationsView({ onDeleteClick, isEditModalOpen }: Recommen
               trip={trip}
             />
           </div>
-          {!isEditModalOpen && trip && <FloatingControlBar />}
         </div>
       </div>
 

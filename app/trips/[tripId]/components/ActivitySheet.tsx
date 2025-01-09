@@ -1,8 +1,9 @@
+'use client';
+
 import React, { useMemo, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { MapPin, Star, MoreVertical, Heart, Trash2, Plus, Search, X, List } from 'lucide-react';
-import { usePathname, useRouter } from 'next/navigation';
+import { MapPin, Star, MoreVertical, Heart, Trash2, Plus, Search, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -13,24 +14,18 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from '@/components/ui/sheet';
+import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
 import { ActivityStatus, ParsedItineraryActivity } from '../types';
 
-const ITEM_HEIGHT = 116; // Height of each MiniActivityCard in pixels
+const ITEM_HEIGHT = 116;
 
 const MiniActivityCard = ({
   activity,
-  isInterested = false,
+  isInterested,
 }: {
   activity: ParsedItineraryActivity;
   isInterested: boolean;
@@ -154,11 +149,8 @@ const VirtualizedActivityList = ({
   );
 };
 
-const FloatingControlBar = () => {
-  const [isExpanded, setIsExpanded] = useState(false);
+export const ActivitySheet = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const router = useRouter();
-  const pathname = usePathname();
   const { trip } = useActivitiesStore();
 
   const addedActivities = useMemo(() => {
@@ -188,53 +180,6 @@ const FloatingControlBar = () => {
   const filteredAdded = filterActivities(addedActivities);
   const filteredInterested = filterActivities(interestedActivities);
 
-  const MINIMUM_ACTIVITIES = 1;
-  const canGenerateItinerary = addedActivities.length >= MINIMUM_ACTIVITIES;
-
-  const ControlBarContent = () => (
-    <div className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3">
-      <div className="flex items-center justify-between space-x-4 mr-4">
-        {isExpanded ? (
-          <List className="w-5 h-5 text-gray-400" />
-        ) : (
-          <List className="w-5 h-5 text-gray-400 group-hover:text-gray-600 transition-all " />
-        )}
-        <div className="text-center">
-          <span className="text-lg font-semibold">{addedActivities.length}</span>
-          <span className="text-gray-500 ml-2">Added</span>
-        </div>
-        <div className="text-center">
-          <span className="text-lg font-semibold">{interestedActivities.length}</span>
-          <span className="text-gray-500 ml-2">Interested</span>
-        </div>
-      </div>
-
-      {pathname.endsWith('itinerary') ? (
-        <Button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-          role="navigation"
-          onClick={e => {
-            e.stopPropagation();
-            router.push(`/trips/${trip.id}`);
-          }}
-        >
-          View Recommendations
-        </Button>
-      ) : (
-        <Button
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-          role="navigation"
-          onClick={e => {
-            e.stopPropagation();
-            router.push(`/trips/${trip.id}/itinerary`);
-          }}
-        >
-          View Itinerary
-        </Button>
-      )}
-    </div>
-  );
-
   const EmptyState = ({ message, subMessage }: { message: string; subMessage: string }) => (
     <div className="flex flex-col items-center justify-center p-8 text-gray-500 h-full">
       <p>{message}</p>
@@ -243,93 +188,70 @@ const FloatingControlBar = () => {
   );
 
   return (
-    <div
-      className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg mx-auto"
-      style={{ zIndex: 100 }}
-    >
-      <Sheet open={isExpanded} onOpenChange={setIsExpanded}>
-        {/* Collapsed bar */}
-        {!isExpanded && (
-          <div
-            role="button"
-            onClick={() => setIsExpanded(true)}
-            className="w-full cursor-pointer group hover:bg-gray-50 transition-colors rounded-lg border border-slate-500"
-          >
-            <ControlBarContent />
+    <SheetContent side="right" className="px-0 pb-0 rounded-l-lg w-full lg:max-w-2xl">
+      <SheetHeader className="px-4">
+        <SheetTitle>Selected Activities</SheetTitle>
+        <SheetDescription className="sr-only">Selected activities list</SheetDescription>
+      </SheetHeader>
+
+      <Tabs defaultValue={defaultTab} className="mt-4 flex flex-col h-[calc(100%-95px)]">
+        <div className="px-4 flex items-center justify-between gap-4 flex-shrink-0">
+          <TabsList className="flex-shrink-0">
+            <TabsTrigger value="added">Added ({addedActivities.length})</TabsTrigger>
+            <TabsTrigger value="interested">Interested ({interestedActivities.length})</TabsTrigger>
+          </TabsList>
+
+          <div className="relative flex-1 max-w-xs">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+            <Input
+              placeholder="Search activities"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 pr-8 h-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* Expanded content */}
-        <SheetContent side="right" className="px-0 pb-0 rounded-l-lg w-full lg:max-w-2xl">
-          <SheetHeader className="px-4">
-            <SheetTitle>Selected Activities</SheetTitle>
-            <SheetDescription className="sr-only">Selected activities list</SheetDescription>
-          </SheetHeader>
+        <TabsContent value="added" className="flex-1 mt-4 h-full">
+          {addedActivities.length === 0 ? (
+            <EmptyState
+              message="No activities added yet"
+              subMessage="Add some activities to get started"
+            />
+          ) : filteredAdded.length === 0 ? (
+            <EmptyState
+              message="No matching activities found"
+              subMessage="Try adjusting your search"
+            />
+          ) : (
+            <VirtualizedActivityList activities={filteredAdded} isInterested={false} />
+          )}
+        </TabsContent>
 
-          <Tabs defaultValue={defaultTab} className="mt-4 flex flex-col h-[calc(100%-95px)]">
-            <div className="px-4 flex items-center justify-between gap-4 flex-shrink-0">
-              <TabsList className="flex-shrink-0">
-                <TabsTrigger value="added">Added ({addedActivities.length})</TabsTrigger>
-                <TabsTrigger value="interested">
-                  Interested ({interestedActivities.length})
-                </TabsTrigger>
-              </TabsList>
-
-              <div className="relative flex-1 max-w-xs">
-                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search activities"
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="pl-9 pr-8 h-9"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <TabsContent value="added" className="flex-1 mt-4 h-full">
-              {addedActivities.length === 0 ? (
-                <EmptyState
-                  message="No activities added yet"
-                  subMessage="Add some activities to get started"
-                />
-              ) : filteredAdded.length === 0 ? (
-                <EmptyState
-                  message="No matching activities found"
-                  subMessage="Try adjusting your search"
-                />
-              ) : (
-                <VirtualizedActivityList activities={filteredAdded} isInterested={false} />
-              )}
-            </TabsContent>
-
-            <TabsContent value="interested" className="flex-1 mt-4 h-full">
-              {interestedActivities.length === 0 ? (
-                <EmptyState
-                  message="No interested activities yet"
-                  subMessage="Mark some activities as interested to save them for later"
-                />
-              ) : filteredInterested.length === 0 ? (
-                <EmptyState
-                  message="No matching activities found"
-                  subMessage="Try adjusting your search"
-                />
-              ) : (
-                <VirtualizedActivityList activities={filteredInterested} isInterested={true} />
-              )}
-            </TabsContent>
-          </Tabs>
-        </SheetContent>
-      </Sheet>
-    </div>
+        <TabsContent value="interested" className="flex-1 mt-4 h-full">
+          {interestedActivities.length === 0 ? (
+            <EmptyState
+              message="No interested activities yet"
+              subMessage="Mark some activities as interested to save them for later"
+            />
+          ) : filteredInterested.length === 0 ? (
+            <EmptyState
+              message="No matching activities found"
+              subMessage="Try adjusting your search"
+            />
+          ) : (
+            <VirtualizedActivityList activities={filteredInterested} isInterested={true} />
+          )}
+        </TabsContent>
+      </Tabs>
+    </SheetContent>
   );
 };
-
-export default FloatingControlBar;
