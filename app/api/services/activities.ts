@@ -3,13 +3,7 @@ import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
-import {
-  calculateAvailableTime,
-  calculateTotalTimeNeeded,
-  formatDuration,
-  clearSchedulingData,
-  scheduleActivities,
-} from './utils';
+import { scheduleActivities } from './utils';
 
 interface UpdateActivityParams {
   tripId: string;
@@ -53,8 +47,6 @@ export const activityService = {
       },
     })) as unknown as ParsedItineraryActivity[];
 
-    await clearSchedulingData(tripId);
-
     await scheduleActivities(plannedActivities, trip);
 
     const updatedActivities = (await prisma.itineraryActivity.findMany({
@@ -67,24 +59,6 @@ export const activityService = {
       scheduled: updatedActivities.filter(a => a.status === 'planned' && a.startTime),
       unscheduled: updatedActivities.filter(a => a.status === 'planned' && !a.startTime),
     };
-  },
-
-  async validatePlannedCapacity(tripId: string, userId: string) {
-    const trip = await tripService.getTrip({
-      userId,
-      tripId,
-      include: ['activities'],
-    });
-
-    const plannedActivities = trip.activities.filter(a => a.status === 'planned');
-    const availableTime = calculateAvailableTime(trip);
-    const requiredTime = calculateTotalTimeNeeded(plannedActivities);
-
-    if (requiredTime > availableTime) {
-      throw new Error(
-        `Trip is at capacity. Current activities require ${formatDuration(requiredTime)} but only ${formatDuration(availableTime)} available.`
-      );
-    }
   },
 
   async createActivity({ tripId, recommendationId, status }: CreateActivityParams) {

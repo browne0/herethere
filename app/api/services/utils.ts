@@ -757,7 +757,7 @@ export function formatDuration(minutes: number): string {
 }
 
 // Clear existing scheduling data to rebuild schedule
-export async function clearSchedulingData(tripId: string): Promise<void> {
+async function clearSchedulingData(tripId: string): Promise<void> {
   await prisma.itineraryActivity.updateMany({
     where: {
       tripId,
@@ -776,6 +776,7 @@ export async function scheduleActivities(
   activities: ParsedItineraryActivity[],
   trip: ParsedTrip
 ): Promise<number> {
+  await clearSchedulingData(trip.id);
   const userPreferences = await preferencesService.getPreferences(trip.userId);
 
   let scheduledMinutes = 0;
@@ -858,86 +859,6 @@ export async function scheduleActivities(
   }
 
   return scheduledMinutes;
-}
-
-/**
- * Attempts to fit interested activities into remaining schedule time
- * Considers existing planned activities and schedule constraints
- */
-export async function tryFitInterestedActivities(
-  trip: ParsedTrip,
-  tripId: string,
-  remainingMinutes: number
-): Promise<void> {
-  // Get both interested and already planned activities
-  const [interestedActivities, plannedActivities] = await Promise.all([
-    prisma.itineraryActivity.findMany({
-      where: {
-        tripId,
-        status: 'interested',
-      },
-      include: {
-        recommendation: true,
-      },
-      orderBy: {
-        recommendation: {
-          rating: 'desc',
-        },
-      },
-    }),
-    prisma.itineraryActivity.findMany({
-      where: {
-        tripId,
-        status: 'planned',
-      },
-      include: {
-        recommendation: true,
-      },
-    }),
-  ]);
-
-  const userPreferences = await preferencesService.getPreferences(trip.userId);
-
-  let availableMinutes = remainingMinutes;
-  const currentSchedule = plannedActivities as unknown as ParsedItineraryActivity[];
-
-  for (const activity of interestedActivities) {
-    const timeNeeded = activity.recommendation.duration + 45; // Activity + transit/buffer
-
-    if (availableMinutes >= timeNeeded) {
-      try {
-        const { bestSlot, bestTransitTime } = await findBestTimeSlot(
-          trip,
-          activity.recommendation as unknown as ActivityRecommendation,
-          currentSchedule,
-          userPreferences
-        );
-
-        if (bestSlot) {
-          const updatedActivity = await prisma.itineraryActivity.update({
-            where: { id: activity.id },
-            data: {
-              status: 'planned',
-              startTime: bestSlot,
-              endTime: addMinutes(bestSlot, activity.recommendation.duration),
-              transitTimeFromPrevious: bestTransitTime,
-            },
-            include: {
-              recommendation: true,
-            },
-          });
-
-          // Add the newly scheduled activity to our tracking array
-          currentSchedule.push(updatedActivity as unknown as ParsedItineraryActivity);
-          availableMinutes -= timeNeeded;
-        }
-      } catch (error) {
-        // If we can't find a slot for this activity, skip it and try the next one
-        console.warn(`Could not schedule interested activity ${activity.id}:`, error);
-        continue;
-      }
-    }
-  }
 }
 
 export async function findBestTimeSlot(

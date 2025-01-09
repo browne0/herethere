@@ -204,7 +204,9 @@ export function TripsList({ initialTrips }: TripsListProps) {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="font-medium text-sm sm:text-base">Your Adventures</h3>
-                    <p className="text-lg sm:text-2xl font-bold">{uniqueDestinations} Places</p>
+                    <p className="text-lg sm:text-2xl font-bold">
+                      {uniqueDestinations} {uniqueDestinations === 1 ? 'Place' : 'Places'}
+                    </p>
                     <p className="text-xs sm:text-sm text-purple-600">
                       {totalActivities} activities planned →
                     </p>

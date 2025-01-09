@@ -43,3 +43,7 @@
 .fc .fc-list-sticky .fc-list-day > * {
   top: 40px;
 }
+
+.fc .fc-timegrid-slot-minor {
+  border-top-style: none;
+}

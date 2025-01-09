@@ -1,19 +1,8 @@
 import React, { useMemo, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import {
-  MapPin,
-  Star,
-  Info,
-  MoreVertical,
-  Heart,
-  Trash2,
-  Plus,
-  Search,
-  X,
-  List,
-} from 'lucide-react';
-import Link from 'next/link';
+import { MapPin, Star, MoreVertical, Heart, Trash2, Plus, Search, X, List } from 'lucide-react';
+import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -168,6 +157,8 @@ const VirtualizedActivityList = ({
 const FloatingControlBar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const router = useRouter();
+  const pathname = usePathname();
   const { trip } = useActivitiesStore();
 
   const addedActivities = useMemo(() => {
@@ -202,7 +193,7 @@ const FloatingControlBar = () => {
 
   const ControlBarContent = () => (
     <div className="max-w-2xl mx-auto flex items-center justify-between px-4 py-3">
-      <div className="flex items-center justify-between space-x-6">
+      <div className="flex items-center justify-between space-x-4 mr-4">
         {isExpanded ? (
           <List className="w-5 h-5 text-gray-400" />
         ) : (
@@ -218,21 +209,28 @@ const FloatingControlBar = () => {
         </div>
       </div>
 
-      {canGenerateItinerary ? (
-        <Link
-          href={`/trips/${trip.id}/itinerary`}
+      {pathname.endsWith('itinerary') ? (
+        <Button
           className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          role="navigation"
           onClick={e => {
             e.stopPropagation();
+            router.push(`/trips/${trip.id}`);
+          }}
+        >
+          View Recommendations
+        </Button>
+      ) : (
+        <Button
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+          role="navigation"
+          onClick={e => {
+            e.stopPropagation();
+            router.push(`/trips/${trip.id}/itinerary`);
           }}
         >
           View Itinerary
-        </Link>
-      ) : (
-        <div className="flex items-center text-sm text-gray-500">
-          <Info className="h-4 w-4 mr-2" />
-          Add an activity to see your itinerary
-        </div>
+        </Button>
       )}
     </div>
   );
@@ -246,7 +244,7 @@ const FloatingControlBar = () => {
 
   return (
     <div
-      className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg max-w-md w-full mx-auto"
+      className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg mx-auto"
       style={{ zIndex: 100 }}
     >
       <Sheet open={isExpanded} onOpenChange={setIsExpanded}>

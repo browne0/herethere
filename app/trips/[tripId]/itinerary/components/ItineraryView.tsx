@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
 import ItineraryLoading from './ItineraryLoading';
+import FloatingControlBar from '../../components/FloatingControlBar';
 
 function isValidActivityStatus(status: string): status is ActivityStatus {
   return ['interested', 'planned', 'confirmed', 'completed', 'cancelled'].includes(status);
@@ -45,7 +46,7 @@ const statusColors: Record<ActivityStatus, string> = {
   cancelled: '#ef4444',
 };
 
-export function ItineraryView() {
+export function ItineraryView({ isEditModalOpen }: { isEditModalOpen: boolean }) {
   const { trip, setTrip } = useActivitiesStore();
   const { updateActivity } = useActivityMutations();
   const [view, setView] = useState<'listMonth' | 'timeGrid'>('listMonth');
@@ -141,6 +142,11 @@ export function ItineraryView() {
   const renderEventContent = (eventInfo: EventContentArg) => {
     const { event } = eventInfo;
 
+    const getStreetAddress = (fullAddress: string) => {
+      // Split by commas and take the first part which is typically the street address
+      return fullAddress.split(',')[0].trim();
+    };
+
     if (view === 'listMonth') {
       return (
         <div className="flex flex-col space-y-1 py-1">
@@ -158,9 +164,11 @@ export function ItineraryView() {
     // Grid view event rendering
     return (
       <div className="p-1 overflow-hidden">
-        <div className="font-medium text-sm truncate">{event.title}</div>
+        <div className="font-medium text-xs break-words">{event.title}</div>
         <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
-        <div className="text-xs opacity-75 truncate">{event.extendedProps.location}</div>
+        <div className="text-xs opacity-75 truncate">
+          {getStreetAddress(event.extendedProps.location)}
+        </div>
       </div>
     );
   };
@@ -265,6 +273,7 @@ export function ItineraryView() {
           ref={calendarRef}
         />
       </div>
+      {!isEditModalOpen && trip && <FloatingControlBar />}
     </div>
   );
 }
