@@ -127,9 +127,11 @@ export const TripHeader = ({ onEditClick }: TripHeaderProps) => {
             <Link href="/trips" className="text-sm font-medium hover:bg-gray-100 px-3 py-2">
               Trips
             </Link>
-            <SignedIn>
-              <HereThereUserButton />
-            </SignedIn>
+            <div className="pl-3">
+              <SignedIn>
+                <HereThereUserButton />
+              </SignedIn>
+            </div>
           </div>
         </div>
       </div>

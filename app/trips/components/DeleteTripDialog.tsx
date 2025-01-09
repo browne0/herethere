@@ -12,16 +12,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+
+import { ParsedTrip } from '../[tripId]/types';
 
 interface DeleteTripDialogProps {
   isOpen: boolean;
   onClose: () => void;
   onDelete: (tripId: string) => Promise<void>;
+  trip: ParsedTrip | null;
 }
 
-export function DeleteTripDialog({ isOpen, onClose, onDelete }: DeleteTripDialogProps) {
-  const { trip } = useActivitiesStore();
+export function DeleteTripDialog({ isOpen, onClose, onDelete, trip }: DeleteTripDialogProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   if (!trip) return null;

@@ -224,76 +224,70 @@ export function TripsList({ initialTrips }: TripsListProps) {
               <h2 className="text-lg font-semibold mb-4">Upcoming</h2>
               <div className="space-y-4">
                 {upcoming.map(trip => (
-                  <Card
-                    key={trip.id}
-                    className="group overflow-hidden hover:shadow-lg transition-all mb-8"
-                  >
-                    <div className="grid md:grid-cols-[2fr,1fr]">
-                      {/* Trip Info */}
-                      <div className="p-6 relative">
-                        <TripActions trip={trip} onDeleteClick={() => setTripToDelete(trip)} />
+                  <Link key={trip.id} href={`/trips/${trip.id}`}>
+                    <Card className="group overflow-hidden hover:shadow-lg transition-all mb-8">
+                      <div className="grid md:grid-cols-[2fr,1fr]">
+                        {/* Trip Info */}
+                        <div className="p-6 relative">
+                          <TripActions trip={trip} onDeleteClick={() => setTripToDelete(trip)} />
 
-                        <div className="flex items-start justify-between">
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              {ongoing.includes(trip) ? (
-                                <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-600 rounded-full">
-                                  Active Trip
-                                </span>
-                              ) : (
-                                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">
-                                  Upcoming
-                                </span>
-                              )}
-                            </div>
-                            <Link href={`/trips/${trip.id}`}>
-                              <h3 className="text-xl font-semibold mb-1 hover:text-blue-600 transition-colors">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2 mb-2">
+                                {ongoing.includes(trip) ? (
+                                  <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-600 rounded-full">
+                                    Active Trip
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-600 rounded-full">
+                                    Upcoming
+                                  </span>
+                                )}
+                              </div>
+                              <h3 className="text-xl font-semibold mb-1 group-hover:text-blue-600 transition-colors">
                                 {trip.city.name}
                               </h3>
-                            </Link>
-                            <p className="text-gray-500">
-                              {formatTripDates(trip.startDate, trip.endDate)}
-                            </p>
+                              <p className="text-gray-500">
+                                {formatTripDates(trip.startDate, trip.endDate)}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Quick Stats */}
+                          <div className="flex gap-4 mt-4 text-sm">
+                            <div>
+                              <p className="text-gray-500">Duration</p>
+                              <p className="font-medium">
+                                {Math.ceil(
+                                  (new Date(trip.endDate).getTime() -
+                                    new Date(trip.startDate).getTime()) /
+                                    (1000 * 60 * 60 * 24)
+                                )}{' '}
+                                days
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">Activities</p>
+                              <p className="font-medium">{trip.activities.length || 'None'}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-500">Status</p>
+                              <p className="font-medium">
+                                {trip.activities.length > 0 ? 'In progress' : 'Not started'}
+                              </p>
+                            </div>
                           </div>
                         </div>
 
-                        {/* Quick Stats */}
-                        <div className="flex gap-4 mt-4 text-sm">
-                          <div>
-                            <p className="text-gray-500">Duration</p>
-                            <p className="font-medium">
-                              {Math.ceil(
-                                (new Date(trip.endDate).getTime() -
-                                  new Date(trip.startDate).getTime()) /
-                                  (1000 * 60 * 60 * 24)
-                              )}{' '}
-                              days
-                            </p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Activities</p>
-                            <p className="font-medium">{trip.activities.length || 'None'}</p>
-                          </div>
-                          <div>
-                            <p className="text-gray-500">Status</p>
-                            <p className="font-medium">
-                              {trip.activities.length > 0 ? 'In progress' : 'Not started'}
-                            </p>
+                        {/* Map Preview - Remove nested Link */}
+                        <div className="relative h-48 md:h-auto bg-gray-100">
+                          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                            <Map className="w-6 h-6" />
                           </div>
                         </div>
                       </div>
-
-                      {/* Map Preview - Now clearly separated */}
-                      <Link
-                        href={`/trips/${trip.id}`}
-                        className="relative h-48 md:h-auto bg-gray-100"
-                      >
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                          <Map className="w-6 h-6" />
-                        </div>
-                      </Link>
-                    </div>
-                  </Card>
+                    </Card>
+                  </Link>
                 ))}
               </div>
             </section>
@@ -384,6 +378,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
         isOpen={!!tripToDelete}
         onClose={() => setTripToDelete(null)}
         onDelete={handleDeleteTrip}
+        trip={tripToDelete}
       />
     </Container>
   );

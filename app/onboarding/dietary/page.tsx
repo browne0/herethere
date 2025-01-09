@@ -136,15 +136,24 @@ const DietaryPage = () => {
         <div>
           <div className="font-medium">Favorite Cuisines</div>
           <div className="text-sm text-gray-500">Select which foods you enjoy</div>
-          <ResponsiveMultiSelect<Cuisine>
-            options={CUISINE_PREFERENCES}
-            selected={cuisinePreferences.preferred}
-            onChange={handleCuisineChange}
-            placeholder="Select your favorite cuisines"
-            title="Favorite Cuisines"
-            searchPlaceholder="Search cuisines..."
-            entity="cuisines"
-          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+            {CUISINE_PREFERENCES.map(cuisine => (
+              <label key={cuisine.value} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={cuisinePreferences.preferred.includes(cuisine.value)}
+                  onChange={() => {
+                    const newPreferred = cuisinePreferences.preferred.includes(cuisine.value)
+                      ? cuisinePreferences.preferred.filter(c => c !== cuisine.value)
+                      : [...cuisinePreferences.preferred, cuisine.value];
+                    handleCuisineChange(newPreferred);
+                  }}
+                  className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{cuisine.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Meal Importance */}
