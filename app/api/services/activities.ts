@@ -1,7 +1,6 @@
 import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import { tripService } from './trips';
 import { isActivityOpenDuring, scheduleActivities } from './utils';
@@ -56,9 +55,8 @@ export const activityService = {
     for (const activity of plannedActivities) {
       if (activity.startTime && activity.endTime) {
         const isOpen = isActivityOpenDuring(
-          activity.recommendation as ActivityRecommendation,
-          new Date(activity.startTime),
-          new Date(activity.endTime)
+          { openingHours: { periods: activity.recommendation.openingHours?.periods } },
+          new Date(activity.startTime)
         );
 
         if (!isOpen) {
@@ -132,25 +130,21 @@ export const activityService = {
 
     // If updating time, check if activity is open
     if (updates.startTime) {
-      const activity = await prisma.itineraryActivity.findUnique({
+      const activity = (await prisma.itineraryActivity.findUnique({
         where: { id: activityId },
         include: { recommendation: true },
-      });
+      })) as unknown as ParsedItineraryActivity;
 
       if (!activity?.recommendation) {
         throw new Error('Activity not found');
       }
 
       const startTime = new Date(updates.startTime);
-      const endTime = updates.endTime
-        ? new Date(updates.endTime)
-        : new Date(startTime.getTime() + activity.recommendation.duration);
 
       if (
         !isActivityOpenDuring(
-          activity.recommendation as unknown as ActivityRecommendation,
-          startTime,
-          endTime
+          { openingHours: { periods: activity.recommendation.openingHours!.periods } },
+          startTime
         )
       ) {
         warning =

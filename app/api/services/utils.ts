@@ -1280,40 +1280,74 @@ export async function validateActivityTimeSlot({
 }
 
 export function isActivityOpenDuring(
-  recommendation: ActivityRecommendation,
-  startTime: Date,
-  endTime: Date
+  recommendation: {
+    openingHours: {
+      periods: protos.google.maps.places.v1.Place.IOpeningHours['periods'];
+    };
+  },
+  startTime: Date
 ): boolean {
-  const periods = recommendation.openingHours?.periods;
+  const periods = recommendation.openingHours.periods;
 
-  if (!periods || !periods.length) {
+  // Handle missing or empty periods
+  if (!periods?.length) {
+    console.warn('No periods data available for:', recommendation);
     return false;
   }
 
-  const timeInMinutes = (time: Date) => time.getHours() * 60 + time.getMinutes();
-  const startMinutes = timeInMinutes(startTime);
-  const endMinutes = timeInMinutes(endTime);
+  // Check if it's open 24/7
+  const is24Hours = periods.some(
+    period =>
+      period.open?.day === period.close?.day &&
+      period.open?.hour === 0 &&
+      period.open?.minute === 0 &&
+      !period.close
+  );
+  if (is24Hours) return true;
 
-  // Check if the activity time falls within any of the opening periods
+  // Convert activity time to day and minutes
+  const activityStartDay = startTime.getUTCDay();
+  const activityStartMinutes = startTime.getUTCHours() * 60 + startTime.getUTCMinutes();
+
+  // Check if activity start time falls within any opening period
   return periods.some(period => {
-    if (!period.open || !period.close) return false;
-
-    const openHour = period.open.hour;
-    const openMinute = period.open.minute;
-    const closeHour = period.close.hour;
-    const closeMinute = period.close.minute;
-
-    if (
-      typeof openHour !== 'number' ||
-      typeof closeHour !== 'number' ||
-      typeof openMinute !== 'number' ||
-      typeof closeMinute !== 'number'
-    )
+    if (!period.open?.day || !period.open?.hour || !period.close?.day || !period.close?.hour) {
       return false;
+    }
 
-    const openMinutes = openHour * 60 + openMinute;
-    const closeMinutes = closeHour * 60 + closeMinute;
+    const openDay = period.open.day;
+    const openMinutes = period.open.hour * 60 + (period.open.minute || 0);
+    const closeDay = period.close.day;
+    const closeMinutes = period.close.hour * 60 + (period.close.minute || 0);
 
-    return startMinutes >= openMinutes && endMinutes <= closeMinutes;
+    return isWithinPeriod(
+      activityStartDay,
+      activityStartMinutes,
+      openDay,
+      openMinutes,
+      closeDay,
+      closeMinutes
+    );
   });
+}
+
+function isWithinPeriod(
+  activityStartDay: number,
+  activityStartMinutes: number,
+  openDay: number,
+  openMinutes: number,
+  closeDay: number,
+  closeMinutes: number
+): boolean {
+  // If activity is on opening day, just check if it's after opening time
+  if (activityStartDay === openDay) {
+    return activityStartMinutes >= openMinutes;
+  }
+
+  // If activity is on closing day, just check if it's before closing time
+  if (activityStartDay === closeDay) {
+    return activityStartMinutes < closeMinutes;
+  }
+
+  return false;
 }
