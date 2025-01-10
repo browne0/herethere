@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { Info } from 'lucide-react';
+import { Info, X } from 'lucide-react';
 
 import {
   Pagination,
@@ -9,6 +9,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { cn } from '@/lib/utils';
 
 import ActivityCard from './ActivityCard';
@@ -21,6 +22,11 @@ interface ActivityListProps {
 }
 
 const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListProps) => {
+  const [hasSeenBanner, setHasSeenBanner] = useLocalStorage(
+    'has-seen-recommendations-banner',
+    false
+  );
+
   const PaginationComponent = () => {
     if (!currentCategory) return null;
 
@@ -63,18 +69,32 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
 
   if (!currentCategory) return null;
 
+  const shouldShowBanner = currentCategory.type === 'must-see' && !hasSeenBanner;
+
   return (
     <>
-      <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 m-4">
-        <h3 className="font-medium text-gray-900 flex items-center">
-          <Info className="w-4 h-4 mr-2 inline" />
-          <span>Personalized Recommendations</span>
-        </h3>
-        <p className="text-gray-500 text-sm">
-          We've curated these activities based on your preferences. Add them to your trip and we'll
-          create an optimized itinerary.
-        </p>
-      </div>
+      {shouldShowBanner && (
+        <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 m-4 relative">
+          <button
+            onClick={() => {
+              setHasSeenBanner(true);
+              localStorage.setItem('has-seen-recommendations-banner', 'true');
+            }}
+            className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 transition-colors"
+            aria-label="Close banner"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <h3 className="font-medium text-gray-900 flex items-center">
+            <Info className="w-4 h-4 mr-2 inline" />
+            <span>Personalized Recommendations</span>
+          </h3>
+          <p className="text-gray-500 text-sm">
+            We've curated these activities based on your preferences. Add them to your trip and
+            we'll create an optimized itinerary.
+          </p>
+        </div>
+      )}
 
       <div className="py-4 ml-4">
         <h2 className="text-2xl font-semibold">{currentCategory.title}</h2>

@@ -187,14 +187,24 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
   useEffect(() => {
     if (!map || boundsSet.current || !trip) return;
 
-    const bounds = new google.maps.LatLngBounds();
-    trip.activities.forEach(activity => {
-      bounds.extend({
-        lat: activity.recommendation.location.latitude,
-        lng: activity.recommendation.location.longitude,
+    if (trip?.activities.length) {
+      const bounds = new google.maps.LatLngBounds();
+      trip.activities.forEach(activity => {
+        bounds.extend({
+          lat: activity.recommendation.location.latitude,
+          lng: activity.recommendation.location.longitude,
+        });
       });
-    });
-    map.fitBounds(bounds, 100);
+      map.fitBounds(bounds, 100);
+    } else {
+      // Center on city coordinates if no activities
+      map.setCenter({
+        lat: trip.city.latitude,
+        lng: trip.city.longitude,
+      });
+      map.setZoom(DEFAULT_ZOOM);
+    }
+
     boundsSet.current = true;
   }, [map, trip, trip?.activities]);
 

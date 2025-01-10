@@ -1,13 +1,14 @@
 'use client';
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 
 import { useRouter } from 'next/navigation';
 
 import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
-import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
+import { DietaryRestriction, usePreferences } from '@/lib/stores/preferences';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { cn } from '@/lib/utils';
 
@@ -53,13 +54,6 @@ const FoodPage = () => {
   const handleBack = () => {
     router.push('/trips/new/activities');
   };
-
-  const handleCuisineChange = useCallback(
-    (preferred: Cuisine[]) => {
-      setTripCuisinePreferences({ preferred, avoided: tripCuisinePreferences.avoided });
-    },
-    [setTripCuisinePreferences, tripCuisinePreferences.avoided]
-  );
 
   useEffect(() => {
     setMounted(true);
@@ -108,31 +102,68 @@ const FoodPage = () => {
           <div className="text-sm text-gray-500 mb-2">
             Get catered restaurant suggestions for you
           </div>
-          <ResponsiveMultiSelect<DietaryRestriction>
-            options={DIETARY_RESTRICTIONS}
-            selected={tripDietaryRestrictions}
-            onChange={setTripDietaryRestrictions}
-            placeholder="Select any dietary restrictions"
-            title="Dietary Restrictions"
-            searchPlaceholder="Search restrictions..."
-            type="dietary"
-            entity="dietary restrictions"
-          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {DIETARY_RESTRICTIONS.map(restriction => (
+              <div key={restriction.value} className="flex items-center space-x-2 py-1">
+                <Checkbox
+                  id={restriction.value}
+                  checked={tripDietaryRestrictions.includes(restriction.value)}
+                  onCheckedChange={checked => {
+                    if (restriction.value === 'none') {
+                      // If "No restrictions" is checked, clear all other selections
+                      setTripDietaryRestrictions(checked ? ['none'] : []);
+                    } else {
+                      // If any other restriction is checked
+                      let newRestrictions = tripDietaryRestrictions.filter(r => r !== 'none'); // Remove "none" if it exists
+                      if (checked) {
+                        newRestrictions = [...newRestrictions, restriction.value];
+                      } else {
+                        newRestrictions = newRestrictions.filter(r => r !== restriction.value);
+                      }
+                      setTripDietaryRestrictions(newRestrictions);
+                    }
+                  }}
+                />
+                <label
+                  htmlFor={restriction.value}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {restriction.label}
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Cuisine Preferences */}
         <div>
           <div className="font-medium">Favorite Cuisines</div>
           <div className="text-sm text-gray-500 mb-2">Select which foods you enjoy</div>
-          <ResponsiveMultiSelect<Cuisine>
-            options={CUISINE_PREFERENCES}
-            selected={tripCuisinePreferences.preferred}
-            onChange={handleCuisineChange}
-            placeholder="Select your favorite cuisines"
-            title="Favorite Cuisines"
-            searchPlaceholder="Search cuisines..."
-            entity="cuisines"
-          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            {CUISINE_PREFERENCES.map(cuisine => (
+              <div key={cuisine.value} className="flex items-center space-x-2 py-0.5">
+                <Checkbox
+                  id={cuisine.value}
+                  checked={tripCuisinePreferences.preferred.includes(cuisine.value)}
+                  onCheckedChange={checked => {
+                    const newPreferred = checked
+                      ? [...tripCuisinePreferences.preferred, cuisine.value]
+                      : tripCuisinePreferences.preferred.filter(c => c !== cuisine.value);
+                    setTripCuisinePreferences({
+                      ...tripCuisinePreferences,
+                      preferred: newPreferred,
+                    });
+                  }}
+                />
+                <label
+                  htmlFor={cuisine.value}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {cuisine.label}
+                </label>
+              </div>
+            ))}
+          </div>
         </div>
       </Card>
       <div className="flex justify-between mt-8">

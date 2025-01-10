@@ -84,48 +84,22 @@ export const TripHeader = ({ onEditClick }: TripHeaderProps) => {
 
           {/* Center section */}
           <div className="flex items-center rounded-full border border-gray-200">
-            <div className="flex items-center divide-x divide-gray-200">
-              <div
-                onClick={onEditClick}
-                className="flex items-center hover:bg-gray-100 py-2 pl-4 cursor-pointer transition-colors rounded-l-full"
-              >
-                <div className="text-sm font-medium px-3 first:pl-0">{trip.city.name}</div>
-                <div className="text-sm font-medium px-3 border-l border-gray-200">
-                  {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
-                </div>
-                <div className="text-sm font-medium px-3 border-l border-gray-200">1 guest</div>
+            <div
+              onClick={onEditClick}
+              className="flex items-center hover:bg-gray-100 py-2 px-4 cursor-pointer transition-colors rounded-full"
+            >
+              <div className="text-sm font-medium px-3 first:pl-0">{trip.city.name}</div>
+              <div className="text-sm font-medium px-3 border-l border-gray-200">
+                {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
               </div>
-              <Sheet>
-                <SheetTrigger asChild>
-                  <div className="flex items-center text-sm font-medium hover:bg-gray-100 px-3 py-2 cursor-pointer transition-colors rounded-r-full">
-                    <List className="h-4 w-4 mr-1" />
-                    <span>Activities ({addedActivities.length + interestedActivities.length})</span>
-                  </div>
-                </SheetTrigger>
-                <ActivitySheet />
-              </Sheet>
+              <div className="text-sm font-medium px-3 border-l border-gray-200">1 guest</div>
             </div>
           </div>
 
           {/* Right section */}
           <div className="flex-1 flex items-center justify-end space-x-2">
-            {pathname.endsWith('itinerary') ? (
-              <Link
-                href={`/trips/${trip.id}`}
-                className="text-sm font-medium hover:bg-gray-100 px-3 py-2"
-              >
-                Recommendations
-              </Link>
-            ) : (
-              <Link
-                href={`/trips/${trip.id}/itinerary`}
-                className="text-sm font-medium hover:bg-gray-100 px-3 py-2"
-              >
-                Itinerary
-              </Link>
-            )}
             <Link href="/trips" className="text-sm font-medium hover:bg-gray-100 px-3 py-2">
-              Trips
+              My Trips
             </Link>
             <div className="pl-3">
               <SignedIn>

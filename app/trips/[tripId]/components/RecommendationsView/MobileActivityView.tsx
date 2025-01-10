@@ -13,6 +13,7 @@ import {
   Info,
 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -126,7 +127,9 @@ const MiniActivityCard: React.FC<MiniActivityCardProps> = ({ activity }) => {
         activityId: activity.id,
       });
     } catch (error) {
-      console.error('Error updating activity:', error);
+      toast.error('Error updating activity', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      });
     }
   };
 
@@ -305,8 +308,9 @@ const MyActivitiesContent = () => {
         activityId: activity.id,
       });
     } catch (error) {
-      // The store handles error state, we just need to handle UI feedback
-      console.error('Error updating activity:', error);
+      toast.error('Error updating activity', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      });
     }
   };
 

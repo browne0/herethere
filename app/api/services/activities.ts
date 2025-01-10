@@ -1,9 +1,10 @@
 import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
+import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import { tripService } from './trips';
-import { scheduleActivities } from './utils';
+import { isActivityOpenDuring, scheduleActivities } from './utils';
 
 interface UpdateActivityParams {
   tripId: string;
@@ -96,6 +97,36 @@ export const activityService = {
       throw new Error('Trip not found');
     }
 
+    let warning = null;
+
+    // If updating time, check if activity is open
+    if (updates.startTime) {
+      const activity = await prisma.itineraryActivity.findUnique({
+        where: { id: activityId },
+        include: { recommendation: true },
+      });
+
+      if (!activity?.recommendation) {
+        throw new Error('Activity not found');
+      }
+
+      const startTime = new Date(updates.startTime);
+      const endTime = updates.endTime
+        ? new Date(updates.endTime)
+        : new Date(startTime.getTime() + activity.recommendation.duration);
+
+      if (
+        !isActivityOpenDuring(
+          activity.recommendation as unknown as ActivityRecommendation,
+          startTime,
+          endTime
+        )
+      ) {
+        warning =
+          'This activity might be closed during the selected time. Please verify the opening hours.';
+      }
+    }
+
     const updatedActivity = await prisma.itineraryActivity.update({
       where: {
         id: activityId,
@@ -105,13 +136,14 @@ export const activityService = {
         ...updates,
         startTime: updates.startTime != undefined ? new Date(updates.startTime) : undefined,
         endTime: updates.endTime != undefined ? new Date(updates.endTime) : undefined,
+        warning: warning,
       },
       include: {
-        recommendation: true, // Include the associated recommendation data
+        recommendation: true,
       },
     });
 
-    return updatedActivity;
+    return { activity: updatedActivity, warning };
   },
 
   async deleteActivity({ tripId, activityId }: { tripId: string; activityId: string }) {

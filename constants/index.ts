@@ -38,6 +38,8 @@ export const RESTAURANT_TYPES = {
   vietnamese_restaurant: 'Vietnamese',
   pizza_restaurant: 'Pizza',
   barbecue_restaurant: 'Barbecue',
+  sushi_restaurant: 'Sushi',
+  ramen_restaurant: 'Ramen',
 };
 
 export const MUSEUM_TYPES = {

@@ -96,14 +96,14 @@ export async function PATCH(
       return NextResponse.json({ error: 'Invalid transitTimeFromPrevious' }, { status: 400 });
     }
 
-    const activity = await activityService.updateActivity({
+    const result = await activityService.updateActivity({
       tripId,
       activityId,
       userId,
       updates,
     });
 
-    return NextResponse.json(activity);
+    return NextResponse.json(result);
   } catch (error) {
     console.error('[ACTIVITY_UPDATE]', error);
 
@@ -117,6 +117,11 @@ export async function PATCH(
           return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         case 'Invalid update data':
           return NextResponse.json({ error: 'Invalid update data' }, { status: 400 });
+        case 'Activity not open during selected time':
+          return NextResponse.json(
+            { error: 'Activity is not open during the selected time' },
+            { status: 400 }
+          );
         default:
           if (error instanceof PrismaClientKnownRequestError) {
             switch (error.code) {

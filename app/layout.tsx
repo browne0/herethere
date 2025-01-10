@@ -17,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <QueryProvider>
             <PageLayout>
               <GoogleMapsProvider>{children}</GoogleMapsProvider>
-              <Toaster closeButton richColors position="top-center" />
+              <Toaster closeButton position="top-center" />
             </PageLayout>
           </QueryProvider>
         </ClerkProvider>

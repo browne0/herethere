@@ -157,11 +157,9 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
           });
         }
       }
-    } catch (_error) {
-      console.log(_error);
-      // The store is handling the error state, but we'll show a user-friendly toast
+    } catch (error) {
       toast.error('Error', {
-        description: 'Failed to manage activity. Please try again.',
+        description: error instanceof Error ? error.message : 'Failed to manage activity',
       });
     }
   };

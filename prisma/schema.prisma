@@ -172,6 +172,8 @@ model ItineraryActivity {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  warning String?
+
   @@index([tripId])
   @@index([recommendationId])
 }

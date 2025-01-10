@@ -1278,3 +1278,42 @@ export async function validateActivityTimeSlot({
 
   return { isValid: true, scoreAdjustment: 0 };
 }
+
+export function isActivityOpenDuring(
+  recommendation: ActivityRecommendation,
+  startTime: Date,
+  endTime: Date
+): boolean {
+  const periods = recommendation.openingHours?.periods;
+
+  if (!periods || !periods.length) {
+    return false;
+  }
+
+  const timeInMinutes = (time: Date) => time.getHours() * 60 + time.getMinutes();
+  const startMinutes = timeInMinutes(startTime);
+  const endMinutes = timeInMinutes(endTime);
+
+  // Check if the activity time falls within any of the opening periods
+  return periods.some(period => {
+    if (!period.open || !period.close) return false;
+
+    const openHour = period.open.hour;
+    const openMinute = period.open.minute;
+    const closeHour = period.close.hour;
+    const closeMinute = period.close.minute;
+
+    if (
+      typeof openHour !== 'number' ||
+      typeof closeHour !== 'number' ||
+      typeof openMinute !== 'number' ||
+      typeof closeMinute !== 'number'
+    )
+      return false;
+
+    const openMinutes = openHour * 60 + openMinute;
+    const closeMinutes = closeHour * 60 + closeMinute;
+
+    return startMinutes >= openMinutes && endMinutes <= closeMinutes;
+  });
+}

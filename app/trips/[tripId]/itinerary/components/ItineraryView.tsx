@@ -8,15 +8,18 @@ import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { addDays } from 'date-fns';
-import { Calendar, List, MapPin } from 'lucide-react';
+import { MapPin, AlertTriangle, CalendarDays } from 'lucide-react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import './calendar-overrides.css';
 
 import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
-import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
+import { ItineraryHeader } from './ItineraryHeader';
 import ItineraryLoading from './ItineraryLoading';
+import ItineraryRebalancing from './ItineraryRebalancing';
 
 function isValidActivityStatus(status: string): status is ActivityStatus {
   return ['interested', 'planned', 'confirmed', 'completed', 'cancelled'].includes(status);
@@ -99,6 +102,7 @@ export function ItineraryView() {
             location: activity.recommendation.location.address,
             duration: activity.recommendation.duration,
             recommendationId: activity.recommendationId,
+            warning: activity.warning,
           },
           editable: activity.status === 'planned',
         };
@@ -110,14 +114,27 @@ export function ItineraryView() {
       const { event } = eventInfo;
 
       const getStreetAddress = (fullAddress: string) => {
-        // Split by commas and take the first part which is typically the street address
         return fullAddress.split(',')[0].trim();
       };
 
       if (view === 'listMonth') {
         return (
           <div className="flex flex-col space-y-1 py-1">
-            <div className="font-medium">{event.title}</div>
+            <div className="font-medium flex items-center gap-2">
+              {event.title}
+              {event.extendedProps.warning && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <AlertTriangle className="fill-yellow-400 h-3.5 w-3.5 text-black" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>{event.extendedProps.warning}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
             <div className="flex flex-col space-y-2 text-sm text-gray-600">
               <div className="flex items-center">
                 <MapPin className="h-4 w-4 mr-1" />
@@ -130,11 +147,27 @@ export function ItineraryView() {
 
       // Grid view event rendering
       return (
-        <div className="p-1 overflow-hidden">
-          <div className="font-medium text-xs break-words">{event.title}</div>
-          <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
-          <div className="text-xs opacity-75 truncate">
-            {getStreetAddress(event.extendedProps.location)}
+        <div className="p-1 overflow-hidden relative">
+          {event.extendedProps.warning && (
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="absolute top-1 right-1">
+                    <AlertTriangle className="fill-yellow-400 h-3.5 w-3.5 text-black" />
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-[250px] z-[100]">
+                  <p>{event.extendedProps.warning}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
+          <div className="pr-4">
+            <div className="font-medium text-xs break-words">{event.title}</div>
+            <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
+            <div className="text-xs opacity-75 truncate">
+              {getStreetAddress(event.extendedProps.location)}
+            </div>
           </div>
         </div>
       );
@@ -142,24 +175,53 @@ export function ItineraryView() {
     [view]
   );
 
-  if (!trip || isRebalancing) return <ItineraryLoading />;
+  const EmptyState = () => (
+    <div className="h-full flex flex-col items-center justify-center text-gray-500 p-8">
+      <CalendarDays className="h-12 w-12 mb-4" />
+      <h3 className="text-lg font-medium mb-2">No activities scheduled yet</h3>
+      <p className="text-center text-sm mb-4">
+        Add activities from the recommendations list to start building your itinerary.
+      </p>
+      <Link
+        href={`/trips/${trip?.id}`}
+        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+      >
+        Browse Recommendations →
+      </Link>
+    </div>
+  );
 
-  console.log(trip.activities);
+  if (!trip) return <ItineraryLoading />;
 
-  // Memoize the events array
+  if (isRebalancing)
+    return (
+      <ItineraryRebalancing
+        tripTitle={trip.title}
+        startDate={trip.startDate}
+        endDate={trip.endDate}
+      />
+    );
 
   const handleEventDrop = async (info: EventDropArg) => {
     try {
-      await updateActivity.mutateAsync({
+      const result = await updateActivity.mutateAsync({
         activityId: info.event.id,
         updates: {
           startTime: info.event.start,
           endTime: info.event.end,
         },
       });
-      toast.success('Activity rescheduled');
-    } catch (_error) {
-      toast.error('Failed to reschedule activity');
+      if (result.warning) {
+        toast.warning('Opening Hours Warning', {
+          description: result.warning,
+        });
+      } else {
+        toast.success('Activity rescheduled');
+      }
+    } catch (error) {
+      toast.error('Failed to reschedule activity', {
+        description: error instanceof Error ? error.message : 'Please try again',
+      });
       info.revert();
     }
   };
@@ -181,102 +243,63 @@ export function ItineraryView() {
 
   return (
     <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)] flex flex-col">
-      {/* Header */}
-      <div className="px-4 py-3 border-b bg-white">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">{trip.title}</h1>
-            <div className="flex items-center mt-1 text-sm text-gray-500">
-              <span>
-                {new Date(trip.startDate).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-                {' - '}
-                {new Date(trip.endDate).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
-              </span>
-              <span className="mx-2">•</span>
-              <span>{`${scheduledEvents.length} activities`}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={rebalanceSchedule}
-              disabled={isRebalancing}
-            >
-              {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
-            </Button>
-            <div className="border rounded-lg">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setView('listMonth');
-                  calendarRef.current!.getApi().changeView('listMonth');
-                }}
-                className={view === 'listMonth' ? 'bg-gray-100' : ''}
-              >
-                <List className="w-4 h-4 mr-1" />
-                List
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setView('timeGrid');
-                  calendarRef.current!.getApi().changeView('timeGrid');
-                }}
-                className={view === 'timeGrid' ? 'bg-gray-100' : ''}
-              >
-                <Calendar className="w-4 h-4 mr-1" />
-                Calendar
-              </Button>
-            </div>
-          </div>
-        </div>
-      </div>
-
+      <ItineraryHeader
+        title={trip.title}
+        startDate={trip.startDate}
+        endDate={trip.endDate}
+        activitiesCount={scheduledEvents.length}
+        isRebalancing={isRebalancing}
+        onRebalance={rebalanceSchedule}
+        view={view}
+        onViewChange={newView => {
+          setView(newView);
+          calendarRef.current!.getApi().changeView(newView);
+        }}
+      />
       {/* Calendar */}
       <div className="flex-1 overflow-hidden bg-white px-4 mb-4">
-        <FullCalendar
-          key={`calendar-${view}`}
-          plugins={[timeGridPlugin, interactionPlugin, listPlugin]}
-          initialView={view}
-          headerToolbar={{
-            right: 'prev,next',
-            center: '',
-            left: '',
-          }}
-          views={{
-            timeGrid: {
-              type: 'timeGrid',
-              duration: { days: numDays > 7 ? 7 : numDays },
-            },
-          }}
-          events={scheduledEvents}
-          editable={true}
-          eventDrop={handleEventDrop}
-          eventContent={renderEventContent}
-          slotMinTime="00:00:00"
-          allDaySlot={false}
-          eventOverlap={true}
-          stickyHeaderDates={false}
-          height="100%"
-          dayHeaderFormat={{ weekday: 'long', month: 'numeric', day: 'numeric', omitCommas: true }}
-          validRange={{
-            start: trip.startDate,
-            end: addDays(trip.endDate, 1),
-          }}
-          nowIndicator
-          scrollTime="08:00:00"
-          ref={calendarRef}
-        />
+        {scheduledEvents.length === 0 ? (
+          <EmptyState />
+        ) : (
+          <FullCalendar
+            key={`calendar-${view}`}
+            plugins={[timeGridPlugin, interactionPlugin, listPlugin]}
+            initialView={view}
+            headerToolbar={{
+              right: 'prev,next',
+              center: '',
+              left: '',
+            }}
+            views={{
+              timeGrid: {
+                type: 'timeGrid',
+                duration: { days: numDays > 7 ? 7 : numDays },
+              },
+            }}
+            events={scheduledEvents}
+            editable={true}
+            eventDrop={handleEventDrop}
+            eventContent={renderEventContent}
+            slotMinTime="00:00:00"
+            allDaySlot={false}
+            eventOverlap={true}
+            stickyHeaderDates={false}
+            height="100%"
+            dayHeaderFormat={{
+              weekday: 'long',
+              month: 'numeric',
+              day: 'numeric',
+              omitCommas: true,
+            }}
+            validRange={{
+              start: trip.startDate,
+              end: addDays(trip.endDate, 1),
+            }}
+            nowIndicator
+            scrollTime="08:00:00"
+            ref={calendarRef}
+          />
+        )}
       </div>
     </div>
   );

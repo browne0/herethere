@@ -78,7 +78,6 @@ export interface ActivityRecommendation {
 
   // External IDs and metadata
   googlePlaceId: string | null;
-  googleTypes: string[]; // Raw place types from Google
   lastSyncedAt: Date;
 
   // Viator integration

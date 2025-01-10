@@ -59,11 +59,13 @@ const activityApi = {
       body: JSON.stringify(updates),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      throw new Error('Failed to update activity');
+      throw new Error(data.error);
     }
 
-    return response.json();
+    return data;
   },
 };
 
@@ -106,6 +108,7 @@ function createOptimisticActivity(
     createdAt: new Date(),
     updatedAt: new Date(),
     city,
+    warning: null,
   };
 }
 
@@ -235,7 +238,7 @@ export function useActivityMutations() {
 
   // Update activity mutation
   const updateActivity = useMutation({
-    mutationFn: ({
+    mutationFn: async ({
       activityId,
       updates,
     }: {
@@ -251,7 +254,7 @@ export function useActivityMutations() {
     onMutate: async ({ activityId, updates }) => {
       const previousTrip = useActivitiesStore.getState().trip;
 
-      // Apply optimistic update to the activity
+      // Apply optimistic update
       useActivitiesStore.setState(state => ({
         trip: state.trip
           ? {
@@ -261,6 +264,7 @@ export function useActivityMutations() {
                   ? {
                       ...activity,
                       ...updates,
+                      warning: null, // Optimistically clear warning
                       updatedAt: new Date(),
                     }
                   : activity
@@ -273,13 +277,51 @@ export function useActivityMutations() {
       return { previousTrip, activityId };
     },
 
-    onError: (_, { activityId }, context) => {
+    onError: (error, { activityId }, context) => {
       if (context?.previousTrip) {
         useActivitiesStore.setState(state => ({
           trip: context.previousTrip,
           loadingActivities: new Set([...state.loadingActivities].filter(id => id !== activityId)),
         }));
+
+        // Re-throw the error with a user-friendly message
+        if (error instanceof Error) {
+          switch (error.message) {
+            case 'Activity is not open during the selected time':
+              throw new Error('This activity is not open during the selected time');
+            case 'Trip not found':
+              throw new Error('Trip not found');
+            case 'Activity not found':
+              throw new Error('Activity not found');
+            case 'Unauthorized':
+              throw new Error('You are not authorized to perform this action');
+            case 'Invalid update data':
+              throw new Error('Invalid update data provided');
+            default:
+              throw new Error('Failed to update activity');
+          }
+        }
       }
+    },
+
+    onSuccess: (result, { activityId }) => {
+      useActivitiesStore.setState(state => ({
+        trip: state.trip
+          ? {
+              ...state.trip,
+              activities: state.trip.activities.map(activity =>
+                activity.id === activityId
+                  ? {
+                      ...activity,
+                      ...result.activity,
+                      warning: result.warning || null, // Update warning from response
+                    }
+                  : activity
+              ),
+            }
+          : null,
+        loadingActivities: new Set([...state.loadingActivities].filter(id => id !== activityId)),
+      }));
     },
   });
 
