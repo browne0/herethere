@@ -5,22 +5,31 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ItineraryHeader } from './ItineraryHeader';
 
 interface ItineraryRebalancingProps {
+  tripId: string;
   tripTitle: string;
   startDate: Date;
   endDate: Date;
 }
 
-const ItineraryRebalancing = ({ tripTitle, startDate, endDate }: ItineraryRebalancingProps) => {
+const ItineraryRebalancing = ({
+  tripId,
+  tripTitle,
+  startDate,
+  endDate,
+}: ItineraryRebalancingProps) => {
   // Create an array of 3 days to show loading state
   const loadingDays = Array(3).fill(null);
 
   return (
     <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)] flex flex-col">
       <ItineraryHeader
+        tripId={tripId}
         title={tripTitle}
         startDate={startDate}
         endDate={endDate}
         isRebalancing={true}
+        view="listMonth"
+        onViewChange={() => {}}
       />
 
       {/* List view loading state */}

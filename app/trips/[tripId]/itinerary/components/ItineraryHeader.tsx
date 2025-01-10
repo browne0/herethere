@@ -1,10 +1,12 @@
-import { Calendar, List, CalendarDays } from 'lucide-react';
+import { List, CalendarDays } from 'lucide-react';
+import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
 
 type ViewType = 'listMonth' | 'timeGrid';
 
 interface ItineraryHeaderProps {
+  tripId: string;
   title: string;
   startDate: Date | string | number;
   endDate: Date | string | number;
@@ -16,6 +18,7 @@ interface ItineraryHeaderProps {
 }
 
 export function ItineraryHeader({
+  tripId,
   title,
   startDate,
   endDate,
@@ -30,6 +33,12 @@ export function ItineraryHeader({
 
   return (
     <div className="px-4 py-3 border-b bg-white">
+      <Link
+        href={`/trips/${tripId}`}
+        className="pb-2 text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+      >
+        ← Back to Recommendations
+      </Link>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">{title}</h1>

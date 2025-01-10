@@ -36,6 +36,11 @@ export interface Features {
   takeout?: boolean;
   delivery?: boolean;
   parking?: ParkingFeatures;
+  reservable?: boolean;
+  servesBeer?: boolean;
+  servesWine?: boolean;
+  outdoorSeating?: boolean;
+  servesVegetarianFood?: boolean;
 }
 
 export interface ActivityRecommendation {

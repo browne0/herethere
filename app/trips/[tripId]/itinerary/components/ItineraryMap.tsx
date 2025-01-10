@@ -9,6 +9,7 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import CustomMarker from '../../components/RecommendationsView/CustomMarker';
+import { MapLegend } from '../../components/RecommendationsView/MapLegend';
 
 // Constants for map display
 const MIN_LABEL_DISTANCE = 105;
@@ -289,6 +290,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
       onLoad={handleMapLoad}
       zoom={zoom}
     >
+      <MapLegend />
       {activitiesByDay.map(day => renderDayMarkers(day))}
 
       {selectedActivity && (

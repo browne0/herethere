@@ -48,7 +48,38 @@ export const activityService = {
       },
     })) as unknown as ParsedItineraryActivity[];
 
+    // Schedule activities
     await scheduleActivities(plannedActivities, trip);
+
+    // After scheduling, check each activity's new time against opening hours
+    // and update warnings accordingly
+    for (const activity of plannedActivities) {
+      if (activity.startTime && activity.endTime) {
+        const isOpen = isActivityOpenDuring(
+          activity.recommendation as ActivityRecommendation,
+          new Date(activity.startTime),
+          new Date(activity.endTime)
+        );
+
+        if (!isOpen) {
+          await prisma.itineraryActivity.update({
+            where: { id: activity.id },
+            data: {
+              warning:
+                'This activity might be closed during the scheduled time. Please verify the opening hours.',
+            },
+          });
+        } else {
+          // Clear any existing warnings if the activity is now scheduled during open hours
+          await prisma.itineraryActivity.update({
+            where: { id: activity.id },
+            data: {
+              warning: null,
+            },
+          });
+        }
+      }
+    }
 
     const updatedActivities = (await prisma.itineraryActivity.findMany({
       where: { tripId },
