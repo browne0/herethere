@@ -1,10 +1,9 @@
 'use client';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { SignedIn } from '@clerk/nextjs';
 import { ChevronLeft, List } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
 
 import { HereThereUserButton } from '@/components/nav';
 import { Button } from '@/components/ui/button';
@@ -12,15 +11,16 @@ import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ActivitySheet } from './ActivitySheet';
+import { ParsedTrip } from '../types';
 
 interface TripHeaderProps {
   onEditClick: () => void;
+  onDateClick: () => void;
+  onCityClick: () => void;
 }
 
-export const TripHeader = ({ onEditClick }: TripHeaderProps) => {
+export const TripHeader = ({ onEditClick, onDateClick, onCityClick }: TripHeaderProps) => {
   const { trip } = useActivitiesStore();
-  const router = useRouter();
-  const pathname = usePathname();
 
   const addedActivities = trip?.activities.filter(act => act.status === 'planned') ?? [];
   const interestedActivities = trip?.activities.filter(act => act.status === 'interested') ?? [];
@@ -84,15 +84,25 @@ export const TripHeader = ({ onEditClick }: TripHeaderProps) => {
 
           {/* Center section */}
           <div className="flex items-center rounded-full border border-gray-200">
-            <div
-              onClick={onEditClick}
-              className="flex items-center hover:bg-gray-100 py-2 px-4 cursor-pointer transition-colors rounded-full"
-            >
-              <div className="text-sm font-medium px-3 first:pl-0">{trip.city.name}</div>
-              <div className="text-sm font-medium px-3 border-l border-gray-200">
+            <div className="flex items-center">
+              <button
+                onClick={onCityClick}
+                className="text-sm font-medium px-3 py-2 hover:bg-gray-100 transition-colors rounded-l-full"
+              >
+                {trip.city.name}
+              </button>
+              <button
+                onClick={onDateClick}
+                className="text-sm font-medium px-3 py-2 border-l border-gray-200 hover:bg-gray-100 transition-colors"
+              >
                 {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
-              </div>
-              <div className="text-sm font-medium px-3 border-l border-gray-200">1 guest</div>
+              </button>
+              <button
+                onClick={onEditClick}
+                className="text-sm font-medium px-3 py-2 border-l border-gray-200 hover:bg-gray-100 transition-colors rounded-r-full"
+              >
+                1 guest
+              </button>
             </div>
           </div>
 

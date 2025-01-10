@@ -9,8 +9,6 @@ import { Cuisine, DietaryRestriction, usePreferences } from '@/lib/stores/prefer
 import { MealType } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
-import ResponsiveMultiSelect from './ResponsiveMultiSelect';
-
 // SSR-safe media query hook
 const useSSRMediaQuery = (query: string): boolean => {
   const [matches, setMatches] = useState(false);
@@ -120,16 +118,34 @@ const DietaryPage = () => {
         <div>
           <div className="font-medium">Dietary Restrictions</div>
           <div className="text-sm text-gray-500">Get catered restaurant suggestions for you</div>
-          <ResponsiveMultiSelect<DietaryRestriction>
-            options={DIETARY_RESTRICTIONS}
-            selected={dietaryRestrictions}
-            onChange={setDietaryRestrictions}
-            placeholder="Select any dietary restrictions"
-            title="Dietary Restrictions"
-            searchPlaceholder="Search restrictions..."
-            type="dietary"
-            entity="dietary restrictions"
-          />
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-2">
+            {DIETARY_RESTRICTIONS.map(restriction => (
+              <label key={restriction.value} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={dietaryRestrictions.includes(restriction.value)}
+                  onChange={() => {
+                    let newRestrictions: DietaryRestriction[];
+                    if (restriction.value === 'none') {
+                      // If "none" is selected, clear all other selections
+                      newRestrictions = dietaryRestrictions.includes('none') ? [] : ['none'];
+                    } else {
+                      // If any other restriction is selected, remove "none" and toggle the selection
+                      newRestrictions = dietaryRestrictions.filter(r => r !== 'none');
+                      if (dietaryRestrictions.includes(restriction.value)) {
+                        newRestrictions = newRestrictions.filter(r => r !== restriction.value);
+                      } else {
+                        newRestrictions = [...newRestrictions, restriction.value];
+                      }
+                    }
+                    setDietaryRestrictions(newRestrictions);
+                  }}
+                  className="rounded border-gray-300 text-blue-500 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">{restriction.label}</span>
+              </label>
+            ))}
+          </div>
         </div>
 
         {/* Cuisine Preferences */}

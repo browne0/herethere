@@ -183,7 +183,7 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
             className="rounded-t-xl"
             activityId={activity.id}
           />
-          {activity.isMustSee && category.type !== 'must-see' && (
+          {activity.isMustSee && (
             <div className="absolute top-3 left-3">
               <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
                 Must See

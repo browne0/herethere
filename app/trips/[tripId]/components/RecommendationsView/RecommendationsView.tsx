@@ -62,7 +62,7 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
   const searchParams = useSearchParams();
 
   // States
-  const selectedCategory = searchParams.get('category') || 'must-see';
+  const selectedCategory = searchParams.get('category') || 'popular';
   const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [snap, setSnap] = useState<number | string | null>(0.5);

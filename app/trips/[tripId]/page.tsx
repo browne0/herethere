@@ -3,10 +3,10 @@ import { Camera, Flower2, HandPlatter, Landmark, Martini, Palette, Star } from '
 import { Metadata, Viewport } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
-import { essentialExperiencesRecommendationService } from '@/app/api/services/recommendations/essentialExperiences';
 import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
 import { nightlifeRecommendationService } from '@/app/api/services/recommendations/nightlife';
+import { popularRecommendationsService } from '@/app/api/services/recommendations/popularRecommendations';
 import { restaurantRecommendationService } from '@/app/api/services/recommendations/restaurants';
 import { spaWellnessRecommendationService } from '@/app/api/services/recommendations/spas';
 import { touristAttractionService } from '@/app/api/services/recommendations/touristAttractions';
@@ -109,7 +109,7 @@ export default async function TripPage({
 
   const syncSearchParams = await searchParams;
 
-  const currentCategory = syncSearchParams['category'] || 'must-see';
+  const currentCategory = syncSearchParams['category'] || 'popular';
   const currentPage = parseInt(syncSearchParams['page'] || '1');
 
   const cityCenter = {
@@ -146,8 +146,8 @@ export default async function TripPage({
   // Get the appropriate service based on category
   const getServiceForCategory = (category: string) => {
     switch (category) {
-      case 'must-see':
-        return essentialExperiencesRecommendationService;
+      case 'popular':
+        return popularRecommendationsService;
       case 'tourist-attractions':
         return touristAttractionService;
       case 'culture':
@@ -161,7 +161,7 @@ export default async function TripPage({
       case 'spas-&-wellness':
         return spaWellnessRecommendationService;
       default:
-        return essentialExperiencesRecommendationService;
+        return popularRecommendationsService;
     }
   };
 
@@ -174,15 +174,15 @@ export default async function TripPage({
   // Define all categories but only populate data for the current one
   const categories: ActivityCategoryType[] = [
     {
-      type: 'must-see',
+      type: 'popular',
       icon: <Star className="w-5 h-5" />,
-      title: `Must See in ${trip.city.name}`,
+      title: `Most Popular in ${trip.city.name}`,
       description: 'Essential experiences and notable attractions',
-      activities: (currentCategory === 'must-see'
+      activities: (currentCategory === 'popular'
         ? recommendations.items
         : []) as unknown as ActivityRecommendation[],
       pagination:
-        currentCategory === 'must-see'
+        currentCategory === 'popular'
           ? {
               currentPage: recommendations.page,
               totalPages: recommendations.totalPages,

@@ -9,6 +9,7 @@ import type {
   ParsedTrip,
 } from '@/app/trips/[tripId]/types';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
+import { debounce } from '@/lib/utils/debounce';
 
 // Core store state interface - Keep this minimal and focused on UI state
 interface ActivitiesState {
@@ -236,25 +237,34 @@ export function useActivityMutations() {
     },
   });
 
+  // Create debounced API call with explicit return type
+  const debouncedUpdateApi = debounce<
+    (
+      tripId: string,
+      activityId: string,
+      updates: UpdateableActivityFields
+    ) => Promise<{
+      activity: ParsedItineraryActivity;
+      warning: string | null;
+    }>
+  >((tripId, activityId, updates) => activityApi.updateActivity(tripId, activityId, updates), 300);
+
   // Update activity mutation
-  const updateActivity = useMutation({
-    mutationFn: async ({
-      activityId,
-      updates,
-    }: {
-      activityId: string;
-      updates: UpdateableActivityFields;
-    }) => {
-      if (!trip) {
-        throw new Error('Cannot add activity without trip context');
-      }
-      return activityApi.updateActivity(trip.id, activityId, updates);
+  const updateActivity = useMutation<
+    { activity: ParsedItineraryActivity; warning: string | null },
+    Error,
+    { activityId: string; updates: UpdateableActivityFields },
+    { previousTrip: ParsedTrip | null; activityId: string }
+  >({
+    mutationFn: async ({ activityId, updates }) => {
+      if (!trip) throw new Error('Cannot add activity without trip context');
+      return await debouncedUpdateApi(trip.id, activityId, updates);
     },
 
     onMutate: async ({ activityId, updates }) => {
+      // Immediate optimistic update
       const previousTrip = useActivitiesStore.getState().trip;
 
-      // Apply optimistic update
       useActivitiesStore.setState(state => ({
         trip: state.trip
           ? {
@@ -264,7 +274,7 @@ export function useActivityMutations() {
                   ? {
                       ...activity,
                       ...updates,
-                      warning: null, // Optimistically clear warning
+                      warning: null,
                       updatedAt: new Date(),
                     }
                   : activity

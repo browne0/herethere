@@ -193,7 +193,7 @@ export function ItineraryView() {
 
   if (!trip) return <ItineraryLoading />;
 
-  if (isRebalancing)
+  if (isRebalancing && trip)
     return (
       <ItineraryRebalancing
         tripTitle={trip.title}
@@ -243,6 +243,12 @@ export function ItineraryView() {
 
   return (
     <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)] flex flex-col">
+      <Link
+        href={`/trips/${trip.id}`}
+        className="px-4 pt-4 text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+      >
+        ← Back to Recommendations
+      </Link>
       <ItineraryHeader
         title={trip.title}
         startDate={trip.startDate}

@@ -1,7 +1,11 @@
 import React from 'react';
 
-import { Info, X } from 'lucide-react';
+import { TooltipArrow } from '@radix-ui/react-tooltip';
+import { Bookmark, Info, X } from 'lucide-react';
+import { ListChecks, Calendar } from 'lucide-react';
+import Link from 'next/link';
 
+import { Button } from '@/components/ui/button';
 import {
   Pagination,
   PaginationContent,
@@ -9,11 +13,15 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
+import { Sheet, SheetTrigger } from '@/components/ui/sheet';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
 import ActivityCard from './ActivityCard';
 import { ActivityCategoryType } from '../../types';
+import { ActivitySheet } from '../ActivitySheet';
 
 interface ActivityListProps {
   currentCategory?: ActivityCategoryType;
@@ -22,6 +30,10 @@ interface ActivityListProps {
 }
 
 const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListProps) => {
+  const { trip } = useActivitiesStore();
+  const addedCount = trip?.activities.filter(act => act.status === 'planned').length ?? 0;
+  const interestedCount = trip?.activities.filter(act => act.status === 'interested').length ?? 0;
+
   const [hasSeenBanner, setHasSeenBanner] = useLocalStorage(
     'has-seen-recommendations-banner',
     false
@@ -33,7 +45,7 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
     const { currentPage, totalPages } = currentCategory.pagination;
 
     return (
-      <div className="bg-white border-t py-4 px-2 h-full relative">
+      <div className="bg-white border-t py-4 px-2 relative">
         <Pagination>
           <PaginationContent className="flex justify-center items-center gap-2">
             <PaginationItem>
@@ -69,10 +81,72 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
 
   if (!currentCategory) return null;
 
-  const shouldShowBanner = currentCategory.type === 'must-see' && !hasSeenBanner;
+  const shouldShowBanner = currentCategory.type === 'popular' && !hasSeenBanner;
 
   return (
-    <>
+    <div className="relative overflow-y-auto h-[calc(100vh-144px)]">
+      <div className="bg-white border-b px-4 py-3 hidden lg:flex items-center justify-between sticky top-0 z-20">
+        <div className="flex divide-x">
+          <div className="flex items-center gap-2 pr-4 ">
+            <ListChecks className="w-5 h-5 text-green-600" />
+            <span className="text-sm">
+              <span className="font-medium">{addedCount}</span>{' '}
+              {addedCount === 1 ? 'activity' : 'activities'} added
+            </span>
+          </div>
+          <div className="flex items-center gap-2 pl-4">
+            <Bookmark
+              className="h-5 w-5 text-yellow-300 fill-yellow-300"
+              stroke="black"
+              strokeWidth={1.5}
+            />
+            <span className="text-sm">
+              <span className="font-medium">{interestedCount} saved for later</span>
+            </span>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" size="sm">
+                View Activities
+              </Button>
+            </SheetTrigger>
+            <ActivitySheet />
+          </Sheet>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Button
+                    asChild={addedCount > 0}
+                    variant="default"
+                    size="sm"
+                    disabled={addedCount === 0}
+                  >
+                    {addedCount > 0 ? (
+                      <Link href={`/trips/${trip?.id}/itinerary`}>
+                        <Calendar className="w-4 h-4" />
+                        View Itinerary
+                      </Link>
+                    ) : (
+                      <span className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        View Itinerary
+                      </span>
+                    )}
+                  </Button>
+                </div>
+              </TooltipTrigger>
+              {addedCount === 0 && (
+                <TooltipContent side="bottom">
+                  <p>Add activities to view your itinerary</p>
+                </TooltipContent>
+              )}
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
       {shouldShowBanner && (
         <div className="bg-gray-100 border border-gray-200 rounded-lg p-4 m-4 relative">
           <button
@@ -119,7 +193,7 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
       )}
 
       {currentCategory.pagination && <PaginationComponent />}
-    </>
+    </div>
   );
 };
 

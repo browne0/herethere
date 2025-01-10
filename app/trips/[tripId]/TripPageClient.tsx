@@ -7,9 +7,11 @@ import { toast } from 'sonner';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { RecommendationsView } from './components/RecommendationsView';
+import { RecommendationsView } from './components/RecommendationsView/RecommendationsView';
 import { ActivityCategoryType, ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
+import DateEditModal from './components/DateEditModal';
+import TripCityModal from './components/TripCityModal';
 import TripEditModal from './components/TripEditModal';
 import TripHeader from './components/TripHeader';
 
@@ -23,6 +25,8 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
   const { setTrip, setCategories } = useActivitiesStore();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
+  const [isCityModalOpen, setIsCityModalOpen] = useState(false);
 
   // Initialize store with trip activities
   useEffect(() => {
@@ -59,9 +63,14 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
 
   return (
     <div className="bg-white">
-      <TripHeader onEditClick={() => setIsEditModalOpen(true)} />
+      <TripHeader
+        onEditClick={() => setIsEditModalOpen(true)}
+        onDateClick={() => setIsDateModalOpen(true)}
+        onCityClick={() => setIsCityModalOpen(true)}
+      />
       <RecommendationsView onDeleteClick={() => setIsDeleteDialogOpen(true)} />
       <DeleteTripDialog
+        trip={trip}
         isOpen={isDeleteDialogOpen}
         onClose={() => setIsDeleteDialogOpen(false)}
         onDelete={handleDeleteTrip}
@@ -69,6 +78,16 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
       <TripEditModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
+        onUpdateTrip={handleTripUpdate}
+      />
+      <DateEditModal
+        isOpen={isDateModalOpen}
+        onClose={() => setIsDateModalOpen(false)}
+        onUpdateTrip={handleTripUpdate}
+      />
+      <TripCityModal
+        isOpen={isCityModalOpen}
+        onClose={() => setIsCityModalOpen(false)}
         onUpdateTrip={handleTripUpdate}
       />
     </div>

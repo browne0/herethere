@@ -26,14 +26,14 @@ import { toast } from 'sonner';
 import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CUISINE_PREFERENCES } from '@/constants';
+import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 import {
   usePreferences,
   InterestType,
   TransportMode,
   StartTime,
-  DietaryRestriction,
   CrowdPreference,
   Cuisine,
 } from '@/lib/stores/preferences';
@@ -322,58 +322,77 @@ export default function EditPreferences() {
 
                   <div>
                     <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">
-                      Your Favorite Cuisines
+                      Favorite Cuisines
                     </h2>
-                    <ResponsiveMultiSelect<Cuisine>
-                      options={CUISINE_PREFERENCES}
-                      selected={preferences.cuisinePreferences.preferred}
-                      onChange={handleCuisineChange}
-                      placeholder="Select your favorite cuisines"
-                      title="Favorite Cuisines"
-                      searchPlaceholder="Search cuisines..."
-                      entity="cuisines"
-                    />
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {CUISINE_PREFERENCES.map(cuisine => (
+                        <div key={cuisine.value} className="flex items-center space-x-2 py-1">
+                          <Checkbox
+                            id={cuisine.value}
+                            checked={preferences.cuisinePreferences.preferred.includes(
+                              cuisine.value
+                            )}
+                            onCheckedChange={checked => {
+                              const newPreferred = checked
+                                ? [...preferences.cuisinePreferences.preferred, cuisine.value]
+                                : preferences.cuisinePreferences.preferred.filter(
+                                    c => c !== cuisine.value
+                                  );
+                              preferences.setCuisinePreferences({
+                                ...preferences.cuisinePreferences,
+                                preferred: newPreferred,
+                              });
+                            }}
+                          />
+                          <label
+                            htmlFor={cuisine.value}
+                            className="text-sm md:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                          >
+                            {cuisine.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   <div>
                     <h2 className="font-semibold text-base md:text-lg mb-3 md:mb-4">
                       Dietary Restrictions
                     </h2>
-                    <div className="space-y-2">
-                      {(['none', 'vegetarian', 'vegan'] as DietaryRestriction[]).map(
-                        restriction => (
-                          <button
-                            key={restriction}
-                            onClick={() => {
-                              if (restriction === 'none') {
-                                preferences.setDietaryRestrictions(['none']);
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                      {DIETARY_RESTRICTIONS.map(restriction => (
+                        <div key={restriction.value} className="flex items-center space-x-2 py-1">
+                          <Checkbox
+                            id={restriction.value}
+                            checked={preferences.dietaryRestrictions.includes(restriction.value)}
+                            onCheckedChange={checked => {
+                              if (restriction.value === 'none') {
+                                // If "No restrictions" is checked, clear all other selections
+                                preferences.setDietaryRestrictions(checked ? ['none'] : []);
                               } else {
-                                preferences.setDietaryRestrictions(
-                                  preferences.dietaryRestrictions.includes(restriction)
-                                    ? preferences.dietaryRestrictions.filter(r => r !== restriction)
-                                    : [
-                                        ...preferences.dietaryRestrictions.filter(
-                                          r => r !== 'none'
-                                        ),
-                                        restriction,
-                                      ]
-                                );
+                                // If any other restriction is checked
+                                let newRestrictions = preferences.dietaryRestrictions.filter(
+                                  r => r !== 'none'
+                                ); // Remove "none" if it exists
+                                if (checked) {
+                                  newRestrictions = [...newRestrictions, restriction.value];
+                                } else {
+                                  newRestrictions = newRestrictions.filter(
+                                    r => r !== restriction.value
+                                  );
+                                }
+                                preferences.setDietaryRestrictions(newRestrictions);
                               }
                             }}
-                            className={`w-full p-3 md:p-4 rounded-lg border transition-all ${
-                              preferences.dietaryRestrictions.includes(restriction)
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-gray-300'
-                            }`}
+                          />
+                          <label
+                            htmlFor={restriction.value}
+                            className="text-sm md:text-base font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
                           >
-                            <div className="text-left">
-                              <div className="font-medium text-sm md:text-base capitalize">
-                                {restriction === 'none' ? 'No restrictions' : restriction}
-                              </div>
-                            </div>
-                          </button>
-                        )
-                      )}
+                            {restriction.label}
+                          </label>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

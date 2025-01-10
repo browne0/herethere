@@ -16,7 +16,7 @@ interface Location {
   neighborhood: string;
 }
 
-export const essentialExperiencesRecommendationService = {
+export const popularRecommendationsService = {
   async getRecommendations(params: ScoringParams, pagination: PaginationParams) {
     const { page = 1, pageSize = DEFAULT_PAGE_SIZE } = pagination;
     const { cityId } = params;
@@ -159,7 +159,7 @@ export const essentialExperiencesRecommendationService = {
       }
     });
 
-    // Always include essential tourist types for must-see attractions
+    // Always include essential tourist types for popular attractions
     CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.forEach(type => placeTypes.add(type));
     CategoryMapping[PlaceCategory.HISTORIC].includedTypes.forEach(type => placeTypes.add(type));
 
@@ -222,20 +222,20 @@ export const essentialExperiencesRecommendationService = {
 
   calculateWeights(params: ScoringParams) {
     const weights = {
-      mustSee: 0.3, // Must-see status is primary for this service
-      interest: 0.25, // Interest match is important but secondary
-      activityFit: 0.2, // Activity characteristics
-      price: 0.15, // Price considerations
-      location: 0.1, // Location/accessibility
+      mustSee: 0.2,
+      interest: 0.2,
+      activityFit: 0.2,
+      price: 0.15,
+      location: 0.25,
     };
 
     // Adjust weights based on crowd preference
     if (params.crowdPreference === 'popular') {
-      weights.mustSee += 0.05;
-      weights.location -= 0.05;
+      weights.mustSee += 0.1;
+      weights.location -= 0.1;
     } else if (params.crowdPreference === 'hidden') {
-      weights.mustSee -= 0.05;
-      weights.interest += 0.05;
+      weights.mustSee -= 0.1;
+      weights.interest += 0.1;
     }
 
     // Adjust for budget sensitivity
@@ -250,23 +250,28 @@ export const essentialExperiencesRecommendationService = {
   calculateMustSeeScore(attraction: ActivityRecommendation): number {
     let score = 0;
 
-    // Core must-see factors
-    if (attraction.isMustSee) {
-      score += 0.6;
-    }
-    if (attraction.isTouristAttraction) {
+    // Emphasize ratings and review counts more than must-see status
+    if (attraction.ratingTier === 'EXCEPTIONAL') {
+      score += 0.4;
+    } else if (attraction.ratingTier === 'HIGH') {
       score += 0.3;
     }
 
-    // Bonus for significant landmarks or high ratings
-    if (attraction.placeTypes.includes('landmark') || attraction.placeTypes.includes('monument')) {
-      score = Math.min(1, score + 0.2);
-    }
-    if (attraction.ratingTier === 'EXCEPTIONAL' && attraction.reviewCountTier === 'VERY_HIGH') {
-      score = Math.min(1, score + 0.1);
+    if (attraction.reviewCountTier === 'VERY_HIGH') {
+      score += 0.4;
+    } else if (attraction.reviewCountTier === 'HIGH') {
+      score += 0.3;
     }
 
-    return score;
+    // Reduce emphasis on must-see status
+    if (attraction.isMustSee) {
+      score += 0.3;
+    }
+    if (attraction.isTouristAttraction) {
+      score += 0.2;
+    }
+
+    return Math.min(1, score);
   },
 
   calculateInterestScore(attraction: ActivityRecommendation, interests: InterestType[]): number {

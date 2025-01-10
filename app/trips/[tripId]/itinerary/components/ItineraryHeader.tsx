@@ -6,8 +6,8 @@ type ViewType = 'listMonth' | 'timeGrid';
 
 interface ItineraryHeaderProps {
   title: string;
-  startDate: Date;
-  endDate: Date;
+  startDate: Date | string | number;
+  endDate: Date | string | number;
   activitiesCount?: number;
   isRebalancing?: boolean;
   onRebalance?: () => void;
@@ -25,6 +25,9 @@ export function ItineraryHeader({
   view,
   onViewChange,
 }: ItineraryHeaderProps) {
+  const start = startDate instanceof Date ? startDate : new Date(startDate);
+  const end = endDate instanceof Date ? endDate : new Date(endDate);
+
   return (
     <div className="px-4 py-3 border-b bg-white">
       <div className="flex items-center justify-between">
@@ -32,17 +35,15 @@ export function ItineraryHeader({
           <h1 className="text-xl font-semibold">{title}</h1>
           <div className="flex items-center mt-1 text-sm text-gray-500">
             <span>
-              {startDate &&
-                startDate.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
+              {start.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })}
               {' - '}
-              {endDate &&
-                endDate.toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })}
+              {end.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+              })}
             </span>
             {activitiesCount !== undefined && (
               <>

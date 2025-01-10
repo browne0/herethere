@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-import { Bookmark, Check, ChevronUp } from 'lucide-react';
+import { Bookmark, Check, ChevronUp, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -21,7 +21,7 @@ export const MapLegend: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="absolute left-2 top-2 z-10">
+    <div className="absolute right-2 top-2 z-10">
       {isExpanded ? (
         <Card className="w-48">
           <CardContent className="p-4 space-y-3">
@@ -46,7 +46,7 @@ export const MapLegend: React.FC = () => {
             />
             <LegendItem
               icon={
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-white">
+                <div className="flex h-6 w-6 p-1 items-center justify-center rounded-full bg-white border border-black">
                   <Bookmark
                     className="h-4 w-4 text-yellow-500 fill-yellow-500"
                     stroke="black"
@@ -55,6 +55,14 @@ export const MapLegend: React.FC = () => {
                 </div>
               }
               label="Interested"
+            />
+            <LegendItem
+              icon={
+                <div className="flex h-6 w-6 items-center justify-center">
+                  <MapPin className="h-5 w-5 text-red-700 fill-red-500" />
+                </div>
+              }
+              label="Activity"
             />
           </CardContent>
         </Card>
