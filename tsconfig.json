@@ -22,7 +22,7 @@
     "paths": {
       "@/*": ["./*"]
     },
-    "types": ["google.maps", "jest", "node", "@testing-library/jest-dom"]
+    "types": ["google.maps", "jest", "node"]
   },
   "include": [
     "next-env.d.ts",
