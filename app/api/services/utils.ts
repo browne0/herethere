@@ -100,31 +100,17 @@ const VENUE_TIMING = {
   bar: { start: 19, end: 26 },
 };
 
-const getPreferredStartHour = (startTime: StartTime, timezone: string): number => {
-  // Get current date in the local timezone
-  const today = new Date();
-  const localDate = formatInTimeZone(today, timezone, 'yyyy-MM-dd');
-
-  let hour: number;
+const getPreferredStartHour = (startTime: StartTime): number => {
   switch (startTime) {
     case 'early':
-      hour = 7; // Early bird - before 8am
-      break;
+      return 7; // Early bird - 7am
     case 'mid':
-      hour = 9; // Mid-morning - 9-10am
-      break;
+      return 9; // Mid-morning - 9am
     case 'late':
-      hour = 10; // Later start - after 10am
-      break;
+      return 10; // Later start - 10am
     default:
-      hour = 9; // Default to mid-morning if not specified
+      return 9; // Default to mid-morning if not specified
   }
-
-  // Create a date object in the correct timezone
-  const localTime = new Date(`${localDate}T${hour.toString().padStart(2, '0')}:00:00`);
-
-  // Convert the hour back to the local timezone number
-  return Number(formatInTimeZone(localTime, timezone, 'H'));
 };
 
 function isSameDay(date1: Date | null, date2: Date | null, timezone: string): boolean {
@@ -370,7 +356,7 @@ function scoreTimeSlot(
     if (dayBalance.totalDuration > 480) score -= 5;
   }
 
-  const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime, timezone);
+  const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime);
   if (hour < preferredStartHour) {
     score -= 20;
   }
@@ -608,8 +594,7 @@ function handleRestaurantSlots(
   existingActivities: ParsedItineraryActivity[],
   tripStart: Date,
   tripEnd: Date,
-  mealWindows: typeof MEAL_WINDOWS,
-  timezone: string
+  mealWindows: typeof MEAL_WINDOWS
 ): Date[] {
   const slots: Date[] = [];
 
@@ -736,8 +721,8 @@ export function findAvailableSlots(
   });
 
   while (date <= tripEnd) {
-    const localDay = Number(formatInTimeZone(date, timezone, 'i')) - 1;
-    const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime, timezone);
+    const localDay = Number(formatInTimeZone(date, timezone, 'e')) - 1;
+    const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime);
 
     // Reset to preferred start hour each day
     date.setHours(preferredStartHour, 0, 0, 0);
@@ -752,13 +737,15 @@ export function findAvailableSlots(
       const openDay = period.open.day;
       return openDay === localDay;
     });
+    console.log(recommendation.name);
+    console.log(dayPeriods);
 
     if (!dayPeriods.length) {
       console.debug(
         `Skipping ${formatInTimeZone(date, timezone, 'EEEE')} - ${recommendation.name} is closed today`
       );
       date.setDate(date.getDate() + 1);
-      date.setHours(8, 0, 0, 0);
+      date.setHours(preferredStartHour, 0, 0, 0);
       continue;
     }
 
@@ -771,12 +758,11 @@ export function findAvailableSlots(
         activities,
         tripStart,
         tripEnd,
-        MEAL_WINDOWS,
-        timezone
+        MEAL_WINDOWS
       );
       slots.push(...restaurantSlots);
       date.setDate(date.getDate() + 1);
-      date.setHours(8, 0, 0, 0);
+      date.setHours(preferredStartHour, 0, 0, 0);
       continue;
     }
 
@@ -915,6 +901,7 @@ async function clearSchedulingData(tripId: string): Promise<void> {
       startTime: null,
       endTime: null,
       transitTimeFromPrevious: 0,
+      warning: null,
     },
   });
 }
@@ -931,6 +918,8 @@ export async function scheduleActivities(
   const scheduledActivities: ParsedItineraryActivity[] = [];
   const unscheduledActivities: ParsedItineraryActivity[] = [];
   const activityIntervals = new IntervalTree();
+
+  console.log(activities);
 
   const sortedActivities = activities.sort((a, b) => {
     // First priority: Must-see attractions
@@ -976,7 +965,7 @@ export async function scheduleActivities(
         activity.recommendation,
         scheduledActivities,
         userPreferences,
-        activityIntervals // Pass the interval tree
+        activityIntervals
       );
 
       if (!bestSlot) {

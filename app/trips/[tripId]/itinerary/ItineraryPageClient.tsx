@@ -47,7 +47,7 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
       />
       <ItineraryView />
       <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)]">
-        <ItineraryMap />
+        <ItineraryMap initialTrip={initialTrip} />
       </div>
       <TripEditModal
         isOpen={isEditModalOpen}

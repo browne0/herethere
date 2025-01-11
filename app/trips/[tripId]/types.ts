@@ -12,7 +12,7 @@ export interface Location {
   placeId?: string;
 }
 
-export type ActivityStatus = 'interested' | 'planned' | 'confirmed' | 'completed' | 'cancelled';
+export type ActivityStatus = 'interested' | 'planned' | 'completed' | 'cancelled';
 
 export interface ParsedItineraryActivity extends ItineraryActivity {
   recommendation: ActivityRecommendation;

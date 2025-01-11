@@ -22,7 +22,7 @@ import ItineraryLoading from './ItineraryLoading';
 import ItineraryRebalancing from './ItineraryRebalancing';
 
 function isValidActivityStatus(status: string): status is ActivityStatus {
-  return ['interested', 'planned', 'confirmed', 'completed', 'cancelled'].includes(status);
+  return ['interested', 'planned', 'completed', 'cancelled'].includes(status);
 }
 
 function getDaysBetweenDates(date1: Date, date2: Date) {
@@ -43,7 +43,6 @@ function getDaysBetweenDates(date1: Date, date2: Date) {
 const statusColors: Record<ActivityStatus, string> = {
   interested: '#fcd34d',
   planned: '#4285f4',
-  confirmed: '#86efac',
   completed: '#d1d5db',
   cancelled: '#ef4444',
 };
@@ -255,8 +254,11 @@ export function ItineraryView() {
         view={view}
         onViewChange={newView => {
           setView(newView);
-          calendarRef.current!.getApi().changeView(newView);
+          if (calendarRef.current) {
+            calendarRef.current.getApi().changeView(newView);
+          }
         }}
+        disableViewToggle={scheduledEvents.length === 0}
       />
       {/* Calendar */}
       <div className="flex-1 overflow-hidden bg-white px-4 mb-4">
@@ -264,7 +266,6 @@ export function ItineraryView() {
           <EmptyState />
         ) : (
           <FullCalendar
-            key={`calendar-${view}`}
             plugins={[timeGridPlugin, interactionPlugin, listPlugin]}
             initialView={view}
             headerToolbar={{

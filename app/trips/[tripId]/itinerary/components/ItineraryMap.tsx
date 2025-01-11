@@ -10,6 +10,7 @@ import { ActivityRecommendation } from '@/lib/types/recommendations';
 
 import CustomMarker from '../../components/RecommendationsView/CustomMarker';
 import { MapLegend } from '../../components/RecommendationsView/MapLegend';
+import { ParsedTrip } from '../../types';
 
 // Constants for map display
 const MIN_LABEL_DISTANCE = 105;
@@ -17,6 +18,7 @@ const DEFAULT_ZOOM = 13;
 const MIN_ZOOM_FOR_LABELS = 12;
 
 interface ItineraryMapProps {
+  initialTrip: ParsedTrip;
   onMarkerHover?: (activityId: string | null) => void;
   onMarkerSelect?: (activityId: string | null) => void;
   hoveredActivityId?: string | null;
@@ -36,7 +38,7 @@ interface MarkerWithPixels {
 interface DayActivities {
   dayIndex: number;
   date: Date;
-  timezone: string; // Add timezone from city
+  timezone: string;
   activities: Array<{
     activity: ActivityRecommendation;
     status: 'planned' | 'interested';
@@ -100,6 +102,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
   hoveredActivityId,
   selectedActivityId,
   currentDayIndex,
+  initialTrip,
 }) => {
   const { trip } = useActivitiesStore();
   const [map, setMap] = useState<google.maps.Map | null>(null);
@@ -191,15 +194,22 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
 
     // Center on city coordinates by default
     map.setCenter({
-      lat: trip.city.latitude,
-      lng: trip.city.longitude,
+      lat: initialTrip.city.latitude,
+      lng: initialTrip.city.longitude,
     });
     map.setZoom(DEFAULT_ZOOM);
 
+    const scheduledActivities = trip?.activities.filter(
+      activity => activity.status === 'planned' && activity.startTime && activity.endTime
+    );
     // Adjust bounds if there are activities
-    if (trip.activities.length > 0) {
+    if (scheduledActivities.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      trip.activities.forEach(activity => {
+      scheduledActivities.forEach(a => {
+        console.log(a.recommendation.name, ' Opening Hours:');
+        console.log(a.recommendation.openingHours?.weekdayDescriptions);
+      });
+      scheduledActivities.forEach(activity => {
         bounds.extend({
           lat: activity.recommendation.location.latitude,
           lng: activity.recommendation.location.longitude,
@@ -209,7 +219,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
     }
 
     boundsSet.current = true;
-  }, [map, trip, trip?.activities]);
+  }, [initialTrip.city.latitude, initialTrip.city.longitude, map, trip, trip?.activities]);
 
   // Loading and error states
   if (!isLoaded) {

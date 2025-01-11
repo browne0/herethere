@@ -15,6 +15,7 @@ interface ItineraryHeaderProps {
   onRebalance?: () => void;
   view: ViewType;
   onViewChange: (view: ViewType) => void;
+  disableViewToggle?: boolean;
 }
 
 export function ItineraryHeader({
@@ -27,6 +28,7 @@ export function ItineraryHeader({
   onRebalance,
   view,
   onViewChange,
+  disableViewToggle,
 }: ItineraryHeaderProps) {
   const start = startDate instanceof Date ? startDate : new Date(startDate);
   const end = endDate instanceof Date ? endDate : new Date(endDate);
@@ -68,7 +70,9 @@ export function ItineraryHeader({
             <Button variant="outline" size="sm" onClick={onRebalance} disabled={isRebalancing}>
               {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
             </Button>
-            <div className="bg-gray-100 p-1 rounded-lg flex">
+            <div
+              className={`bg-gray-100 p-1 rounded-lg flex ${disableViewToggle ? 'opacity-50 pointer-events-none' : ''}`}
+            >
               <button
                 onClick={() => onViewChange('listMonth')}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
