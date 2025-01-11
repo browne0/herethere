@@ -1,0 +1,11 @@
+{
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next",
+      "config": {
+        "buildCommand": "CI=true npm run test && npm run build"
+      }
+    }
+  ]
+}

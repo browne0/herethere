@@ -8,6 +8,115 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id                  String   @id
+  email               String   @unique
+  firstName           String?
+  lastName            String?
+  profileImage        String?
+  preferences         Json?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  onboardingCompleted Boolean  @default(false)
+  trips               Trip[]
+}
+
+model Trip {
+  id             String              @id @default(cuid())
+  userId         String
+  cityId         String
+  title          String
+  startDate      DateTime
+  endDate        DateTime
+  preferences    Json?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  lastRebalanced DateTime?
+  activities     ItineraryActivity[]
+  city           City                @relation(fields: [cityId], references: [id])
+  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([cityId])
+}
+
+model ActivityRecommendation {
+  id                   String               @id @default(cuid())
+  name                 String
+  description          String
+  cityId               String
+  duration             Int
+  location             Json
+  images               Json
+  rating               Float
+  reviewCount          Int
+  openingHours         Json?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  googlePlaceId        String?              @unique
+  indoorOutdoor        IndoorOutdoor
+  isMustSee            Boolean              @default(false)
+  isTouristAttraction  Boolean              @default(false)
+  lastSyncedAt         DateTime
+  placeTypes           String[]
+  ratingTier           RatingTier
+  reviewCountTier      ReviewCountTier
+  seasonalAvailability SeasonalAvailability @default(ALL_YEAR)
+  availableDays        Int[]
+  lastViatorSync       DateTime?
+  viatorData           Json?
+  viatorProductId      String?
+  businessStatus       BusinessStatus       @default(OPERATIONAL)
+  features             Json?
+  primaryType          String?
+  priceLevel           PriceLevel
+  city                 City                 @relation(fields: [cityId], references: [id])
+  itineraryActivities  ItineraryActivity[]
+
+  @@index([cityId])
+  @@index([isMustSee])
+  @@index([placeTypes])
+  @@index([googlePlaceId])
+}
+
+model ItineraryActivity {
+  id                      String                 @id @default(cuid())
+  tripId                  String
+  recommendationId        String
+  startTime               DateTime?
+  endTime                 DateTime?
+  status                  String                 @default("planned")
+  transitTimeFromPrevious Int
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+  warning                 String?
+  recommendation          ActivityRecommendation @relation(fields: [recommendationId], references: [id])
+  trip                    Trip                   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+
+  @@index([tripId])
+  @@index([recommendationId])
+}
+
+model City {
+  id             String                   @id @default(cuid())
+  name           String
+  countryCode    String
+  placeId        String
+  latitude       Float
+  longitude      Float
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  lastViatorSync DateTime?
+  viatorData     Json?
+  viatorDestId   Int?
+  viatorLookupId String?
+  timezone       String
+  activities     ActivityRecommendation[]
+  trips          Trip[]
+
+  @@unique([name, countryCode])
+}
+
 enum RatingTier {
   EXCEPTIONAL
   HIGH
@@ -46,153 +155,4 @@ enum PriceLevel {
   PRICE_LEVEL_MODERATE
   PRICE_LEVEL_EXPENSIVE
   PRICE_LEVEL_VERY_EXPENSIVE
-}
-
-model User {
-  id                  String   @id
-  email               String   @unique
-  firstName           String?
-  lastName            String?
-  profileImage        String?
-  preferences         Json?
-  onboardingCompleted Boolean  @default(false)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  trips               Trip[]
-}
-
-model Trip {
-  id             String              @id @default(cuid())
-  userId         String
-  user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  cityId         String
-  city           City                @relation(fields: [cityId], references: [id])
-  title          String
-  startDate      DateTime
-  endDate        DateTime
-  preferences    Json?
-  lastRebalanced DateTime?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
-  activities     ItineraryActivity[]
-
-  @@index([userId])
-  @@index([cityId])
-}
-
-model ActivityRecommendation {
-  id          String @id @default(cuid())
-  name        String
-  description String
-  cityId      String
-  city        City   @relation(fields: [cityId], references: [id])
-
-  // Core quality metrics
-  rating          Float
-  ratingTier      RatingTier
-  reviewCount     Int
-  reviewCountTier ReviewCountTier
-
-  // Basic attributes
-  isMustSee           Boolean  @default(false)
-  isTouristAttraction Boolean  @default(false)
-  placeTypes          String[] // ['museum', 'art_gallery', etc.]
-
-  // Characteristics
-  indoorOutdoor        IndoorOutdoor
-  duration             Int // in minutes
-  priceLevel           PriceLevel
-  seasonalAvailability SeasonalAvailability @default(ALL_YEAR)
-
-  // Location and media
-  location Json // { latitude: number, longitude: number, address: string, placeId: string, neighborhood: string }
-  images   Json // { urls: Array<{url: string, cdnUrl: string}> }
-
-  // Operating hours
-  // {
-  //   periods: {
-  //     open: { day: number, hour: number, minute: number },
-  //     close: { day: number, hour: number, minute: number }
-  //   }[],
-  //   weekdayDescriptions: string[]
-  // }
-  openingHours Json?
-
-  availableDays Int[] // [0,1,2,3,4,5,6] for days of week
-
-  businessStatus BusinessStatus @default(OPERATIONAL)
-  primaryType    String? // Direct from Places API primaryTypeDisplayName
-
-  features Json?
-  // {
-  // wheelchair   Boolean?
-  // dineIn      Boolean?
-  // takeout     Boolean?
-  // delivery    Boolean?
-  // parking     Json? 
-  // {
-  //   freeParkingLot  Boolean?
-  //   paidParkingLot  Boolean?
-  //   streetParking   Boolean?
-  //   valetParking    Boolean?
-  // }
-  // }
-
-  // External IDs and metadata
-  googlePlaceId String?  @unique // For updating from Google Places
-  lastSyncedAt  DateTime // Track when we last synced with Google
-
-  viatorProductId String?
-  viatorData      Json? // Store full Viator product data
-  lastViatorSync  DateTime? // Track when we last synced with Viator
-
-  // Relations and timestamps
-  itineraryActivities ItineraryActivity[]
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
-
-  @@index([cityId])
-  @@index([isMustSee])
-  @@index([placeTypes])
-  @@index([googlePlaceId])
-}
-
-model ItineraryActivity {
-  id               String                 @id @default(cuid())
-  tripId           String
-  trip             Trip                   @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  recommendationId String
-  recommendation   ActivityRecommendation @relation(fields: [recommendationId], references: [id])
-
-  startTime               DateTime? // When this activity is scheduled
-  endTime                 DateTime?
-  status                  String    @default("planned") // planned, interested, confirmed, completed, cancelled
-  transitTimeFromPrevious Int
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  warning String?
-
-  @@index([tripId])
-  @@index([recommendationId])
-}
-
-model City {
-  id             String                   @id @default(cuid())
-  name           String
-  countryCode    String
-  placeId        String
-  latitude       Float
-  longitude      Float
-  viatorDestId   Int? // Store the matching Viator destinationId
-  viatorLookupId String? // Store the lookupId for API calls
-  viatorData     Json? // Store the full destination data
-  lastViatorSync DateTime? // Track when we last synced with Viator
-  createdAt      DateTime                 @default(now())
-  updatedAt      DateTime                 @updatedAt
-  activities     ActivityRecommendation[]
-  trips          Trip[]
-
-  @@unique([name, countryCode])
 }

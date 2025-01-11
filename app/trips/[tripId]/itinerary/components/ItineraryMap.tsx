@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { GoogleMap, InfoWindow } from '@react-google-maps/api';
-import { MapPin, Loader2, Calendar } from 'lucide-react';
+import { Calendar, Loader2, MapPin } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
@@ -36,6 +36,7 @@ interface MarkerWithPixels {
 interface DayActivities {
   dayIndex: number;
   date: Date;
+  timezone: string; // Add timezone from city
   activities: Array<{
     activity: ActivityRecommendation;
     status: 'planned' | 'interested';
@@ -129,6 +130,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
       days.push({
         dayIndex: i,
         date: currentDate,
+        timezone: trip.city.timezone,
         activities: dayActivities.map(ta => ({
           activity: ta.recommendation,
           status: ta.status as 'planned' | 'interested',
@@ -163,9 +165,9 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
           : (ta.recommendation.rating || 0) * 100,
     }));
 
-    const newVisibleLabels = calculateVisibleLabels(markers, map, newZoom);
-    setVisibleLabels(newVisibleLabels);
-  }, [map, trip, currentDayIndex]);
+    const visibleLabels = calculateVisibleLabels(markers, map, zoom);
+    setVisibleLabels(visibleLabels);
+  }, [map, trip, currentDayIndex, zoom]);
 
   // Map initialization and bounds setting
   const handleMapLoad = useCallback((mapInstance: google.maps.Map) => {
@@ -184,11 +186,18 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
     }
   }, [map, handleMapChange]);
 
-  // Set initial map bounds to include all activities
   useEffect(() => {
     if (!map || boundsSet.current || !trip) return;
 
-    if (trip?.activities.length) {
+    // Center on city coordinates by default
+    map.setCenter({
+      lat: trip.city.latitude,
+      lng: trip.city.longitude,
+    });
+    map.setZoom(DEFAULT_ZOOM);
+
+    // Adjust bounds if there are activities
+    if (trip.activities.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       trip.activities.forEach(activity => {
         bounds.extend({
@@ -197,13 +206,6 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
         });
       });
       map.fitBounds(bounds, 100);
-    } else {
-      // Center on city coordinates if no activities
-      map.setCenter({
-        lat: trip.city.latitude,
-        lng: trip.city.longitude,
-      });
-      map.setZoom(DEFAULT_ZOOM);
     }
 
     boundsSet.current = true;

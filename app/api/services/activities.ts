@@ -1,9 +1,11 @@
+import { formatInTimeZone } from 'date-fns-tz';
+
 import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
-import { isActivityOpenDuring, scheduleActivities } from './utils';
+import { getNextOpeningTime, isActivityOpenDuring, scheduleActivities } from './utils';
 
 interface UpdateActivityParams {
   tripId: string;
@@ -29,7 +31,7 @@ export const activityService = {
     const trip = await tripService.getTrip({
       userId,
       tripId,
-      include: ['activities'],
+      include: ['activities', 'city'],
     });
 
     const plannedActivities = (await prisma.itineraryActivity.findMany({
@@ -54,28 +56,37 @@ export const activityService = {
     // and update warnings accordingly
     for (const activity of plannedActivities) {
       if (activity.startTime && activity.endTime) {
+        const startTime = new Date(activity.startTime);
         const isOpen = isActivityOpenDuring(
-          { openingHours: { periods: activity.recommendation.openingHours?.periods } },
-          new Date(activity.startTime)
+          {
+            openingHours: { periods: activity.recommendation.openingHours?.periods },
+            name: activity.recommendation.name,
+          },
+          startTime,
+          trip.city.timezone
         );
 
+        let warning = null;
         if (!isOpen) {
-          await prisma.itineraryActivity.update({
-            where: { id: activity.id },
-            data: {
-              warning:
-                'This activity might be closed during the scheduled time. Please verify the opening hours.',
-            },
-          });
-        } else {
-          // Clear any existing warnings if the activity is now scheduled during open hours
-          await prisma.itineraryActivity.update({
-            where: { id: activity.id },
-            data: {
-              warning: null,
-            },
-          });
+          const nextOpen = getNextOpeningTime(
+            { periods: activity.recommendation.openingHours?.periods },
+            startTime,
+            trip.city.timezone
+          );
+
+          warning = nextOpen
+            ? `This activity is closed at the scheduled time. The next opening time is at ${formatInTimeZone(
+                nextOpen,
+                trip.city.timezone,
+                'h:mm a'
+              )}.`
+            : 'This activity might be closed during the scheduled time. Please verify the opening hours.';
         }
+
+        await prisma.itineraryActivity.update({
+          where: { id: activity.id },
+          data: { warning },
+        });
       }
     }
 
@@ -108,17 +119,21 @@ export const activityService = {
         startTime: null,
         endTime: null,
         transitTimeFromPrevious: 0,
+        warning: null,
       },
       include: { recommendation: true },
     });
   },
 
   async updateActivity({ tripId, activityId, userId, updates }: UpdateActivityParams) {
-    // Verify the trip exists and belongs to the user
+    // Get trip with city to access timezone
     const trip = await prisma.trip.findUnique({
       where: {
         id: tripId,
         userId,
+      },
+      include: {
+        city: true,
       },
     });
 
@@ -128,7 +143,6 @@ export const activityService = {
 
     let warning = null;
 
-    // If updating time, check if activity is open
     if (updates.startTime) {
       const activity = (await prisma.itineraryActivity.findUnique({
         where: { id: activityId },
@@ -141,14 +155,29 @@ export const activityService = {
 
       const startTime = new Date(updates.startTime);
 
-      if (
-        !isActivityOpenDuring(
-          { openingHours: { periods: activity.recommendation.openingHours!.periods } },
-          startTime
-        )
-      ) {
-        warning =
-          'This activity might be closed during the selected time. Please verify the opening hours.';
+      const isOpen = isActivityOpenDuring(
+        {
+          openingHours: { periods: activity.recommendation.openingHours!.periods },
+          name: activity.recommendation.name,
+        },
+        startTime,
+        trip.city.timezone
+      );
+
+      if (!isOpen) {
+        const nextOpen = getNextOpeningTime(
+          { periods: activity.recommendation.openingHours!.periods },
+          startTime,
+          trip.city.timezone
+        );
+
+        warning = nextOpen
+          ? `This activity is closed at the selected time. The next opening time is at ${formatInTimeZone(
+              nextOpen,
+              trip.city.timezone,
+              'h:mm a'
+            )}.`
+          : 'This activity might be closed during the selected time. Please verify the opening hours.';
       }
     }
 

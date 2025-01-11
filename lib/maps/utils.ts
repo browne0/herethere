@@ -1,5 +1,3 @@
-import { protos } from '@googlemaps/places';
-
 import { Location } from '@/app/trips/[tripId]/types';
 
 /**
@@ -44,70 +42,4 @@ export function getGoogleMapsDirectionsUrl(destination: Location, origin?: Locat
   originParam = encodeURIComponent(originParam);
 
   return `https://www.google.com/maps/dir/?api=1&destination=${destinationParam}&origin=${originParam}`;
-}
-
-export function isOpenAtTime(
-  openingHours: protos.google.maps.places.v1.Place.IOpeningHours,
-  dateTime: Date
-): boolean {
-  // If no opening hours data provided, conservatively return false
-  if (!openingHours?.periods) return false;
-
-  const day = dateTime.getDay();
-  const hour = dateTime.getHours();
-  const minute = dateTime.getMinutes();
-  const timeInMinutes = hour * 60 + minute;
-
-  // Check each period to see if the location is open
-  return openingHours.periods.some(
-    (period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod) => {
-      const open = period.open;
-      const close = period.close;
-
-      // Safety check for required fields
-      if (
-        !open ||
-        typeof open.day !== 'number' ||
-        typeof open.hour !== 'number' ||
-        typeof open.minute !== 'number'
-      ) {
-        return false;
-      }
-
-      // For 24/7 places (always open)
-      if (open.day === 0 && open.hour === 0 && open.minute === 0 && !close) {
-        return true;
-      }
-
-      // Handle regular opening hours
-      if (
-        close &&
-        typeof close.day === 'number' &&
-        typeof close.hour === 'number' &&
-        typeof close.minute === 'number'
-      ) {
-        const openTimeInMinutes = open.hour * 60 + open.minute;
-        const closeTimeInMinutes = close.hour * 60 + close.minute;
-
-        // Same day period
-        if (open.day === close.day && open.day === day) {
-          return timeInMinutes >= openTimeInMinutes && timeInMinutes <= closeTimeInMinutes;
-        }
-
-        // Overnight period (e.g., 11 PM - 3 AM)
-        if (open.day !== close.day) {
-          // If we're on the opening day, check if we're after opening time
-          if (day === open.day) {
-            return timeInMinutes >= openTimeInMinutes;
-          }
-          // If we're on the closing day, check if we're before closing time
-          if (day === close.day) {
-            return timeInMinutes <= closeTimeInMinutes;
-          }
-        }
-      }
-
-      return false;
-    }
-  );
 }

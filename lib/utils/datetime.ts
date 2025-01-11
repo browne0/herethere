@@ -1,27 +1,3 @@
-type TimeOfDay = 'morning' | 'afternoon' | 'evening' | 'night';
-
-/**
- * Convert a time string to a TimeOfDay
- * @param time - Time string in 24-hour format (e.g., "14:30") or Date object
- */
-export function getTimeOfDay(time?: string | Date): TimeOfDay {
-  if (!time) return 'afternoon'; // Default to afternoon if no time provided
-
-  let hours: number;
-
-  if (time instanceof Date) {
-    hours = time.getHours();
-  } else {
-    // Convert time string to hours
-    hours = parseInt(time.split(':')[0]);
-  }
-
-  if (hours >= 5 && hours < 12) return 'morning';
-  if (hours >= 12 && hours < 17) return 'afternoon';
-  if (hours >= 17 && hours < 22) return 'evening';
-  return 'night';
-}
-
 /**
  * Format a date range into a human-readable string
  */

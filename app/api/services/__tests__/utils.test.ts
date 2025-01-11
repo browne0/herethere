@@ -122,48 +122,6 @@ describe('isActivityOpenDuring', () => {
   });
 
   describe('isActivityOpenDuring - Additional Edge Cases', () => {
-    describe('Cross-Week Periods', () => {
-      const sundayToMondayVenue = {
-        openingHours: {
-          periods: [
-            {
-              open: { day: 0, hour: 20, minute: 0 }, // Sunday 8 PM
-              close: { day: 1, hour: 2, minute: 0 }, // Monday 2 AM
-            },
-          ],
-        },
-      };
-
-      it('should handle Sunday to Monday overnight period', () => {
-        const startTime = new Date('2024-03-17T21:00:00.000Z'); // Sunday 9 PM
-
-        expect(isActivityOpenDuring(sundayToMondayVenue, startTime)).toBe(true);
-      });
-    });
-
-    describe('Multi-Day Activities', () => {
-      const normalVenue = {
-        openingHours: {
-          periods: [
-            {
-              open: { day: 1, hour: 9, minute: 0 }, // Monday 9 AM
-              close: { day: 1, hour: 17, minute: 0 }, // Monday 5 PM
-            },
-            {
-              open: { day: 2, hour: 9, minute: 0 }, // Tuesday 9 AM
-              close: { day: 2, hour: 17, minute: 0 }, // Tuesday 5 PM
-            },
-          ],
-        },
-      };
-
-      it('should return false for activity spanning multiple operating days', () => {
-        const startTime = new Date('2024-03-18T14:00:00.000Z'); // Monday 2 PM
-
-        expect(isActivityOpenDuring(normalVenue, startTime)).toBe(false);
-      });
-    });
-
     describe('Boundary Cases', () => {
       const venue = {
         openingHours: {

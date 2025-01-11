@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { EventContentArg, EventDropArg } from '@fullcalendar/core/index.js';
 import interactionPlugin from '@fullcalendar/interaction';
@@ -8,7 +8,7 @@ import listPlugin from '@fullcalendar/list';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import { addDays } from 'date-fns';
-import { MapPin, AlertTriangle, CalendarDays } from 'lucide-react';
+import { AlertTriangle, CalendarDays, MapPin } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import './calendar-overrides.css';
@@ -73,7 +73,6 @@ export function ItineraryView() {
       console.error('Rebalance error:', error);
     } finally {
       setIsRebalancing(false);
-      setView('listMonth');
     }
   }, [setTrip, trip]);
 
@@ -203,8 +202,6 @@ export function ItineraryView() {
         endDate={trip.endDate}
       />
     );
-
-  console.log(JSON.stringify(trip.activities));
 
   const handleEventDrop = async (info: EventDropArg) => {
     try {
