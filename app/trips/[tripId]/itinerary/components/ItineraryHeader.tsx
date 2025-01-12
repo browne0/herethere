@@ -71,7 +71,7 @@ export function ItineraryHeader({
               {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
             </Button>
             <div
-              className={`bg-gray-100 p-1 rounded-lg flex ${disableViewToggle ? 'opacity-50 pointer-events-none' : ''}`}
+              className={`bg-gray-100 p-1 rounded-lg flex ${disableViewToggle || isRebalancing ? 'opacity-50 pointer-events-none' : ''}`}
             >
               <button
                 onClick={() => onViewChange('listMonth')}
@@ -80,6 +80,7 @@ export function ItineraryHeader({
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
+                disabled={disableViewToggle || isRebalancing}
               >
                 <List className="h-4 w-4" />
                 <span>List</span>
@@ -91,6 +92,7 @@ export function ItineraryHeader({
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
+                disabled={disableViewToggle || isRebalancing}
               >
                 <CalendarDays className="h-4 w-4" />
                 <span>Calendar</span>

@@ -205,10 +205,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
     // Adjust bounds if there are activities
     if (scheduledActivities.length > 0) {
       const bounds = new google.maps.LatLngBounds();
-      scheduledActivities.forEach(a => {
-        console.log(a.recommendation.name, ' Opening Hours:');
-        console.log(a.recommendation.openingHours?.weekdayDescriptions);
-      });
+
       scheduledActivities.forEach(activity => {
         bounds.extend({
           lat: activity.recommendation.location.latitude,

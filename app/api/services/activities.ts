@@ -155,6 +155,9 @@ export const activityService = {
 
       const startTime = new Date(updates.startTime);
 
+      console.log(activity.recommendation.name);
+      console.log(activity.recommendation.openingHours?.weekdayDescriptions);
+
       const isOpen = isActivityOpenDuring(
         {
           openingHours: { periods: activity.recommendation.openingHours!.periods },
@@ -190,7 +193,7 @@ export const activityService = {
         ...updates,
         startTime: updates.startTime != undefined ? new Date(updates.startTime) : undefined,
         endTime: updates.endTime != undefined ? new Date(updates.endTime) : undefined,
-        warning: warning,
+        warning,
       },
       include: {
         recommendation: true,
