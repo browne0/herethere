@@ -38,12 +38,6 @@ interface TimeBlock {
   required: boolean;
 }
 
-interface TimeCalculation {
-  minutes: number;
-  hours: number;
-  days: number;
-}
-
 interface ValidationResult {
   isValid: boolean;
   reason?: string;
@@ -119,54 +113,6 @@ function isSameDay(date1: Date | null, date2: Date | null, timezone: string): bo
     formatInTimeZone(date1, timezone, 'yyyy-MM-dd') ===
     formatInTimeZone(date2, timezone, 'yyyy-MM-dd')
   );
-}
-
-function isTimeWithinAnyPeriod(
-  time: Date,
-  periods: protos.google.maps.places.v1.Place.IOpeningHours['periods'],
-  timezone: string
-): boolean {
-  if (!periods?.length) return false;
-
-  const localDay = Number(formatInTimeZone(time, timezone, 'i')) - 1; // Get local day (0-6)
-  const localHour = Number(formatInTimeZone(time, timezone, 'H')); // Get local hour (0-23)
-  const localMinute = Number(formatInTimeZone(time, timezone, 'm')); // Get local minute
-  const timeInMinutes = localHour * 60 + localMinute;
-
-  return periods.some(period => {
-    if (!period.open || !period.close) return false;
-
-    const openDay = period.open.day;
-    const closeDay = period.close.day;
-    const openHour = period.open.hour;
-    const openMinute = period.open.minute || 0;
-    const closeHour = period.close.hour;
-    const closeMinute = period.close.minute || 0;
-
-    if (typeof openHour !== 'number' || typeof closeHour !== 'number') return false;
-
-    const openInMinutes = openHour * 60 + openMinute;
-    const closeInMinutes = closeHour * 60 + closeMinute;
-
-    // Handle overnight periods
-    if (closeDay !== openDay) {
-      if (localDay === openDay) {
-        // On opening day, check if time is after opening
-        return timeInMinutes >= openInMinutes;
-      } else if (localDay === closeDay) {
-        // On closing day, check if time is before closing
-        return timeInMinutes <= closeInMinutes;
-      } else if (openDay != undefined && closeDay != undefined && openDay > closeDay) {
-        // Handle week wraparound
-        return localDay > openDay || localDay < closeDay;
-      }
-    }
-
-    // Same day period
-    return (
-      localDay === openDay && timeInMinutes >= openInMinutes && timeInMinutes <= closeInMinutes
-    );
-  });
 }
 
 function getReservedMealBlocks(
@@ -689,7 +635,7 @@ function handleRestaurantSlots(
   return slots;
 }
 
-export function findAvailableSlots(
+function findAvailableSlots(
   activities: ParsedItineraryActivity[],
   date: Date,
   duration: number,
@@ -769,7 +715,7 @@ export function findAvailableSlots(
 }
 
 // Calculate total available time in the trip
-export function calculateAvailableTime(trip: Pick<ParsedTrip, 'endDate' | 'startDate'>): number {
+function calculateAvailableTime(trip: Pick<ParsedTrip, 'endDate' | 'startDate'>): number {
   const startDate = new Date(trip.startDate);
   const endDate = new Date(trip.endDate);
 
@@ -781,43 +727,6 @@ export function calculateAvailableTime(trip: Pick<ParsedTrip, 'endDate' | 'start
   const HOURS_PER_DAY = 10;
 
   return days * HOURS_PER_DAY * 60; // Return total minutes available
-}
-
-// Calculate how much time all activities will take
-export function calculateTotalTimeNeeded(activities: ParsedItineraryActivity[]): number {
-  return activities.reduce((total, activity) => {
-    const activityDuration = activity.recommendation.duration;
-
-    // Add transit time between activities (either existing or estimated)
-    const transitTime = activity.transitTimeFromPrevious || 30; // Default 30min if not calculated
-
-    // Add buffer time for each activity (checkin, security, etc)
-    const bufferTime = 15;
-
-    return total + activityDuration + transitTime + bufferTime;
-  }, 0);
-}
-
-// Format duration for error messages and UI
-export function formatDuration(minutes: number): string {
-  const calculation: TimeCalculation = {
-    minutes: minutes % 60,
-    hours: Math.floor(minutes / 60) % 24,
-    days: Math.floor(minutes / (60 * 24)),
-  };
-
-  const parts = [];
-  if (calculation.days > 0) {
-    parts.push(`${calculation.days} day${calculation.days === 1 ? '' : 's'}`);
-  }
-  if (calculation.hours > 0) {
-    parts.push(`${calculation.hours} hour${calculation.hours === 1 ? '' : 's'}`);
-  }
-  if (calculation.minutes > 0) {
-    parts.push(`${calculation.minutes} minute${calculation.minutes === 1 ? '' : 's'}`);
-  }
-
-  return parts.join(' and ');
 }
 
 // Clear existing scheduling data to rebuild schedule
@@ -1280,4 +1189,27 @@ export function getNextOpeningTime(
   }
 
   return null;
+}
+
+export function isTimeWithinPeriod(
+  time: Date,
+  period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod,
+  timezone: string
+): boolean {
+  if (
+    !period?.open ||
+    typeof period.open.day !== 'number' ||
+    typeof period.open.hour !== 'number'
+  ) {
+    return false;
+  }
+
+  const localTimeStr = formatInTimeZone(time, timezone, 'HH:mm:ss E');
+  const [timeStr] = localTimeStr.split(' ');
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const timeMinutes = hours * 60 + minutes;
+
+  const openMinutes = period.open.hour * 60 + (period.open.minute || 0);
+
+  return timeMinutes >= openMinutes;
 }

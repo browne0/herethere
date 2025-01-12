@@ -5,7 +5,12 @@ import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
-import { getNextOpeningTime, isActivityOpenDuring, scheduleActivities } from './utils';
+import {
+  getNextOpeningTime,
+  isActivityOpenDuring,
+  isTimeWithinPeriod,
+  scheduleActivities,
+} from './utils';
 
 interface UpdateActivityParams {
   tripId: string;
@@ -52,35 +57,27 @@ export const activityService = {
     // Schedule activities
     await scheduleActivities(plannedActivities, trip);
 
-    // After scheduling, check each activity's new time against opening hours
-    // and update warnings accordingly
     for (const activity of plannedActivities) {
-      if (activity.startTime && activity.endTime) {
-        const startTime = new Date(activity.startTime);
-        const isOpen = isActivityOpenDuring(
-          {
-            openingHours: { periods: activity.recommendation.openingHours?.periods },
-            name: activity.recommendation.name,
-          },
-          startTime,
-          trip.city.timezone
-        );
-
+      if (activity.startTime) {
         let warning = null;
-        if (!isOpen) {
-          const nextOpen = getNextOpeningTime(
-            { periods: activity.recommendation.openingHours?.periods },
-            startTime,
-            trip.city.timezone
+
+        if (activity.recommendation.openingHours?.periods?.length) {
+          const startTime = new Date(activity.startTime);
+          const localDay = Number(formatInTimeZone(startTime, trip.city.timezone, 'e')) - 1;
+
+          const relevantPeriod = activity.recommendation.openingHours.periods.find(
+            period =>
+              period?.open?.day === localDay ||
+              (period?.open?.day === (localDay + 6) % 7 && period?.close?.day === localDay)
           );
 
-          warning = nextOpen
-            ? `This activity is closed at the scheduled time. The next opening time is at ${formatInTimeZone(
-                nextOpen,
-                trip.city.timezone,
-                'h:mm a'
-              )}.`
-            : 'This activity might be closed during the scheduled time. Please verify the opening hours.';
+          if (
+            relevantPeriod &&
+            !isTimeWithinPeriod(startTime, relevantPeriod, trip.city.timezone)
+          ) {
+            warning =
+              'This activity might be closed at the selected time. Please verify the opening hours.';
+          }
         }
 
         await prisma.itineraryActivity.update({
@@ -127,14 +124,10 @@ export const activityService = {
 
   async updateActivity({ tripId, activityId, userId, updates }: UpdateActivityParams) {
     // Get trip with city to access timezone
-    const trip = await prisma.trip.findUnique({
-      where: {
-        id: tripId,
-        userId,
-      },
-      include: {
-        city: true,
-      },
+    const trip = await tripService.getTrip({
+      userId,
+      tripId,
+      include: ['city'],
     });
 
     if (!trip) {
@@ -153,34 +146,22 @@ export const activityService = {
         throw new Error('Activity not found');
       }
 
-      const startTime = new Date(updates.startTime);
+      // Only show warning if we have opening hours data AND the time is definitely outside them
+      if (activity.recommendation.openingHours?.periods?.length) {
+        const startTime = new Date(updates.startTime);
+        const localDay = Number(formatInTimeZone(startTime, trip.city.timezone, 'e')) - 1;
 
-      console.log(activity.recommendation.name);
-      console.log(activity.recommendation.openingHours?.weekdayDescriptions);
-
-      const isOpen = isActivityOpenDuring(
-        {
-          openingHours: { periods: activity.recommendation.openingHours!.periods },
-          name: activity.recommendation.name,
-        },
-        startTime,
-        trip.city.timezone
-      );
-
-      if (!isOpen) {
-        const nextOpen = getNextOpeningTime(
-          { periods: activity.recommendation.openingHours!.periods },
-          startTime,
-          trip.city.timezone
+        const relevantPeriod = activity.recommendation.openingHours.periods.find(
+          period =>
+            period?.open?.day === localDay ||
+            (period?.open?.day === (localDay + 6) % 7 && period?.close?.day === localDay)
         );
 
-        warning = nextOpen
-          ? `This activity is closed at the selected time. The next opening time is at ${formatInTimeZone(
-              nextOpen,
-              trip.city.timezone,
-              'h:mm a'
-            )}.`
-          : 'This activity might be closed during the selected time. Please verify the opening hours.';
+        // Only warn if we're confident about the hours for this day
+        if (relevantPeriod && !isTimeWithinPeriod(startTime, relevantPeriod, trip.city.timezone)) {
+          warning =
+            'This activity might be closed at the selected time. Please verify the opening hours.';
+        }
       }
     }
 

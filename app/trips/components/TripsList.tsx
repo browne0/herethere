@@ -228,7 +228,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
                     <Card className="group overflow-hidden hover:shadow-lg transition-all mb-8">
                       <div className="grid md:grid-cols-[2fr,1fr]">
                         {/* Trip Info */}
-                        <div className="p-6 relative">
+                        <div className="p-6 relative" onClick={e => e.stopPropagation()}>
                           <TripActions trip={trip} onDeleteClick={() => setTripToDelete(trip)} />
 
                           <div className="flex items-start justify-between">
