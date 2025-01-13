@@ -992,6 +992,15 @@ export async function validateActivityTimeSlot({
     return { isValid: false, reason: 'No start time provided' };
   }
 
+  // Add early check for 2 AM cutoff
+  const hour = Number(formatInTimeZone(startTime, timezone, 'H'));
+  if (hour >= 2 && hour < 6) {
+    return {
+      isValid: false,
+      reason: 'Activities cannot be scheduled between 2 AM and 6 AM',
+    };
+  }
+
   // Include transit time in total duration
   const totalDuration = duration + transitTime + BUFFER_TIME_MINUTES;
   const endTime = new Date(startTime);

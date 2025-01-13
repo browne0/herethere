@@ -32,7 +32,6 @@ interface MarkerWithPixels {
   label?: string;
   pixel?: google.maps.Point;
   shouldShowLabel: boolean;
-  priority: number;
 }
 
 interface DayActivities {
@@ -66,15 +65,12 @@ const calculateVisibleLabels = (
     return { ...marker, pixel: scaledPixel };
   });
 
-  // Sort by priority (higher rating = higher priority)
-  const sortedMarkers = [...markersWithPixels].sort((a, b) => b.priority - a.priority);
-
   // Track occupied spaces
   const occupiedSpaces: Array<{ x: number; y: number }> = [];
   const visibleLabels = new Set<string>();
 
   // Check each marker for available space
-  sortedMarkers.forEach(marker => {
+  markersWithPixels.forEach(marker => {
     if (!marker.pixel) return;
 
     const hasSpace = !occupiedSpaces.some(space => {
@@ -160,17 +156,11 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
       ),
       label: ta.recommendation.name,
       shouldShowLabel: false,
-      // Prioritize current day's activities if currentDayIndex is provided
-      priority:
-        currentDayIndex !== undefined &&
-        new Date(ta.startTime!).getDate() - new Date(trip.startDate).getDate() === currentDayIndex
-          ? 1000
-          : (ta.recommendation.rating || 0) * 100,
     }));
 
-    const visibleLabels = calculateVisibleLabels(markers, map, zoom);
+    const visibleLabels = calculateVisibleLabels(markers, map, newZoom);
     setVisibleLabels(visibleLabels);
-  }, [map, trip, currentDayIndex, zoom]);
+  }, [map, trip]);
 
   // Map initialization and bounds setting
   const handleMapLoad = useCallback((mapInstance: google.maps.Map) => {
