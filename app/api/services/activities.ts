@@ -5,8 +5,7 @@ import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
-import { clearSchedulingData } from './utils';
-import { isTimeWithinPeriod, scheduleActivities } from './utils2';
+import { clearSchedulingData, isTimeWithinPeriod, scheduleActivities } from './utils';
 
 interface UpdateActivityParams {
   tripId: string;

@@ -2,7 +2,7 @@ import { auth } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 import { activityService } from '@/app/api/services/activities';
-import { clearSchedulingData } from '@/app/api/services/utils2';
+import { clearSchedulingData } from '@/app/api/services/utils';
 import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
 

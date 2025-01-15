@@ -1,735 +1,511 @@
 import { protos } from '@googlemaps/places';
-import { addMinutes, differenceInDays } from 'date-fns';
 import { formatInTimeZone } from 'date-fns-tz';
 
-import { Location, ParsedItineraryActivity, ParsedTrip } from '@/app/trips/[tripId]/types';
-import { CategoryMapping, PlaceCategory } from '@/constants';
+import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
+import {
+  CategoryMapping,
+  GOOGLE_RESTAURANT_TYPES,
+  PLACE_INDICATORS,
+  PlaceCategory,
+} from '@/constants';
 import { prisma } from '@/lib/db';
-import { StartTime, UserPreferences } from '@/lib/stores/preferences';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
 
-import { preferencesService } from './preferences';
-import { getTransitTime } from './scheduling/transitTime';
-
-interface ValidateTimeSlotParams {
-  startTime: Date | null;
-  duration: number;
-  tripStart: Date;
-  tripEnd: Date;
-  previousActivity?: ParsedItineraryActivity;
-  existingActivities: ParsedItineraryActivity[];
-  transitTime?: number;
-  intervalTree: IntervalTree;
-  timezone: string;
-}
-
-interface DayBalance {
-  activityCount: number;
-  totalDuration: number;
-  hasLunch: boolean;
-  hasDinner: boolean;
-  intensity: number;
-}
-
-interface TimeBlock {
+interface TimeSlot {
   start: Date;
   end: Date;
-  type: 'meal' | 'activity';
-  required: boolean;
+  type: 'morning' | 'afternoon' | 'evening' | 'meal';
 }
 
-interface ValidationResult {
-  isValid: boolean;
-  reason?: string;
-  scoreAdjustment?: number;
-}
+const TIME_SLOTS = {
+  morning: { start: '09:00', end: '12:00' },
+  afternoon: { start: '13:00', end: '17:00' },
+  evening: { start: '19:30', end: '23:00' },
+};
 
-interface TimeSlotResult {
-  bestSlot: Date | null;
-  bestTransitTime: number;
-}
-
-// Constants aligned with your schema
-const MEAL_WINDOWS = {
+const MEAL_TIMES = {
   breakfast: {
-    start: 8,
-    end: 11.5,
-    duration: 90,
-    required: false,
+    start: '8:00',
+    end: '11:30',
+    duration: 60,
   },
   lunch: {
-    start: 12,
-    end: 15.5,
+    start: '11:30',
+    end: '16:00',
     duration: 60,
-    required: true,
   },
   dinner: {
-    start: 18,
-    end: 20,
-    duration: 120,
-    required: true,
+    start: '17:00',
+    end: '22:00',
+    duration: 60,
   },
-} as const;
-
-const BUFFER_TIME_MINUTES = 10;
-const MINIMUM_ACCEPTABLE_SCORE = -20;
-
-// Updated intensity weights based on your place types
-const INTENSITY_WEIGHTS: Record<string, number> = {
-  historic_site: 60,
-  museum: 40,
-  art_gallery: 25,
-  restaurant: 20,
-  beach: 70,
-  night_club: 80,
-  entertainment: 60,
-  monument: 40,
-  landmark: 50,
-  market: 60,
-} as const;
-
-const VENUE_TIMING = {
-  spa: { start: 10, end: 16 },
-  night_club: { start: 19, end: 26 }, // Using 26 to represent 2 AM next day
-  bar: { start: 19, end: 26 },
+};
+const SCORING_WEIGHTS = {
+  transitTime: 0.3, // How important is minimizing transit time
+  timeOfDay: 0.2, // How important is scheduling at appropriate times
+  popularity: 0.1, // How important is prioritizing popular activities
+  clustering: 0.15, // How important is keeping similar activities together
+  timeSlotUsage: 0.25, // How important is efficient use of time slots
 };
 
-const getPreferredStartHour = (startTime: StartTime): number => {
-  switch (startTime) {
-    case 'early':
-      return 7; // Early bird - 7am
-    case 'mid':
-      return 9; // Mid-morning - 9am
-    case 'late':
-      return 10; // Later start - 10am
-    default:
-      return 9; // Default to mid-morning if not specified
-  }
+const TIME_PREFERENCES = {
+  // Cultural venues - best experienced when fresh and less crowded
+  museum: { morning: 1.0, afternoon: 0.8, evening: 0.3 },
+
+  // Outdoor activities - best with good daylight and weather
+  park: { morning: 0.9, afternoon: 1.0, evening: 0.6 },
+  beach: { morning: 0.8, afternoon: 1.0, evening: 0.7 },
+
+  // Dining and entertainment
+  restaurant: { morning: 0.7, afternoon: 0.9, evening: 1.0 },
+  nightlife: { morning: 0.1, afternoon: 0.4, evening: 1.0 },
+
+  // Shopping and markets
+  // shopping: { morning: 0.8, afternoon: 1.0, evening: 0.7 },
+
+  // Tourist attractions
+  attraction: { morning: 1.0, afternoon: 0.9, evening: 0.7 },
+  historic: { morning: 0.9, afternoon: 1.0, evening: 0.8 },
+
+  // Wellness activities
+  spa: { morning: 0.9, afternoon: 0.5, evening: 0 },
+
+  // Default for uncategorized activities
+  default: { morning: 0.8, afternoon: 1.0, evening: 0.7 },
 };
 
-function isSameDay(date1: Date | null, date2: Date | null, timezone: string): boolean {
-  if (!date1 || !date2) return false;
-  return (
-    formatInTimeZone(date1, timezone, 'yyyy-MM-dd') ===
-    formatInTimeZone(date2, timezone, 'yyyy-MM-dd')
-  );
-}
-
-function getReservedMealBlocks(
-  activities: ParsedItineraryActivity[],
-  date: Date,
-  timezone: string
-): TimeBlock[] {
-  const blocks: TimeBlock[] = [];
-  const dayActivities = activities.filter(activity =>
-    activity.startTime ? isSameDay(new Date(activity.startTime), date, timezone) : false
-  );
-
-  Object.entries(MEAL_WINDOWS).forEach(([mealType, window]) => {
-    const hasMeal = hasMealScheduled(dayActivities, mealType as keyof typeof MEAL_WINDOWS);
-
-    if (mealType === 'breakfast') {
-      const hasActivityDuringBreakfast = dayActivities.some(activity => {
-        if (!activity.startTime) return false;
-        const activityHour = new Date(activity.startTime).getHours();
-        return activityHour >= window.start && activityHour < window.end;
-      });
-      if (hasActivityDuringBreakfast) return;
-    }
-
-    if (!hasMeal && (window.required || mealType === 'breakfast')) {
-      const blockStart = new Date(date);
-      blockStart.setHours(window.start, 0, 0, 0);
-      const blockEnd = new Date(blockStart);
-      blockEnd.setMinutes(blockEnd.getMinutes() + window.duration);
-
-      blocks.push({
-        start: blockStart,
-        end: blockEnd,
-        type: 'meal',
-        required: window.required,
-      });
-    }
-  });
-
-  return blocks;
-}
-
-function getDayBalance(
-  activities: ParsedItineraryActivity[],
-  date: Date,
-  timezone: string
-): DayBalance {
-  const localDateStr = formatInTimeZone(date, timezone, 'yyyy-MM-dd');
-  const dayActivities = activities.filter(activity =>
-    activity.startTime
-      ? formatInTimeZone(new Date(activity.startTime), timezone, 'yyyy-MM-dd') === localDateStr
-      : false
-  );
-
-  return {
-    activityCount: dayActivities.length,
-    totalDuration: dayActivities.reduce((sum, act) => sum + act.recommendation.duration, 0),
-    hasLunch: hasMealScheduled(dayActivities, 'lunch'),
-    hasDinner: hasMealScheduled(dayActivities, 'dinner'),
-    intensity: calculateDayIntensity(dayActivities),
+interface PlacementScore {
+  score: number;
+  startTime: Date;
+  endTime: Date;
+  transitTime: number;
+  breakdown: {
+    transitScore: number;
+    timeOfDayScore: number;
+    popularityScore: number;
+    clusteringScore: number;
+    timeSlotScore: number;
   };
 }
 
-function hasMealScheduled(
+export function scheduleActivities(
   activities: ParsedItineraryActivity[],
-  type: keyof typeof MEAL_WINDOWS
-): boolean {
-  const window = MEAL_WINDOWS[type];
-  return activities.some(activity => {
-    if (!activity.startTime) return false;
-    const time = new Date(activity.startTime).getHours();
-    return (
-      activity.recommendation.placeTypes.includes('restaurant') &&
-      time >= window.start &&
-      time <= window.end
-    );
-  });
-}
-
-function calculateDayIntensity(activities: ParsedItineraryActivity[]): number {
-  if (activities.length === 0) return 0;
-
-  const totalIntensity = activities.reduce((sum, activity) => {
-    // Find the highest intensity among the place types
-    const maxIntensity = Math.max(
-      ...activity.recommendation.placeTypes.map(type => INTENSITY_WEIGHTS[type] || 50)
-    );
-    return sum + maxIntensity;
-  }, 0);
-
-  return Math.round(totalIntensity / activities.length);
-}
-
-function scoreTimeSlot(
-  slot: Date,
-  transitTime: number,
-  existingActivities: ParsedItineraryActivity[],
-  recommendation: ActivityRecommendation,
-  tripStart: Date,
-  tripEnd: Date,
-  userPreferences: UserPreferences,
-  timezone: string,
-  scoreAdjustment: number = 0
-): number {
-  // Add debug logging
-  const isOpen = isActivityOpenDuring(
-    { openingHours: { periods: recommendation.openingHours?.periods }, name: recommendation.name },
-    slot,
-    timezone
-  );
-
-  if (!isOpen) {
-    return -Infinity;
-  }
-
-  let score = 100 + scoreAdjustment;
-  const hour = Number(formatInTimeZone(slot, timezone, 'H'));
-
-  // Check day balance - penalize days that already have many activities
-  const dayBalance = getDayBalance(existingActivities, slot, timezone);
-
-  // Strong penalty for unbalanced days
-  score -= Math.max(0, (dayBalance.activityCount - 3) * 25);
-
-  // Get venue type and its optimal hours
-  const venueType = recommendation.placeTypes.find(type => type in VENUE_TIMING);
-
-  if (venueType) {
-    const timing = VENUE_TIMING[venueType as keyof typeof VENUE_TIMING];
-    if (hour < timing.start || hour > timing.end) {
-      score -= 50; // Big penalty for wrong time of day
-    }
-  }
-
-  const EVENING_VENUE_TYPES = CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes;
-  const isEveningVenue = recommendation.placeTypes.some(type => EVENING_VENUE_TYPES.includes(type));
-
-  // Base scoring logic
-  if (hour < 11) score += 10;
-  if (hour > 14 && hour < 17) score -= 5;
-
-  if (hour >= 19) {
-    score += 15;
-    if (isEveningVenue) {
-      // Additional bonus for evening venues in their prime time
-      score += 25;
-
-      // Extra bonus for optimal hours (8 PM - 11 PM)
-      if (hour >= 20 && hour <= 23) {
-        score += 15;
-      }
-    }
-  }
-
-  if (recommendation.placeTypes.includes('art_gallery')) {
-    const culturalActivitiesToday = existingActivities.filter(
-      activity =>
-        activity.startTime &&
-        isSameDay(new Date(activity.startTime), slot, timezone) &&
-        activity.recommendation.placeTypes.some(type => type === 'museum' || type === 'art_gallery')
-    );
-
-    const culturalCount = culturalActivitiesToday.length;
-    if (culturalCount > 0) {
-      score -= culturalCount * 10;
-    }
-  }
-
-  // Calculate schedule fullness
-  const totalMinutes = calculateAvailableTime({ startDate: tripStart, endDate: tripEnd });
-  const scheduledMinutes = existingActivities.reduce(
-    (sum, activity) => sum + activity.recommendation.duration + activity.transitTimeFromPrevious,
-    0
-  );
-  const scheduleFullness = Math.min(scheduledMinutes / totalMinutes, 1);
-
-  const energyLevel = userPreferences.energyLevel;
-
-  if (energyLevel === 1) {
-    if (dayBalance.activityCount > 4) score -= 20;
-    if (dayBalance.totalDuration > 240) score -= 15;
-  } else if (energyLevel === 2) {
-    if (dayBalance.activityCount > 5) score -= 15;
-    if (dayBalance.totalDuration > 360) score -= 10;
-  } else if (energyLevel === 3) {
-    if (dayBalance.activityCount > 6) score -= 10;
-    if (dayBalance.totalDuration > 480) score -= 5;
-  }
-
-  const preferredStartHour = getPreferredStartHour(userPreferences.preferredStartTime);
-  if (hour < preferredStartHour) {
-    score -= 20;
-  }
-
-  // Reduced density penalty as schedule fills up
-  if (dayBalance.activityCount > 4) {
-    score -= Math.max(5, 10 * (1 - scheduleFullness));
-  }
-
-  // Transit time penalty remains constant
-  score -= Math.min(20, transitTime / 3);
-
-  if (existingActivities.length > 0) {
-    const nearbyActivities = existingActivities.filter(activity => {
-      if (!activity.startTime || !activity.recommendation.location) return false;
-      return (
-        isSameDay(new Date(activity.startTime), slot, timezone) &&
-        calculateDistance(activity.recommendation.location, recommendation.location) < 2 // Within 2km
-      );
-    });
-
-    if (nearbyActivities.length > 0) {
-      score += 15; // Bonus for clustering
-    }
-  }
-
-  return score;
-}
-
-function calculateDistance(loc1: Location, loc2: Location): number {
-  const R = 6371; // Earth's radius in km
-  const dLat = toRad(loc2.latitude - loc1.latitude);
-  const dLon = toRad(loc2.longitude - loc1.longitude);
-
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(toRad(loc1.latitude)) *
-      Math.cos(toRad(loc2.latitude)) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
-
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
-}
-
-function toRad(deg: number): number {
-  return deg * (Math.PI / 180);
-}
-
-function conflictsWithMeals(
-  mealBlocks: TimeBlock[],
-  startTime: Date,
-  endTime: Date,
+  startDate: Date,
+  endDate: Date,
   timezone: string
-): boolean {
-  const localStart = formatInTimeZone(startTime, timezone, 'HH:mm');
-  const localEnd = formatInTimeZone(endTime, timezone, 'HH:mm');
+): ParsedItineraryActivity[] {
+  // First, create all activities without times
+  const unscheduledActivities: ParsedItineraryActivity[] = activities.map(activity => ({
+    ...activity,
+    startTime: null,
+    endTime: null,
+    transitTimeFromPrevious: 0,
+  }));
 
-  return mealBlocks.some(block => {
-    const blockStart = formatInTimeZone(block.start, timezone, 'HH:mm');
-    const blockEnd = formatInTimeZone(block.end, timezone, 'HH:mm');
+  // Separate restaurants from other activities
+  const restaurants = unscheduledActivities.filter(activity =>
+    activity.recommendation.placeTypes.some(type => GOOGLE_RESTAURANT_TYPES.includes(type))
+  );
 
-    return localStart <= blockEnd && localEnd >= blockStart;
-  });
-}
+  const otherActivities = unscheduledActivities.filter(
+    activity =>
+      !activity.recommendation.placeTypes.some(type => GOOGLE_RESTAURANT_TYPES.includes(type))
+  );
 
-class Interval {
-  constructor(
-    public start: Date,
-    public end: Date,
-    public activity?: ParsedItineraryActivity
-  ) {}
+  const scheduledActivities: ParsedItineraryActivity[] = [];
+  const currentDate = new Date(startDate);
 
-  overlaps(other: Interval): boolean {
-    return this.start < other.end && this.end > other.start;
-  }
+  while (currentDate <= endDate) {
+    // Schedule meals first
+    scheduledActivities.push(
+      ...scheduleMeals(restaurants, currentDate, scheduledActivities, timezone)
+    );
 
-  containsTime(time: Date): boolean {
-    return time >= this.start && time < this.end;
-  }
-}
+    // Schedule other activities around meals
+    const timeSlots = generateTimeSlots(currentDate);
 
-class IntervalTreeNode {
-  public left: IntervalTreeNode | null = null;
-  public right: IntervalTreeNode | null = null;
-  public max: Date;
+    // For each unscheduled activity, find and score possible placements
+    for (const activity of otherActivities) {
+      if (isActivityScheduled(activity, scheduledActivities)) continue;
 
-  constructor(
-    public interval: Interval,
-    public height: number = 1
-  ) {
-    this.max = interval.end;
-  }
-}
+      let bestPlacement: PlacementScore | null = null;
 
-class IntervalTree {
-  private root: IntervalTreeNode | null = null;
+      // Try each time slot
+      for (const slot of timeSlots) {
+        // Generate potential start times within the slot (e.g., every 30 minutes)
+        const startTimes = generatePotentialStartTimes(slot, 30);
 
-  insert(interval: Interval): void {
-    this.root = this._insert(this.root, interval);
-  }
+        for (const potentialStart of startTimes) {
+          const lastActivityOfDay =
+            scheduledActivities.length > 0
+              ? scheduledActivities
+                  .filter(
+                    a =>
+                      a.startTime &&
+                      a.endTime &&
+                      a.startTime.toDateString() === potentialStart.toDateString() &&
+                      a.endTime.toDateString() === potentialStart.toDateString()
+                  )
+                  .slice(-1)[0]
+              : null;
 
-  private _insert(node: IntervalTreeNode | null, interval: Interval): IntervalTreeNode {
-    if (!node) {
-      return new IntervalTreeNode(interval);
-    }
+          const transitTime = lastActivityOfDay
+            ? calculateTransitTime(
+                lastActivityOfDay.recommendation.location,
+                activity.recommendation.location
+              )
+            : 0;
 
-    if (interval.start < node.interval.start) {
-      node.left = this._insert(node.left, interval);
-    } else {
-      node.right = this._insert(node.right, interval);
-    }
+          const adjustedStart = new Date(potentialStart);
+          adjustedStart.setMinutes(adjustedStart.getMinutes() + transitTime);
 
-    // Update height and max
-    node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
-    node.max = this.getMaxEnd(node);
+          const minutes = adjustedStart.getMinutes();
+          const roundedMinutes = Math.ceil(minutes / 30) * 30;
+          adjustedStart.setMinutes(roundedMinutes, 0, 0);
 
-    // Balance the tree
-    return this.balance(node);
-  }
+          const potentialEnd = new Date(adjustedStart);
+          potentialEnd.setMinutes(potentialEnd.getMinutes() + activity.recommendation.duration);
 
-  findOverlapping(interval: Interval): Interval[] {
-    const result: Interval[] = [];
-    this._findOverlapping(this.root, interval, result);
-    return result;
-  }
-
-  private _findOverlapping(
-    node: IntervalTreeNode | null,
-    interval: Interval,
-    result: Interval[]
-  ): void {
-    if (!node) return;
-
-    // If current node's max is less than interval start, no overlaps possible
-    if (node.max <= interval.start) return;
-
-    // Check left subtree
-    if (node.left && node.left.max > interval.start) {
-      this._findOverlapping(node.left, interval, result);
-    }
-
-    // Check current node
-    if (node.interval.overlaps(interval)) {
-      result.push(node.interval);
-    }
-
-    // Check right subtree if needed
-    if (node.right && node.interval.start < interval.end) {
-      this._findOverlapping(node.right, interval, result);
-    }
-  }
-
-  // Helper methods for AVL tree balancing
-  private getHeight(node: IntervalTreeNode | null): number {
-    return node ? node.height : 0;
-  }
-
-  private getMaxEnd(node: IntervalTreeNode): Date {
-    const leftMax = node.left ? node.left.max : new Date(0);
-    const rightMax = node.right ? node.right.max : new Date(0);
-    return new Date(Math.max(node.interval.end.getTime(), leftMax.getTime(), rightMax.getTime()));
-  }
-
-  private balance(node: IntervalTreeNode): IntervalTreeNode {
-    const balance = this.getHeight(node.left) - this.getHeight(node.right);
-
-    if (balance > 1) {
-      if (this.getHeight(node.left!.left) >= this.getHeight(node.left!.right)) {
-        return this.rightRotate(node);
-      } else {
-        node.left = this.leftRotate(node.left!);
-        return this.rightRotate(node);
-      }
-    }
-
-    if (balance < -1) {
-      if (this.getHeight(node.right!.right) >= this.getHeight(node.right!.left)) {
-        return this.leftRotate(node);
-      } else {
-        node.right = this.rightRotate(node.right!);
-        return this.leftRotate(node);
-      }
-    }
-
-    return node;
-  }
-
-  private leftRotate(node: IntervalTreeNode): IntervalTreeNode {
-    const rightChild = node.right!;
-    const rightLeftChild = rightChild.left;
-
-    rightChild.left = node;
-    node.right = rightLeftChild;
-
-    node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
-    rightChild.height =
-      1 + Math.max(this.getHeight(rightChild.left), this.getHeight(rightChild.right));
-
-    node.max = this.getMaxEnd(node);
-    rightChild.max = this.getMaxEnd(rightChild);
-
-    return rightChild;
-  }
-
-  private rightRotate(node: IntervalTreeNode): IntervalTreeNode {
-    const leftChild = node.left!;
-    const leftRightChild = leftChild.right;
-
-    leftChild.right = node;
-    node.left = leftRightChild;
-
-    node.height = 1 + Math.max(this.getHeight(node.left), this.getHeight(node.right));
-    leftChild.height =
-      1 + Math.max(this.getHeight(leftChild.left), this.getHeight(leftChild.right));
-
-    node.max = this.getMaxEnd(node);
-    leftChild.max = this.getMaxEnd(leftChild);
-
-    return leftChild;
-  }
-}
-
-function hasActivityConflict(start: Date, end: Date, intervalTree: IntervalTree): boolean {
-  const newInterval = new Interval(start, end);
-  return intervalTree.findOverlapping(newInterval).length > 0;
-}
-
-function handleRestaurantSlots(
-  date: Date,
-  duration: number,
-  dayPeriods: protos.google.maps.places.v1.Place.IOpeningHours['periods'],
-  existingActivities: ParsedItineraryActivity[],
-  tripStart: Date,
-  tripEnd: Date,
-  mealWindows: typeof MEAL_WINDOWS
-): Date[] {
-  const slots: Date[] = [];
-
-  // Skip if no periods for this day
-  if (!dayPeriods?.length) return slots;
-
-  // Check each meal window
-  Object.entries(mealWindows).forEach(([mealType, window]) => {
-    // Skip if this meal is already scheduled
-    if (hasMealScheduled(existingActivities, mealType as keyof typeof mealWindows)) {
-      return;
-    }
-
-    dayPeriods.forEach(period => {
-      // Guard against null/undefined period entries
-      if (!period?.open || !period?.close) {
-        return;
-      }
-
-      // Guard against missing hour/minute values
-      const openHour = period.open.hour;
-      const openMinute = period.open.minute ?? 0;
-      const closeHour = period.close.hour;
-      const closeMinute = period.close.minute ?? 0;
-
-      if (typeof openHour !== 'number' || typeof closeHour !== 'number') {
-        return;
-      }
-
-      // Convert meal window times to minutes for easier comparison
-      const windowStartMinutes = window.start * 60;
-      const windowEndMinutes = window.end * 60;
-
-      // Convert opening hours to minutes
-      const openTimeMinutes = openHour * 60 + openMinute;
-      let closeTimeMinutes = closeHour * 60 + closeMinute;
-
-      // Adjust close time if it's past midnight
-      if (period.close.day !== period.open.day) {
-        closeTimeMinutes += 24 * 60;
-      }
-
-      // Find overlap between meal window and opening hours
-      const overlapStart = Math.max(windowStartMinutes, openTimeMinutes);
-      const overlapEnd = Math.min(windowEndMinutes, closeTimeMinutes);
-
-      if (overlapStart < overlapEnd && overlapEnd - overlapStart >= duration) {
-        // Create slots at 30-minute intervals within the overlap period
-        for (let minutes = overlapStart; minutes <= overlapEnd - duration; minutes += 30) {
-          const slotTime = new Date(date);
-          slotTime.setHours(Math.floor(minutes / 60));
-          slotTime.setMinutes(minutes % 60);
-
-          // Handle slots that go past midnight
-          if (Math.floor(minutes / 60) >= 24) {
-            slotTime.setDate(slotTime.getDate() + 1);
-            slotTime.setHours(Math.floor(minutes / 60) - 24);
-          }
-
-          // Skip if outside trip dates
-          if (slotTime < tripStart || slotTime > tripEnd) {
-            continue;
-          }
-
-          // Create end time for conflict checking
-          const slotEndTime = new Date(slotTime);
-          slotEndTime.setMinutes(slotEndTime.getMinutes() + duration);
-
-          // Skip if ends after trip end
-          if (slotEndTime > tripEnd) {
-            continue;
-          }
-
-          // Check for conflicts with existing activities
-          const hasConflict = existingActivities.some(activity => {
-            if (!activity.startTime || !activity.endTime) return false;
-            const activityStart = new Date(activity.startTime);
-            const activityEnd = new Date(activity.endTime);
-            return (
-              (slotTime >= activityStart && slotTime < activityEnd) ||
-              (slotEndTime > activityStart && slotEndTime <= activityEnd) ||
-              (slotTime <= activityStart && slotEndTime >= activityEnd)
+          // Check if this placement is valid
+          if (
+            adjustedStart <= slot.end &&
+            !overlapsWithScheduledActivities(
+              adjustedStart,
+              potentialEnd,
+              scheduledActivities,
+              activity.recommendation.location
+            ) &&
+            canScheduleActivity(
+              activity,
+              { ...slot, start: adjustedStart, end: potentialEnd },
+              timezone
+            )
+          ) {
+            // Score this placement
+            const placementScore = scoreActivityPlacement(
+              activity,
+              adjustedStart,
+              potentialEnd,
+              transitTime,
+              scheduledActivities
             );
-          });
 
-          if (!hasConflict) {
-            slots.push(slotTime);
+            // Update best placement if this is better
+            if (!bestPlacement || placementScore.score > bestPlacement.score) {
+              bestPlacement = placementScore;
+            }
           }
         }
       }
-    });
-  });
 
-  return slots;
-}
-
-function findAvailableSlots(
-  activities: ParsedItineraryActivity[],
-  date: Date,
-  duration: number,
-  openingHours: protos.google.maps.places.v1.Place.IOpeningHours | null | undefined,
-  isRestaurant: boolean,
-  tripStart: Date,
-  tripEnd: Date,
-  timezone: string
-): Date[] {
-  const slots: Date[] = [];
-  const periods = openingHours?.periods || [];
-
-  // Early return if the date is outside trip bounds
-  if (date < tripStart || date > tripEnd) {
-    return slots;
-  }
-
-  // Build interval tree for existing activities
-  const intervalTree = new IntervalTree();
-  activities.forEach(activity => {
-    if (activity.startTime && activity.endTime) {
-      intervalTree.insert(new Interval(new Date(activity.startTime), new Date(activity.endTime)));
-    }
-  });
-
-  const dayPeriods = periods.filter(period => {
-    if (!period?.open) return false;
-    const localDay = Number(formatInTimeZone(date, timezone, 'e')) - 1;
-    return period.open.day === localDay;
-  });
-
-  // Handle restaurants separately
-  if (isRestaurant) {
-    return handleRestaurantSlots(
-      date,
-      duration,
-      dayPeriods,
-      activities,
-      tripStart,
-      tripEnd,
-      MEAL_WINDOWS
-    );
-  }
-
-  // For non-restaurant activities, generate slots every 30 minutes during opening hours
-  dayPeriods.forEach(period => {
-    if (!period?.open || !period?.close) return;
-
-    const startHour = period.open.hour || 0;
-    const startMinute = period.open.minute || 0;
-    const endHour = period.close.hour || 23;
-    const endMinute = period.close.minute || 59;
-
-    let currentTime = new Date(date);
-    currentTime.setHours(startHour, startMinute, 0, 0);
-
-    const periodEnd = new Date(date);
-    if (period.close.day !== period.open.day) {
-      periodEnd.setDate(periodEnd.getDate() + 1);
-    }
-    periodEnd.setHours(endHour, endMinute, 0, 0);
-
-    while (currentTime <= periodEnd) {
-      const slotEnd = addMinutes(currentTime, duration);
-      if (
-        currentTime >= tripStart &&
-        slotEnd <= tripEnd &&
-        !hasActivityConflict(currentTime, slotEnd, intervalTree)
-      ) {
-        slots.push(new Date(currentTime));
+      // Schedule activity at its best placement if found
+      if (bestPlacement) {
+        scheduledActivities.push({
+          ...activity,
+          startTime: bestPlacement.startTime,
+          endTime: bestPlacement.endTime,
+          transitTimeFromPrevious: bestPlacement.transitTime,
+        });
       }
-      currentTime = addMinutes(currentTime, 30);
     }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  const unscheduledForDay = otherActivities.filter(
+    activity => !isActivityScheduled(activity, scheduledActivities)
+  );
+
+  scheduledActivities.push(
+    ...unscheduledForDay.map(activity => {
+      return {
+        ...activity,
+        startTime: null,
+        endTime: null,
+        transitTimeFromPrevious: 0,
+      };
+    })
+  );
+
+  return scheduledActivities.sort((a, b) => {
+    if (a.startTime === null && b.startTime === null) return 0;
+    if (a.startTime === null) return 1;
+    if (b.startTime === null) return -1;
+    return a.startTime.getTime() - b.startTime.getTime();
   });
-
-  return slots;
 }
 
-// Calculate total available time in the trip
-function calculateAvailableTime(trip: Pick<ParsedTrip, 'endDate' | 'startDate'>): number {
-  const startDate = new Date(trip.startDate);
-  const endDate = new Date(trip.endDate);
-
-  // Calculate full days
-  const days = differenceInDays(endDate, startDate) + 1;
-
-  // Assume 10 hours per day of activity time (8AM - 6PM)
-  // This accounts for travel time, breaks, etc.
-  const HOURS_PER_DAY = 10;
-
-  return days * HOURS_PER_DAY * 60; // Return total minutes available
+function isActivityScheduled(
+  activity: ParsedItineraryActivity,
+  scheduledActivities: ParsedItineraryActivity[]
+): boolean {
+  return scheduledActivities.some(scheduled => scheduled.id === activity.id);
 }
 
-// Clear existing scheduling data to rebuild schedule
+function overlapsWithScheduledActivities(
+  startTime: Date,
+  endTime: Date,
+  scheduledActivities: ParsedItineraryActivity[],
+  newActivityLocation: { latitude: number; longitude: number }
+): boolean {
+  return scheduledActivities.some(activity => {
+    if (!activity.startTime || !activity.endTime) return false;
+
+    // Check if this activity is BEFORE the new activity
+    if (activity.endTime <= startTime) {
+      // Get the transit time needed after the existing activity
+      const transitAfterExisting = calculateTransitTime(
+        activity.recommendation.location,
+        newActivityLocation
+      );
+
+      // Calculate the earliest possible start time after this activity
+      const earliestPossibleStart = new Date(
+        activity.endTime.getTime() + transitAfterExisting * 60 * 1000
+      );
+
+      // Check if we're trying to start before we can get there
+      if (startTime < earliestPossibleStart) {
+        return true; // Overlap - can't start before transit time allows
+      }
+    }
+
+    // Check if this activity is AFTER the new activity
+    if (activity.startTime >= endTime) {
+      // Get the transit time needed to get to the next activity
+      const transitToNext = calculateTransitTime(
+        newActivityLocation,
+        activity.recommendation.location
+      );
+
+      // Calculate the latest possible end time to make it to the next activity
+      const latestPossibleEnd = new Date(activity.startTime.getTime() - transitToNext * 60 * 1000);
+
+      // Check if we're trying to end too late to make it to the next activity
+      if (endTime > latestPossibleEnd) {
+        return true; // Overlap - would make next activity unreachable
+      }
+    }
+
+    // Check for direct time overlap
+    if (!(endTime <= activity.startTime || startTime >= activity.endTime)) {
+      return true; // Direct time overlap
+    }
+
+    return false; // No overlap found
+  });
+}
+
+function findClosestRestaurant(
+  location: { latitude: number; longitude: number },
+  restaurants: ParsedItineraryActivity[]
+): ParsedItineraryActivity {
+  return restaurants.reduce((closest, current) => {
+    const closestDistance = calculateTransitTime(location, closest.recommendation.location);
+    const currentDistance = calculateTransitTime(location, current.recommendation.location);
+    return currentDistance < closestDistance ? current : closest;
+  }, restaurants[0]);
+}
+
+function scheduleMeals(
+  restaurants: ParsedItineraryActivity[],
+  date: Date,
+  scheduledActivities: ParsedItineraryActivity[],
+  timezone: string
+): ParsedItineraryActivity[] {
+  const meals: ParsedItineraryActivity[] = [];
+
+  for (const [_, time] of Object.entries(MEAL_TIMES)) {
+    const mealStart = new Date(date);
+    const [startHour, startMinute] = time.start.split(':');
+    mealStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+
+    // Find suitable restaurant for this meal
+    const availableRestaurants = restaurants.filter(
+      restaurant =>
+        !isActivityScheduled(restaurant, [...scheduledActivities, ...meals]) &&
+        canScheduleActivity(
+          restaurant,
+          {
+            start: mealStart,
+            end: new Date(mealStart.getTime() + time.duration * 60000),
+            type: 'meal',
+          },
+          timezone
+        )
+    );
+
+    if (availableRestaurants.length > 0) {
+      // Select restaurant closest to previous activity if exists
+      const previousActivity = [...scheduledActivities, ...meals].slice(-1)[0];
+      const selectedRestaurant = previousActivity
+        ? findClosestRestaurant(previousActivity.recommendation.location, availableRestaurants)
+        : availableRestaurants[0];
+
+      const transitTime = previousActivity
+        ? calculateTransitTime(
+            previousActivity.recommendation.location,
+            selectedRestaurant.recommendation.location
+          )
+        : 0;
+
+      const startTime = new Date(mealStart);
+
+      // Add transit time and round up to next 30 minutes
+      startTime.setMinutes(startTime.getMinutes() + transitTime);
+      const minutes = startTime.getMinutes();
+      const roundedMinutes = Math.ceil(minutes / 30) * 30;
+      startTime.setMinutes(roundedMinutes, 0, 0);
+
+      const endTime = new Date(startTime);
+      endTime.setMinutes(endTime.getMinutes() + selectedRestaurant.recommendation.duration);
+
+      meals.push({
+        ...selectedRestaurant,
+        startTime,
+        endTime,
+        transitTimeFromPrevious: transitTime,
+      });
+    }
+  }
+
+  return meals;
+}
+
+function generateTimeSlots(date: Date): TimeSlot[] {
+  return Object.entries(TIME_SLOTS).map(([type, times]) => {
+    const start = new Date(date);
+    const [startHour, startMinute] = times.start.split(':');
+    start.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+
+    const end = new Date(date);
+    const [endHour, endMinute] = times.end.split(':');
+    end.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+
+    return {
+      start,
+      end,
+      type: type as 'morning' | 'afternoon' | 'evening',
+    };
+  });
+}
+
+function canScheduleActivity(
+  activity: ParsedItineraryActivity,
+  slot: TimeSlot,
+  timezone: string
+): boolean {
+  if (!activity.recommendation.openingHours || !activity.recommendation.openingHours.periods)
+    return false;
+
+  const localDayOfWeek =
+    parseInt(
+      formatInTimeZone(slot.start, timezone, 'e') // 'e' returns 0-6 for day of week
+    ) - 1;
+
+  // Check if the place is 24/7 first
+  const is24_7 =
+    activity.recommendation.openingHours.periods.length === 1 &&
+    activity.recommendation.openingHours.periods[0].open &&
+    !activity.recommendation.openingHours.periods[0].close;
+
+  const periodsForDay = is24_7
+    ? activity.recommendation.openingHours.periods // For 24/7, use the single period
+    : activity.recommendation.openingHours.periods.filter(period => {
+        if (!isValidPoint(period.open)) return false;
+        return period.open.day === localDayOfWeek;
+      });
+
+  if (periodsForDay.length === 0) {
+    return false; // Place is closed this day
+  }
+
+  return periodsForDay.some(period => {
+    const open = period.open!;
+
+    const openingTime = new Date(slot.start);
+    openingTime.setHours(open!.hour!, open!.minute!, 0, 0);
+    let closingTime: Date;
+
+    if (isValidPoint(period.close)) {
+      // Has valid closing time
+      closingTime = new Date(slot.start);
+      if (period.close.day !== open.day) {
+        closingTime.setDate(closingTime.getDate() + 1);
+      }
+      closingTime.setHours(period.close.hour!, period.close.minute!, 0, 0);
+    } else {
+      // Handle 24/7 case
+      closingTime = new Date(openingTime);
+      closingTime.setDate(closingTime.getDate() + 1);
+    }
+
+    // Compare times in local timezone
+    const slotStartLocal = formatInTimeZone(slot.start, timezone, 'HH:mm');
+    const slotEndLocal = formatInTimeZone(slot.end, timezone, 'HH:mm');
+    const openTimeLocal = formatInTimeZone(openingTime, timezone, 'HH:mm');
+    const closeTimeLocal = formatInTimeZone(closingTime, timezone, 'HH:mm');
+
+    return slotStartLocal >= openTimeLocal && slotEndLocal <= closeTimeLocal;
+  });
+}
+
+function calculateTransitTime(
+  from: { latitude: number; longitude: number },
+  to: { latitude: number; longitude: number }
+): number {
+  // Simple distance-based calculation
+  // In a real implementation, you'd want to use a routing service
+  const R = 6371e3; // Earth's radius in meters
+  const φ1 = (from.latitude * Math.PI) / 180;
+  const φ2 = (to.latitude * Math.PI) / 180;
+  const Δφ = ((to.latitude - from.latitude) * Math.PI) / 180;
+  const Δλ = ((to.longitude - from.longitude) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const distance = R * c;
+
+  // Rough estimate: 4km/h walking speed
+  return Math.round(distance / (4000 / 60)); // Returns minutes
+}
+
+function isValidPoint(
+  point: protos.google.maps.places.v1.Place.OpeningHours.Period.IPoint | null | undefined
+): point is protos.google.maps.places.v1.Place.OpeningHours.Period.IPoint {
+  if (!point) return false;
+
+  const { day, hour, minute } = point;
+  return (
+    day !== undefined &&
+    day !== null &&
+    hour !== undefined &&
+    hour !== null &&
+    minute !== undefined &&
+    minute !== null
+  );
+}
+
+export function isTimeWithinPeriod(
+  time: Date,
+  period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod,
+  timezone: string
+): boolean {
+  if (!isValidPoint(period.open)) {
+    return false;
+  }
+
+  const localTimeStr = formatInTimeZone(time, timezone, 'HH:mm:ss E');
+  const [timeStr] = localTimeStr.split(' ');
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  const timeMinutes = hours * 60 + minutes;
+
+  const openMinutes = period.open.hour! * 60 + (period.open.minute || 0);
+
+  return timeMinutes >= openMinutes;
+}
+
 export async function clearSchedulingData(tripId: string): Promise<void> {
   await prisma.itineraryActivity.updateMany({
     where: {
@@ -745,480 +521,206 @@ export async function clearSchedulingData(tripId: string): Promise<void> {
   });
 }
 
-// Schedule all planned activities
-export async function scheduleActivities(
-  activities: ParsedItineraryActivity[],
-  trip: ParsedTrip
-): Promise<number> {
-  await clearSchedulingData(trip.id);
-  const userPreferences = await preferencesService.getPreferences(trip.userId);
-
-  let scheduledMinutes = 0;
-  const scheduledActivities: ParsedItineraryActivity[] = [];
-  const unscheduledActivities: ParsedItineraryActivity[] = [];
-  const activityIntervals = new IntervalTree();
-
-  const sortedActivities = activities.sort((a, b) => {
-    // Start with planned activities
-    if (a.status !== b.status) {
-      return a.status === 'planned' ? -1 : 1;
-    }
-    // First priority: Must-see attractions
-    if (a.recommendation.isMustSee !== b.recommendation.isMustSee) {
-      return a.recommendation.isMustSee ? -1 : 1;
-    }
-
-    // Second priority: Restaurants (to ensure proper meal timing)
-    if (
-      a.recommendation.placeTypes.includes('restaurant') !==
-      b.recommendation.placeTypes.includes('restaurant')
-    ) {
-      return a.recommendation.placeTypes.includes('restaurant') ? -1 : 1;
-    }
-
-    // Third priority: Activity intensity based on user's energy level
-    const getIntensityScore = (activity: ParsedItineraryActivity) => {
-      const intensity = Math.max(
-        ...activity.recommendation.placeTypes.map(type => INTENSITY_WEIGHTS[type] || 50)
-      );
-      // Adjust intensity score based on user preference
-      switch (userPreferences.energyLevel) {
-        case 1:
-          return -intensity;
-        case 3:
-          return intensity;
-        default:
-          return 0;
-      }
+function scoreActivityPlacement(
+  activity: ParsedItineraryActivity,
+  startTime: Date,
+  endTime: Date,
+  transitTime: number,
+  scheduledActivities: ParsedItineraryActivity[]
+): PlacementScore {
+  // First check if the placement is valid considering transit times
+  if (
+    overlapsWithScheduledActivities(
+      startTime,
+      endTime,
+      scheduledActivities,
+      activity.recommendation.location
+    )
+  ) {
+    return {
+      score: -1,
+      startTime,
+      endTime,
+      transitTime,
+      breakdown: {
+        transitScore: 0,
+        timeOfDayScore: 0,
+        popularityScore: 0,
+        clusteringScore: 0,
+        timeSlotScore: 0,
+      },
     };
-
-    const intensityDiff = getIntensityScore(b) - getIntensityScore(a);
-    if (intensityDiff !== 0) return intensityDiff;
-
-    // Finally, sort by rating
-    return b.recommendation.rating - a.recommendation.rating;
-  });
-
-  for (const activity of sortedActivities) {
-    try {
-      const { bestSlot, bestTransitTime } = await findBestTimeSlot(
-        trip,
-        activity.recommendation,
-        sortedActivities,
-        userPreferences,
-        activityIntervals
-      );
-
-      if (!bestSlot) {
-        console.warn(`Could not find valid slot for activity ${activity.id}`);
-        unscheduledActivities.push(activity);
-        continue;
-      }
-
-      const endTime = addMinutes(bestSlot, activity.recommendation.duration);
-
-      // Add the scheduled activity to the interval tree
-      activityIntervals.insert(new Interval(bestSlot, endTime, activity));
-
-      await prisma.itineraryActivity.update({
-        where: { id: activity.id },
-        data: {
-          startTime: bestSlot,
-          endTime,
-          transitTimeFromPrevious: bestTransitTime,
-        },
-      });
-
-      const updatedActivity = {
-        ...activity,
-        startTime: bestSlot,
-        endTime,
-        transitTimeFromPrevious: bestTransitTime,
-      };
-      scheduledActivities.push(updatedActivity);
-      scheduledMinutes += activity.recommendation.duration + bestTransitTime;
-    } catch (error) {
-      console.error(`Error scheduling activity ${activity.id}:`, error);
-      unscheduledActivities.push(activity);
-    }
   }
 
-  return scheduledMinutes;
-}
+  // 1. Transit time score (lower is better)
+  const maxTransitTime = 60; // Maximum expected transit time in minutes
+  const transitScore = 1 - Math.min(transitTime / maxTransitTime, 1);
 
-export async function findBestTimeSlot(
-  trip: ParsedTrip,
-  recommendation: ActivityRecommendation,
-  existingActivities: ParsedItineraryActivity[],
-  userPreferences: UserPreferences,
-  activityIntervals: IntervalTree
-): Promise<TimeSlotResult> {
-  let bestSlot: Date | null = null;
-  let bestScore = -Infinity;
-  let bestTransitTime = 30;
+  // 2. Time of day appropriateness score
+  const timeOfDay = getTimeOfDay(startTime);
+  const activityType = determineActivityType(activity);
+  const timeOfDayScore = TIME_PREFERENCES[activityType as keyof typeof TIME_PREFERENCES][timeOfDay];
 
-  // Create proper Date objects with time components
-  const tripStart = new Date(trip.startDate);
-  const tripEnd = new Date(trip.endDate);
-  tripEnd.setHours(23, 59, 59, 999);
+  // 3. Popularity score based on rating and review count
+  const popularityScore = calculatePopularityScore(activity);
 
-  // Ensure we don't start before trip start date
-  const currentDate = new Date(tripStart);
+  // 4. Clustering score - how well it fits with nearby activities
+  const clusteringScore = calculateClusteringScore(activity, startTime, scheduledActivities);
 
-  const isRestaurant = recommendation.placeTypes.includes('restaurant');
+  // 5. Time slot usage score - how efficiently it uses the available slot
+  const timeSlotScore = calculateTimeSlotUsage(
+    startTime,
+    endTime,
+    activity.recommendation.duration
+  );
 
-  while (currentDate <= tripEnd) {
-    const availableSlots = findAvailableSlots(
-      existingActivities,
-      currentDate,
-      recommendation.duration,
-      recommendation.openingHours,
-      isRestaurant,
-      tripStart,
-      tripEnd,
-      trip.city.timezone
-    );
-
-    // If no slots available, we should skip to next day
-    if (availableSlots.length === 0) {
-      currentDate.setDate(currentDate.getDate() + 1);
-      currentDate.setHours(getPreferredStartHour(userPreferences.preferredStartTime), 0, 0, 0);
-      continue;
-    }
-
-    const EVENING_VENUE_TYPES = CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes;
-
-    const isEveningVenue = recommendation.placeTypes.some(type =>
-      EVENING_VENUE_TYPES.includes(type)
-    );
-
-    let endTime = new Date(currentDate);
-    endTime.setHours(23, 59, 59, 999);
-
-    // For late night venues, consider slots that extend into early morning of next day
-    if (isEveningVenue) {
-      const nextDay = new Date(currentDate);
-      nextDay.setDate(nextDay.getDate() + 1);
-      nextDay.setHours(2, 0, 0, 0); // Allow scheduling until 2 AM
-      endTime = nextDay;
-    }
-
-    for (const slot of availableSlots) {
-      const previousActivity = existingActivities
-        .filter(a => {
-          if (!a.endTime) return false;
-          const endTime = new Date(a.endTime);
-          return (
-            endTime <= slot && endTime >= tripStart && isSameDay(endTime, slot, trip.city.timezone)
-          );
-        })
-        .sort((a, b) => {
-          if (!a.endTime || !b.endTime) return 0;
-          return new Date(b.endTime).getTime() - new Date(a.endTime).getTime();
-        })[0];
-
-      const transitTime = previousActivity
-        ? await getTransitTime(
-            {
-              latitude: previousActivity.recommendation.location.latitude,
-              longitude: previousActivity.recommendation.location.longitude,
-            },
-            {
-              latitude: recommendation.location.latitude,
-              longitude: recommendation.location.longitude,
-            },
-            previousActivity.endTime ? new Date(previousActivity.endTime) : new Date()
-          )
-        : 0;
-
-      const validation = await validateActivityTimeSlot({
-        startTime: slot,
-        duration: recommendation.duration,
-        tripStart,
-        tripEnd,
-        previousActivity,
-        existingActivities,
-        transitTime,
-        intervalTree: activityIntervals,
-        timezone: trip.city.timezone,
-      });
-
-      // Skip this slot if it's not valid
-      if (!validation.isValid) {
-        continue;
-      }
-
-      const score = scoreTimeSlot(
-        slot,
-        transitTime,
-        existingActivities,
-        recommendation,
-        tripStart,
-        tripEnd,
-        userPreferences,
-        trip.city.timezone,
-        validation.scoreAdjustment
-      );
-
-      if (score > bestScore && score > MINIMUM_ACCEPTABLE_SCORE) {
-        bestScore = score;
-        bestTransitTime = transitTime;
-        bestSlot = slot;
-      }
-    }
-
-    currentDate.setDate(currentDate.getDate() + 1);
-    currentDate.setHours(8, 0, 0, 0);
-  }
+  // Calculate weighted total score
+  const totalScore =
+    transitScore * SCORING_WEIGHTS.transitTime +
+    timeOfDayScore * SCORING_WEIGHTS.timeOfDay +
+    popularityScore * SCORING_WEIGHTS.popularity +
+    clusteringScore * SCORING_WEIGHTS.clustering +
+    timeSlotScore * SCORING_WEIGHTS.timeSlotUsage;
 
   return {
-    bestSlot,
-    bestTransitTime,
+    score: totalScore,
+    startTime,
+    endTime,
+    transitTime,
+    breakdown: {
+      transitScore,
+      timeOfDayScore,
+      popularityScore,
+      clusteringScore,
+      timeSlotScore,
+    },
   };
 }
 
-export async function validateActivityTimeSlot({
-  startTime,
-  duration,
-  tripStart,
-  tripEnd,
-  previousActivity,
-  existingActivities,
-  transitTime = 30,
-  intervalTree,
-  timezone,
-}: ValidateTimeSlotParams): Promise<ValidationResult> {
-  if (!startTime) {
-    return { isValid: false, reason: 'No start time provided' };
+function determineActivityType(activity: ParsedItineraryActivity): string {
+  const types = activity.recommendation.placeTypes;
+  const description = activity.recommendation.description?.toLowerCase() ?? '';
+
+  // Museum and cultural venues
+  if (types.some(type => CategoryMapping[PlaceCategory.MUSEUM].includedTypes.includes(type))) {
+    return 'museum';
   }
 
-  // Add early check for 2 AM cutoff
-  const hour = Number(formatInTimeZone(startTime, timezone, 'H'));
-  if (hour >= 2 && hour < 6) {
-    return {
-      isValid: false,
-      reason: 'Activities cannot be scheduled between 2 AM and 6 AM',
-    };
+  // Outdoor spaces
+  if (types.some(type => CategoryMapping[PlaceCategory.PARK].includedTypes.includes(type))) {
+    return 'park';
+  }
+  if (types.some(type => CategoryMapping[PlaceCategory.BEACH].includedTypes.includes(type))) {
+    return 'beach';
   }
 
-  // Include transit time in total duration
-  const totalDuration = duration + transitTime + BUFFER_TIME_MINUTES;
-  const endTime = new Date(startTime);
-  endTime.setMinutes(endTime.getMinutes() + totalDuration);
-
-  // Adjust end time validation for evening venues that go past midnight
-  const adjustedTripEnd = new Date(tripEnd);
-  if (startTime.getHours() >= 19) {
-    adjustedTripEnd.setDate(adjustedTripEnd.getDate() + 1);
-    adjustedTripEnd.setHours(2, 0, 0, 0);
-  }
-
-  if (startTime < tripStart || endTime > adjustedTripEnd) {
-    return {
-      isValid: false,
-      reason: 'Activity falls outside trip dates',
-    };
-  }
-
-  // Strengthen transit time check
-  if (previousActivity?.endTime) {
-    const previousEndTime = new Date(previousActivity.endTime);
-    const minimumStartTime = new Date(previousEndTime);
-    minimumStartTime.setMinutes(minimumStartTime.getMinutes() + transitTime + BUFFER_TIME_MINUTES);
-
-    if (startTime <= minimumStartTime) {
-      // Changed from < to <= to prevent exact same time scheduling
-      return {
-        isValid: false,
-        reason: `Insufficient transit time from previous activity (needs ${transitTime + BUFFER_TIME_MINUTES} minutes)`,
-      };
-    }
-  }
-
-  // Also check for any activities that end right before this one
-  const previousEndingActivities = existingActivities.filter(activity => {
-    if (!activity.endTime) return false;
-    const activityEnd = new Date(activity.endTime);
-    return activityEnd <= startTime && isSameDay(activityEnd, startTime, timezone);
-  });
-
-  if (previousEndingActivities.length > 0) {
-    const lastEndingActivity = previousEndingActivities.reduce((latest, current) => {
-      if (!latest.endTime || !current.endTime) return current;
-      return new Date(latest.endTime) > new Date(current.endTime) ? latest : current;
-    });
-
-    if (lastEndingActivity.endTime) {
-      const lastEnd = new Date(lastEndingActivity.endTime);
-      const minimumGap = transitTime + BUFFER_TIME_MINUTES;
-      const actualGap = (startTime.getTime() - lastEnd.getTime()) / (1000 * 60); // Convert to minutes
-
-      if (actualGap < minimumGap) {
-        return {
-          isValid: false,
-          reason: `Need at least ${minimumGap} minutes between activities (currently ${Math.floor(actualGap)} minutes)`,
-        };
-      }
-    }
-  }
-
-  // Rest of the validation remains the same...
-  const hasConflict = hasActivityConflict(startTime, endTime, intervalTree);
-
-  if (hasConflict) {
-    return {
-      isValid: false,
-      reason: 'Time slot conflicts with existing activity',
-    };
-  }
-
-  const mealtimeConflict = conflictsWithMeals(
-    getReservedMealBlocks(existingActivities, startTime, timezone),
-    startTime,
-    endTime,
-    timezone
-  );
-
-  if (mealtimeConflict) {
-    return {
-      isValid: true,
-      scoreAdjustment: -20,
-      reason: 'Conflicts with meal time',
-    };
-  }
-
-  return { isValid: true, scoreAdjustment: 0 };
-}
-
-export function isActivityOpenDuring(
-  recommendation: {
-    openingHours: {
-      periods: protos.google.maps.places.v1.Place.IOpeningHours['periods'];
-    };
-    name: string;
-  },
-  startTime: Date,
-  timezone: string
-): boolean {
-  const periods = recommendation.openingHours.periods;
-
-  if (!periods?.length) {
-    console.debug(`No opening hours found for ${recommendation.name}`);
-    return false;
-  }
-
-  const localTimeStr = formatInTimeZone(startTime, timezone, 'HH:mm:ss E');
-  const [timeStr, dayStr] = localTimeStr.split(' ');
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const activityStartDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(dayStr);
-  const activityStartMinutes = hours * 60 + minutes;
-
-  return periods.some(period => {
-    if (
-      !period.open ||
-      typeof period.open.day !== 'number' ||
-      typeof period.open.hour !== 'number' ||
-      !period.close ||
-      typeof period.close.day !== 'number' ||
-      typeof period.close.hour !== 'number'
-    ) {
-      return false;
-    }
-
-    const openDay = period.open.day;
-    const openMinutes = period.open.hour * 60 + (period.open.minute || 0);
-    const closeDay = period.close.day;
-    const closeMinutes = period.close.hour * 60 + (period.close.minute || 0);
-
-    // Handle overnight periods
-    if (openDay === activityStartDay) {
-      // Opens on current day - check if after opening time
-      return activityStartMinutes >= openMinutes;
-    } else if (closeDay === activityStartDay) {
-      // Closes on current day - check if before closing time
-      return activityStartMinutes <= closeMinutes;
-    } else if (openDay === (activityStartDay + 6) % 7) {
-      // Previous day's overnight period
-      return activityStartMinutes <= closeMinutes;
-    }
-
-    return false;
-  });
-}
-
-export function getNextOpeningTime(
-  openingHours: { periods: protos.google.maps.places.v1.Place.IOpeningHours['periods'] },
-  currentTime: Date,
-  timezone: string
-): Date | null {
-  const periods = openingHours.periods;
-  if (!periods?.length) return null;
-
-  // Get local time components
-  const localTimeStr = formatInTimeZone(currentTime, timezone, 'HH:mm:ss E');
-  const [timeStr, dayStr] = localTimeStr.split(' ');
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const currentDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(dayStr);
-  const currentMinutes = hours * 60 + minutes;
-
-  // Look for the next opening time within the next 7 days
-  for (let daysAhead = 0; daysAhead < 7; daysAhead++) {
-    const checkDay = (currentDay + daysAhead) % 7;
-
-    // Get all periods for this day
-    const dayPeriods = periods.filter(period => {
-      if (!period.open || typeof period.open.day !== 'number') return false;
-      return period.open.day === checkDay;
-    });
-
-    for (const period of dayPeriods) {
-      if (
-        !period.open ||
-        typeof period.open.day !== 'number' ||
-        typeof period.open.hour !== 'number'
-      ) {
-        continue;
-      }
-
-      const openMinutes = period.open.hour * 60 + (period.open.minute || 0);
-
-      // If we're checking the current day, only consider future times
-      if (daysAhead === 0 && openMinutes <= currentMinutes) {
-        continue;
-      }
-
-      // Create the next opening time
-      const nextOpeningTime = new Date(currentTime);
-      nextOpeningTime.setDate(nextOpeningTime.getDate() + daysAhead);
-      nextOpeningTime.setHours(period.open.hour);
-      nextOpeningTime.setMinutes(period.open.minute || 0);
-
-      return nextOpeningTime;
-    }
-  }
-
-  return null;
-}
-
-export function isTimeWithinPeriod(
-  time: Date,
-  period: protos.google.maps.places.v1.Place.OpeningHours.IPeriod,
-  timezone: string
-): boolean {
+  // Dining and entertainment
   if (
-    !period?.open ||
-    typeof period.open.day !== 'number' ||
-    typeof period.open.hour !== 'number'
+    types.some(type => CategoryMapping[PlaceCategory.RESTAURANT].includedTypes.includes(type)) &&
+    !types.some(type => CategoryMapping[PlaceCategory.RESTAURANT].excludedTypes.includes(type))
   ) {
-    return false;
+    return 'restaurant';
   }
 
-  const localTimeStr = formatInTimeZone(time, timezone, 'HH:mm:ss E');
-  const [timeStr] = localTimeStr.split(' ');
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const timeMinutes = hours * 60 + minutes;
+  if (types.some(type => CategoryMapping[PlaceCategory.NIGHTLIFE].includedTypes.includes(type))) {
+    return 'nightlife';
+  }
 
-  const openMinutes = period.open.hour * 60 + (period.open.minute || 0);
+  // Shopping
+  // if (
+  //   types.includes('shopping_mall') ||
+  //   types.includes('shopping_center') ||
+  //   types.includes('market')
+  // ) {
+  //   return 'shopping';
+  // }
 
-  return timeMinutes >= openMinutes;
+  // Wellness
+  if (types.some(type => CategoryMapping[PlaceCategory.SPA].includedTypes.includes(type))) {
+    return 'spa';
+  }
+
+  // Historic sites and attractions
+  if (
+    types.some(type => CategoryMapping[PlaceCategory.HISTORIC].includedTypes.includes(type)) ||
+    PLACE_INDICATORS.HISTORICAL.TIME_PERIODS.has(description) ||
+    PLACE_INDICATORS.HISTORICAL.ARCHITECTURAL.has(description)
+  ) {
+    return 'historic';
+  }
+
+  // General tourist attractions
+  if (types.some(type => CategoryMapping[PlaceCategory.ATTRACTION].includedTypes.includes(type))) {
+    return 'attraction';
+  }
+
+  // Default fallback
+  return 'default';
+}
+
+function getTimeOfDay(time: Date): 'morning' | 'afternoon' | 'evening' {
+  const hour = time.getHours();
+  if (hour < 12) return 'morning';
+  if (hour < 17) return 'afternoon';
+  return 'evening';
+}
+
+function calculatePopularityScore(activity: ParsedItineraryActivity): number {
+  const { rating, reviewCount } = activity.recommendation;
+  const normalizedRating = (rating - 3) / 2; // Convert 3-5 scale to 0-1
+  const normalizedReviews = Math.min(reviewCount / 1000, 1); // Cap at 1000 reviews
+  return (normalizedRating + normalizedReviews) / 2;
+}
+
+function calculateClusteringScore(
+  activity: ParsedItineraryActivity,
+  startTime: Date,
+  scheduledActivities: ParsedItineraryActivity[]
+): number {
+  const nearbyActivities = scheduledActivities.filter(scheduled => {
+    if (!scheduled.startTime) return false;
+    const timeDiff = Math.abs(startTime.getTime() - scheduled.startTime.getTime());
+    return timeDiff <= 3 * 60 * 60 * 1000; // Within 3 hours
+  });
+
+  if (nearbyActivities.length === 0) return 0.5; // Neutral score if no nearby activities
+
+  const similarityScores = nearbyActivities.map(nearby => {
+    const typesSimilarity = calculateTypesSimilarity(
+      activity.recommendation.placeTypes,
+      nearby.recommendation.placeTypes
+    );
+    const timeProximity = calculateTimeProximity(startTime, nearby.startTime!);
+    return (typesSimilarity + timeProximity) / 2;
+  });
+
+  return similarityScores.reduce((sum, score) => sum + score, 0) / similarityScores.length;
+}
+
+function calculateTypesSimilarity(types1: string[], types2: string[]): number {
+  const commonTypes = types1.filter(type => types2.includes(type));
+  return commonTypes.length / Math.max(types1.length, types2.length);
+}
+
+function calculateTimeProximity(time1: Date, time2: Date): number {
+  const hoursDiff = Math.abs(time1.getTime() - time2.getTime()) / (60 * 60 * 1000);
+  return Math.max(0, 1 - hoursDiff / 3); // Linear decay over 3 hours
+}
+
+function calculateTimeSlotUsage(startTime: Date, endTime: Date, duration: number): number {
+  const actualDuration = (endTime.getTime() - startTime.getTime()) / (60 * 1000);
+  const efficiency = duration / actualDuration;
+  return Math.min(efficiency, 1); // Cap at 1 for perfect usage
+}
+
+function generatePotentialStartTimes(slot: TimeSlot, intervalMinutes: number): Date[] {
+  const startTimes: Date[] = [];
+  const current = new Date(slot.start);
+
+  while (current < slot.end) {
+    startTimes.push(new Date(current));
+    current.setMinutes(current.getMinutes() + intervalMinutes);
+  }
+
+  return startTimes;
 }
