@@ -1,5 +1,4 @@
 'use client';
-import React, { useState } from 'react';
 
 import { SignedIn } from '@clerk/nextjs';
 import { ChevronLeft, List } from 'lucide-react';
@@ -11,7 +10,6 @@ import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ActivitySheet } from './ActivitySheet';
-import { ParsedTrip } from '../types';
 
 interface TripHeaderProps {
   onEditClick: () => void;
@@ -93,15 +91,9 @@ export const TripHeader = ({ onEditClick, onDateClick, onCityClick }: TripHeader
               </button>
               <button
                 onClick={onDateClick}
-                className="text-sm font-medium px-3 py-2 border-l border-gray-200 hover:bg-gray-100 transition-colors"
-              >
-                {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
-              </button>
-              <button
-                onClick={onEditClick}
                 className="text-sm font-medium px-3 py-2 border-l border-gray-200 hover:bg-gray-100 transition-colors rounded-r-full"
               >
-                1 guest
+                {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
               </button>
             </div>
           </div>

@@ -730,7 +730,7 @@ function calculateAvailableTime(trip: Pick<ParsedTrip, 'endDate' | 'startDate'>)
 }
 
 // Clear existing scheduling data to rebuild schedule
-async function clearSchedulingData(tripId: string): Promise<void> {
+export async function clearSchedulingData(tripId: string): Promise<void> {
   await prisma.itineraryActivity.updateMany({
     where: {
       tripId,
@@ -929,7 +929,7 @@ export async function findBestTimeSlot(
             },
             previousActivity.endTime ? new Date(previousActivity.endTime) : new Date()
           )
-        : 30;
+        : 0;
 
       const validation = await validateActivityTimeSlot({
         startTime: slot,

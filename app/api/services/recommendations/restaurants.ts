@@ -35,7 +35,7 @@ interface RestaurantCluster {
   timeSlot: 'breakfast' | 'lunch' | 'dinner';
 }
 
-const VEGETARIAN_RESTAURANT_TYPES = [
+export const VEGETARIAN_RESTAURANT_TYPES = [
   'indian_restaurant',
   'chinese_restaurant',
   'japanese_restaurant',

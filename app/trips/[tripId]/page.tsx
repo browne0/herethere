@@ -1,8 +1,18 @@
 import { auth } from '@clerk/nextjs/server';
-import { Camera, Flower2, HandPlatter, Landmark, Martini, Palette, Star } from 'lucide-react';
+import {
+  Camera,
+  Flower2,
+  HandPlatter,
+  Landmark,
+  Martini,
+  Palette,
+  Sparkles,
+  Star,
+} from 'lucide-react';
 import { Metadata, Viewport } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
+import { forYouRecommendationsService } from '@/app/api/services/recommendations/forYouRecommendations';
 import { historicSitesRecommendationService } from '@/app/api/services/recommendations/historicSites';
 import { museumRecommendationService } from '@/app/api/services/recommendations/museums';
 import { nightlifeRecommendationService } from '@/app/api/services/recommendations/nightlife';
@@ -109,7 +119,7 @@ export default async function TripPage({
 
   const syncSearchParams = await searchParams;
 
-  const currentCategory = syncSearchParams['category'] || 'popular';
+  const currentCategory = syncSearchParams['category'] || 'for-you';
   const currentPage = parseInt(syncSearchParams['page'] || '1');
 
   const cityCenter = {
@@ -146,6 +156,8 @@ export default async function TripPage({
   // Get the appropriate service based on category
   const getServiceForCategory = (category: string) => {
     switch (category) {
+      case 'for-you':
+        return forYouRecommendationsService;
       case 'popular':
         return popularRecommendationsService;
       case 'tourist-attractions':
@@ -161,7 +173,7 @@ export default async function TripPage({
       case 'spas-&-wellness':
         return spaWellnessRecommendationService;
       default:
-        return popularRecommendationsService;
+        return forYouRecommendationsService;
     }
   };
 
@@ -173,6 +185,24 @@ export default async function TripPage({
 
   // Define all categories but only populate data for the current one
   const categories: ActivityCategoryType[] = [
+    {
+      type: 'for-you',
+      icon: <Sparkles className="w-5 h-5" />,
+      title: `Recommended For You`,
+      description: 'Curated selections based on your preferences',
+      activities: (currentCategory === 'for-you'
+        ? recommendations.items
+        : []) as unknown as ActivityRecommendation[],
+      pagination:
+        currentCategory === 'for-you'
+          ? {
+              currentPage: recommendations.page,
+              totalPages: recommendations.totalPages,
+              hasNextPage: recommendations.hasNextPage,
+              hasPreviousPage: recommendations.hasPreviousPage,
+            }
+          : { currentPage: 1, totalPages: 1, hasNextPage: false, hasPreviousPage: false },
+    },
     {
       type: 'popular',
       icon: <Star className="w-5 h-5" />,

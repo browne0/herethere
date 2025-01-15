@@ -44,6 +44,7 @@ export async function POST(request: Request) {
         latitude: cityData.latitude,
         longitude: cityData.longitude,
         placeId: cityData.placeId,
+        timezone: cityData.timezone,
       },
       update: {},
     });

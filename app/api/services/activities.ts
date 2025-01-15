@@ -5,12 +5,8 @@ import { prisma } from '@/lib/db';
 import { UpdateableActivityFields } from '@/lib/stores/activitiesStore';
 
 import { tripService } from './trips';
-import {
-  getNextOpeningTime,
-  isActivityOpenDuring,
-  isTimeWithinPeriod,
-  scheduleActivities,
-} from './utils';
+import { clearSchedulingData } from './utils';
+import { isTimeWithinPeriod, scheduleActivities } from './utils2';
 
 interface UpdateActivityParams {
   tripId: string;
@@ -47,17 +43,19 @@ export const activityService = {
       include: {
         recommendation: true,
       },
-      orderBy: {
-        recommendation: {
-          isMustSee: 'desc',
-        },
-      },
     })) as unknown as ParsedItineraryActivity[];
 
-    // Schedule activities
-    await scheduleActivities(plannedActivities, trip);
+    await clearSchedulingData(tripId);
 
-    for (const activity of plannedActivities) {
+    // Schedule activities
+    const updatedActivities = await scheduleActivities(
+      plannedActivities,
+      trip.startDate,
+      trip.endDate,
+      trip.city.timezone
+    );
+
+    for (const activity of updatedActivities) {
       if (activity.startTime) {
         let warning = null;
 
@@ -86,12 +84,6 @@ export const activityService = {
         });
       }
     }
-
-    const updatedActivities = (await prisma.itineraryActivity.findMany({
-      where: { tripId },
-      include: { recommendation: true },
-      orderBy: { startTime: 'asc' },
-    })) as unknown as ParsedItineraryActivity[];
 
     return {
       scheduled: updatedActivities.filter(a => a.status === 'planned' && a.startTime),

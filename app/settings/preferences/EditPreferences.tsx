@@ -1,41 +1,39 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useState } from 'react';
 
 import {
-  Mountain,
   Bike,
-  Utensils,
-  Bus,
-  Users,
-  Palette,
-  Music,
-  Camera,
   Book,
-  Sun,
-  Moon,
-  User2,
+  Bus,
+  Camera,
   Car,
-  Coffee,
-  Sparkles,
-  Shuffle,
   Clock,
+  Coffee,
+  Moon,
+  Mountain,
+  Music,
+  Palette,
+  Shuffle,
+  Sparkles,
+  Sun,
+  User2,
+  Users,
+  Utensils,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-import ResponsiveMultiSelect from '@/app/onboarding/dietary/ResponsiveMultiSelect';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CUISINE_PREFERENCES, DIETARY_RESTRICTIONS } from '@/constants';
 import {
-  usePreferences,
-  InterestType,
-  TransportMode,
-  StartTime,
   CrowdPreference,
-  Cuisine,
+  InterestType,
+  StartTime,
+  TransportMode,
+  usePreferences,
 } from '@/lib/stores/preferences';
 import { MealType } from '@/lib/types';
 
@@ -147,23 +145,12 @@ export default function EditPreferences() {
       if (!response.ok) throw new Error('Failed to save preferences');
 
       toast.success('Preferences saved successfully');
-      router.push('/trips');
     } catch (_error) {
       toast.error('Failed to save preferences');
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleCuisineChange = useCallback(
-    (preferred: Cuisine[]) => {
-      preferences.setCuisinePreferences({
-        preferred,
-        avoided: preferences.cuisinePreferences.avoided,
-      });
-    },
-    [preferences]
-  );
 
   return (
     <div className="min-h-screen bg-gray-50/50">

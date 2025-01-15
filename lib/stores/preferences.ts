@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
+import { RESTAURANT_TYPES } from '@/constants';
+
 export type InterestType =
   | 'outdoors'
   | 'arts'
@@ -10,28 +12,7 @@ export type InterestType =
   | 'history';
 export type StartTime = 'early' | 'mid' | 'late' | null;
 export type TransportMode = 'walking' | 'public-transit' | 'taxi' | 'driving';
-export type Cuisine =
-  | 'afghani'
-  | 'african'
-  | 'american'
-  | 'asian'
-  | 'brazilian'
-  | 'chinese'
-  | 'french'
-  | 'greek'
-  | 'indian'
-  | 'italian'
-  | 'japanese'
-  | 'korean'
-  | 'lebanese'
-  | 'mexican'
-  | 'middle_eastern'
-  | 'seafood'
-  | 'spanish'
-  | 'steak'
-  | 'thai'
-  | 'turkish'
-  | 'vietnamese';
+export type Cuisine = keyof typeof RESTAURANT_TYPES;
 export type DietaryRestriction = 'vegetarian' | 'vegan' | 'none';
 export type CrowdPreference = 'popular' | 'hidden' | 'mixed' | null;
 export type MealImportance = {

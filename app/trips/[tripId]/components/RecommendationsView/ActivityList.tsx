@@ -1,8 +1,4 @@
-import React from 'react';
-
-import { TooltipArrow } from '@radix-ui/react-tooltip';
-import { Bookmark, Info, X } from 'lucide-react';
-import { ListChecks, Calendar } from 'lucide-react';
+import { Bookmark, Calendar, Info, ListChecks, X } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -19,9 +15,9 @@ import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
-import ActivityCard from './ActivityCard';
 import { ActivityCategoryType } from '../../types';
 import { ActivitySheet } from '../ActivitySheet';
+import ActivityCard from './ActivityCard';
 
 interface ActivityListProps {
   currentCategory?: ActivityCategoryType;
@@ -81,7 +77,7 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
 
   if (!currentCategory) return null;
 
-  const shouldShowBanner = currentCategory.type === 'popular' && !hasSeenBanner;
+  const shouldShowBanner = currentCategory.type === 'for-you' && !hasSeenBanner;
 
   return (
     <div className="relative overflow-y-auto h-[calc(100vh-144px)]">

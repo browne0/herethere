@@ -1,4 +1,4 @@
-import { List, CalendarDays } from 'lucide-react';
+import { CalendarDays, List } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,7 @@ export function ItineraryHeader({
     <div className="px-4 py-3 border-b bg-white">
       <Link
         href={`/trips/${tripId}`}
-        className="pb-2 text-sm text-gray-600 hover:text-gray-900 flex items-center gap-2"
+        className="mb-2 text-sm text-gray-600 hover:text-gray-900 flex items-center w-fit"
       >
         ← Back to Recommendations
       </Link>
