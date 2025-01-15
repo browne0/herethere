@@ -17,6 +17,7 @@ interface TripFormStore {
     preferred: Cuisine[];
     avoided: Cuisine[];
   };
+  tripName: string;
   setCity: (city: Prisma.CityCreateInput) => void;
   setDates: (dates: DateRangeType) => void;
   setTripDietaryRestrictions: (restrictions: DietaryRestriction[]) => void;
@@ -24,11 +25,13 @@ interface TripFormStore {
   setBudget: (budget: 'budget' | 'moderate' | 'luxury') => void;
   setActivities: (activities: string[]) => void;
   setCustomInterests: (interests: string) => void;
+  setTripName: (name: string) => void;
   reset: () => void;
 }
 
 export const useTripFormStore = create<TripFormStore>()(set => ({
   city: null,
+  tripName: '',
   dates: null,
   budget: null,
   activities: [],
@@ -45,5 +48,6 @@ export const useTripFormStore = create<TripFormStore>()(set => ({
   setBudget: budget => set({ budget }),
   setActivities: activities => set({ activities }),
   setCustomInterests: customInterests => set({ customInterests }),
+  setTripName: name => set({ tripName: name }),
   reset: () => set({ city: null, dates: null, budget: null, activities: [] }),
 }));

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { Prisma } from '@prisma/client';
-import { CalendarDays, MapPin, Wallet } from 'lucide-react';
+import { CalendarDays, MapPin, Pen, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
@@ -36,6 +36,7 @@ const ACTIVITY_ID_TO_LABEL = Object.values(ACTIVITY_CATEGORIES).reduce(
 export default function ReviewPage() {
   const router = useRouter();
   const {
+    tripName,
     city,
     dates,
     budget,
@@ -53,8 +54,10 @@ export default function ReviewPage() {
   useEffect(() => {
     if (!shouldCheckValidation.current) return;
 
-    if (!city) {
+    if (!tripName) {
       router.push('/trips/new');
+    } else if (!city) {
+      router.push('/trips/new/city');
     } else if (!dates?.from || !dates?.to) {
       router.push('/trips/new/dates');
     } else if (!budget) {
@@ -62,10 +65,10 @@ export default function ReviewPage() {
     } else if (!activities.length) {
       router.push('/trips/new/activities');
     }
-  }, [city, dates, budget, activities, router]);
+  }, [tripName, city, dates, budget, activities, router]);
 
   const handleSubmit = async () => {
-    if (!city || !dates?.from || !dates?.to || !budget || !activities.length) {
+    if (!tripName || !city || !dates?.from || !dates?.to || !budget || !activities.length) {
       return;
     }
 
@@ -74,7 +77,7 @@ export default function ReviewPage() {
 
     try {
       const tripData: CreateTripRequest = {
-        title: `Trip to ${city.name}`,
+        title: tripName,
         startDate: dates.from,
         endDate: dates.to,
         preferences: {
@@ -103,8 +106,8 @@ export default function ReviewPage() {
       // Disable validation checks before resetting and navigating
       shouldCheckValidation.current = false;
 
-      reset();
       router.push(`/trips/${trip.id}`);
+      reset();
     } catch (error) {
       console.error('Error creating trip:', error);
       setError('Failed to create trip. Please try again.');
@@ -113,10 +116,13 @@ export default function ReviewPage() {
     }
   };
 
-  const handleEdit = (section: 'city' | 'dates' | 'budget' | 'activities' | 'food') => {
+  const handleEdit = (
+    section: 'city' | 'dates' | 'budget' | 'activities' | 'food' | 'tripName'
+  ) => {
     shouldCheckValidation.current = false;
     const routes = {
-      city: '/trips/new',
+      tripName: '/trips/new',
+      city: '/trips/new/city',
       dates: '/trips/new/dates',
       budget: '/trips/new/budget',
       activities: '/trips/new/activities',
@@ -130,7 +136,7 @@ export default function ReviewPage() {
     router.push('/trips/new/food');
   };
 
-  if (!city || !dates || !budget || !activities.length) return null;
+  if (!city || !dates || !budget || !activities.length || !tripName) return null;
 
   return (
     <div className="relative p-4 sm:p-8 rounded-2xl bg-white shadow-xl border border-transparent">
@@ -143,6 +149,21 @@ export default function ReviewPage() {
           <h2 className="text-xl font-semibold text-indigo-900 mb-4">Trip Summary</h2>
 
           <div className="space-y-4">
+            <div className="flex items-start gap-3 group">
+              <Pen className="w-5 h-5 text-indigo-600 mt-1" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium text-gray-900">Trip Name</h3>
+                  <button
+                    onClick={() => handleEdit('tripName')}
+                    className="text-sm text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    Edit
+                  </button>
+                </div>
+                <p className="text-gray-600">{tripName}</p>
+              </div>
+            </div>
             <div className="flex items-start gap-3 group">
               <MapPin className="w-5 h-5 text-indigo-600 mt-1" />
               <div className="flex-1">

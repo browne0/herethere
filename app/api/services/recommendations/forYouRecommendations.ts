@@ -309,7 +309,7 @@ export const forYouRecommendationsService = {
     if (params.phase === 'active') {
       // Penalty for places closing soon
       if (openingHours.nextCloseTime) {
-        const closeTimestamp = openingHours.nextCloseTime.seconds * 1000;
+        const closeTimestamp = (openingHours.nextCloseTime.seconds as number) * 1000;
         const now = Date.now();
         const hoursUntilClose = (closeTimestamp - now) / (1000 * 60 * 60);
 
@@ -535,8 +535,6 @@ export const forYouRecommendationsService = {
           break;
       }
     });
-
-    console.log(Array.from(placeTypes));
 
     return Array.from(placeTypes);
   },

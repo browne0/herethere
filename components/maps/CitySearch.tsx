@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 
 import { Prisma } from '@prisma/client';
 import { Search, X } from 'lucide-react';
+import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -71,20 +72,42 @@ export function CitySearch({ onCitySelect, defaultValue, value }: CitySearchProp
         placeId: suggestion.place_id,
         fields: ['name', 'formatted_address', 'geometry', 'place_id'],
       },
-      (result, status) => {
+      async (result, status) => {
         if (status === google.maps.places.PlacesServiceStatus.OK && result?.geometry) {
-          const city: Prisma.CityCreateInput = {
-            name: suggestion.structured_formatting.main_text,
-            latitude: result.geometry.location!.lat(),
-            longitude: result.geometry.location!.lng(),
-            placeId: result.place_id!,
-            countryCode: result.address_components ? result.address_components[0].short_name : 'US',
-          };
+          const lat = result.geometry.location!.lat();
+          const lng = result.geometry.location!.lng();
 
-          setSearchInput(city.name);
-          setSuggestions([]);
-          setShowSuggestions(false);
-          onCitySelect(city);
+          try {
+            // Fetch timezone information
+            const timezoneResponse = await fetch(`/api/timezone?latitude=${lat}&longitude=${lng}`);
+
+            if (!timezoneResponse.ok) {
+              throw new Error(`HTTP error! status: ${timezoneResponse.status}`);
+            }
+
+            const timezoneData = await timezoneResponse.json();
+
+            const city: Prisma.CityCreateInput = {
+              name: suggestion.structured_formatting.main_text,
+              latitude: lat,
+              longitude: lng,
+              placeId: result.place_id!,
+              countryCode: result.address_components
+                ? result.address_components[0].short_name
+                : 'US',
+              timezone: timezoneData.timeZoneId,
+            };
+
+            setSearchInput(city.name);
+            setSuggestions([]);
+            setShowSuggestions(false);
+            onCitySelect(city);
+          } catch (_error) {
+            setSearchInput(suggestion.structured_formatting.main_text);
+            setSuggestions([]);
+            setShowSuggestions(false);
+            toast.error('Failed to fetch timezone information.');
+          }
         }
       }
     );

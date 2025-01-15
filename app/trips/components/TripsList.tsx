@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { format, isAfter, isBefore, isToday } from 'date-fns';
 import {
   Calendar,
-  Plus,
-  Plane,
-  Map,
-  MoreVertical,
   ChevronRight,
+  Map,
   MapPin,
+  MoreVertical,
+  Plane,
+  Plus,
   Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
@@ -28,8 +28,8 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { DeleteTripDialog } from './DeleteTripDialog';
 import { ParsedTrip } from '../[tripId]/types';
+import { DeleteTripDialog } from './DeleteTripDialog';
 
 interface TripsListProps {
   initialTrips: ParsedTrip[];
@@ -122,8 +122,10 @@ export function TripsList({ initialTrips }: TripsListProps) {
       // Update local state
       setTrips(trips.filter(t => t.id !== tripId));
 
-      toast.success('Trip deleted', {
-        description: `Successfully deleted your trip to ${result.data.destination}.`,
+      console.log(result);
+
+      toast.success(`Your ${result.data.city.name} trip has been deleted`, {
+        description: `Successfully deleted ${result.data.title}`,
       });
 
       router.refresh();
@@ -244,10 +246,11 @@ export function TripsList({ initialTrips }: TripsListProps) {
                                   </span>
                                 )}
                               </div>
-                              <h3 className="text-xl font-semibold mb-1 group-hover:text-blue-600 transition-colors">
-                                {trip.city.name}
+                              <h3 className="text-xl font-semibold mb-2 group-hover:text-blue-600 transition-colors">
+                                {trip.title}
                               </h3>
-                              <p className="text-gray-500">
+                              <p className="text-gray-500 text-sm">{trip.city.name}</p>
+                              <p className="text-gray-500 text-sm">
                                 {formatTripDates(trip.startDate, trip.endDate)}
                               </p>
                             </div>

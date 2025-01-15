@@ -155,10 +155,6 @@ export function scheduleActivities(
               )
             : 0;
 
-          // console.log(
-          //   `The transit time from ${scheduledActivities[scheduledActivities.length - 1].recommendation.name} to ${activity.recommendation.name} is ${transitTime} minutes.`
-          // );
-
           const adjustedStart = new Date(potentialStart);
           adjustedStart.setMinutes(adjustedStart.getMinutes() + transitTime);
 

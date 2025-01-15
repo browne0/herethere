@@ -66,8 +66,6 @@ export function ItineraryView() {
       if (response.ok) {
         const { trip: updatedTrip } = await response.json();
         setTrip(updatedTrip);
-
-        // console.log(updatedTrip.activities);
       }
     } catch (error) {
       toast.error('Failed to rebalance schedule');

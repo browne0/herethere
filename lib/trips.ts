@@ -25,6 +25,7 @@ export const popularDestinations = [
     placeId: 'ChIJ51cu8IcbXWARiRtXIothAS4', // Tokyo's place ID
     location: { lat: 35.6762, lng: 139.6503 },
     countryCode: 'JP',
+    timezone: 'Asia/Tokyo',
   },
   {
     name: 'Paris',
@@ -32,6 +33,7 @@ export const popularDestinations = [
     placeId: 'ChIJD7fiBh9u5kcRYJSMaMOCCwQ', // Paris' place ID
     location: { lat: 48.8566, lng: 2.3522 },
     countryCode: 'FR',
+    timezone: 'Europe/Paris',
   },
   {
     name: 'New York',
@@ -39,6 +41,7 @@ export const popularDestinations = [
     placeId: 'ChIJOwg_06VPwokRYv534QaPC8g', // NYC's place ID
     location: { lat: 40.7128, lng: -74.006 },
     countryCode: 'US',
+    timezone: 'America/New_York',
   },
   {
     name: 'Barcelona',
@@ -46,6 +49,7 @@ export const popularDestinations = [
     placeId: 'ChIJ5TCOcRaYpBIRCmZHTz37sEQ', // Barcelona's place ID
     location: { lat: 41.3874, lng: 2.1686 },
     countryCode: 'ES',
+    timezone: 'Europe/Madrid',
   },
 ];
 

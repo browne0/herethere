@@ -1,5 +1,5 @@
 // scripts/createCity.ts
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: ['.env.local'] });
@@ -14,7 +14,7 @@ interface CityInput {
   placeId: string;
 }
 
-async function createCity(input: CityInput) {
+async function createCity(input: Prisma.CityCreateInput) {
   try {
     const city = await prisma.city.create({
       data: input,
@@ -29,12 +29,12 @@ async function createCity(input: CityInput) {
 }
 
 async function main() {
-  const [name, countryCode, latitude, longitude, placeId] = process.argv.slice(2);
+  const [name, countryCode, latitude, longitude, placeId, timezone] = process.argv.slice(2);
 
   if (!name || !countryCode || !latitude || !longitude || !placeId) {
     console.error('Missing arguments. Usage:');
     console.error(
-      'npx tsx scripts/createCity.ts "New York City" US 40.7128 -74.0060 ChIJOwg_06VPwokRYv534QaPC8g'
+      'npx tsx scripts/createCity.ts "New York City" US 40.7128 -74.0060 ChIJOwg_06VPwokRYv534QaPC8g America/New_York'
     );
     process.exit(1);
   }
@@ -46,6 +46,7 @@ async function main() {
       latitude: parseFloat(latitude),
       longitude: parseFloat(longitude),
       placeId,
+      timezone,
     });
 
     console.log('Use this city ID for populating attractions:', cityId);

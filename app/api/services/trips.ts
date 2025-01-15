@@ -195,12 +195,14 @@ export const tripService = {
               activities: true,
             },
           },
+          city: true,
         },
       });
 
       return {
         tripId: deletedTrip.id,
-        destination: deletedTrip.title,
+        title: deletedTrip.title,
+        city: deletedTrip.city.name,
         activitiesRemoved: deletedTrip._count.activities,
       };
     });

@@ -4,7 +4,8 @@ import React from 'react';
 import { usePathname } from 'next/navigation';
 
 const steps = [
-  { label: 'City', path: '/trips/new' },
+  { label: 'Trip Name', path: '/trips/new' },
+  { label: 'City', path: '/trips/new/city' },
   { label: 'Dates', path: '/trips/new/dates' },
   { label: 'Budget', path: '/trips/new/budget' },
   { label: 'Activities', path: '/trips/new/activities' },
