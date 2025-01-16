@@ -3,7 +3,7 @@ import type { City, ItineraryActivity, Trip } from '@prisma/client';
 
 import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { ActivityCategoryDetails } from '@/lib/types/activities';
-import { ActivityRecommendation } from '@/lib/types/recommendations';
+import { ActivityRecommendation, UnsplashImageData } from '@/lib/types/recommendations';
 export interface Location {
   latitude: number;
   longitude: number;
@@ -47,8 +47,9 @@ export interface TripPreferences {
   };
 }
 
-export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences'> {
+export interface ParsedTrip extends Omit<Trip, 'activities' | 'preferences' | 'featuredImage'> {
   activities: ParsedItineraryActivity[];
   city: City;
   preferences: TripPreferences;
+  featuredImage: UnsplashImageData;
 }

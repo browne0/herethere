@@ -32,6 +32,7 @@ model Trip {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   lastRebalanced DateTime?
+  featuredImage  Json?
   activities     ItineraryActivity[]
   city           City                @relation(fields: [cityId], references: [id])
   user           User                @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { format, isAfter, isBefore, isToday } from 'date-fns';
 import {
   Calendar,
+  Camera,
   ChevronRight,
   Map,
   MapPin,
@@ -28,6 +29,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { CachedImage } from '@/components/CachedImage';
 import { ParsedTrip } from '../[tripId]/types';
 import { DeleteTripDialog } from './DeleteTripDialog';
 
@@ -122,8 +124,6 @@ export function TripsList({ initialTrips }: TripsListProps) {
       // Update local state
       setTrips(trips.filter(t => t.id !== tripId));
 
-      console.log(result);
-
       toast.success(`Your ${result.data.city.name} trip has been deleted`, {
         description: `Successfully deleted ${result.data.title}`,
       });
@@ -137,6 +137,7 @@ export function TripsList({ initialTrips }: TripsListProps) {
       throw error;
     }
   };
+
   return (
     <Container>
       <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 space-y-4 sm:space-y-8">
@@ -284,9 +285,21 @@ export function TripsList({ initialTrips }: TripsListProps) {
 
                         {/* Map Preview - Remove nested Link */}
                         <div className="relative h-48 md:h-auto bg-gray-100">
-                          <div className="absolute inset-0 flex items-center justify-center text-gray-400">
-                            <Map className="w-6 h-6" />
-                          </div>
+                          {trip.featuredImage ? (
+                            <CachedImage
+                              photo={{ url: trip.featuredImage.urls.regular }}
+                              alt={trip.featuredImage.alt_description ?? trip.city.name}
+                              className="w-full h-full object-cover"
+                              author={{
+                                name: trip.featuredImage.user.name,
+                                url: `${trip.featuredImage.user.links.html}?utm_source=herethere&utm_medium=referral`,
+                              }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-gray-400">
+                              <Camera className="w-6 h-6" />
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Card>

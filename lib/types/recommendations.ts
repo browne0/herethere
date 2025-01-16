@@ -1,12 +1,13 @@
 import { protos } from '@googlemaps/places';
 import {
+  BusinessStatus,
   IndoorOutdoor,
   PriceLevel,
   RatingTier,
   ReviewCountTier,
   SeasonalAvailability,
-  BusinessStatus,
 } from '@prisma/client';
+import { Random } from 'unsplash-js/dist/methods/photos/types';
 
 export interface Location {
   latitude: number;
@@ -22,6 +23,8 @@ export interface ImageData {
     cdnUrl: string;
   }>;
 }
+
+export type UnsplashImageData = Random;
 
 export interface ParkingFeatures {
   freeParkingLot?: boolean;

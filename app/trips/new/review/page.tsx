@@ -11,11 +11,13 @@ import { Cuisine, DietaryRestriction } from '@/lib/stores/preferences';
 import { useTripFormStore } from '@/lib/stores/tripFormStore';
 import { BudgetLevel } from '@/lib/types';
 import { ACTIVITY_CATEGORIES } from '@/lib/types/activities';
+import { UnsplashImageData } from '@/lib/types/recommendations';
 
 interface CreateTripRequest {
   title: string;
   startDate: Date;
   endDate: Date;
+  featuredImage: UnsplashImageData;
   preferences: {
     budget: BudgetLevel;
     activities: string[];
@@ -76,6 +78,20 @@ export default function ReviewPage() {
     setError(null);
 
     try {
+      // Fetch a relevant image from Unsplash
+      let featuredImage = null;
+      try {
+        const imageResponse = await fetch(
+          `/api/unsplash?cityName=${encodeURIComponent(city.name)}`
+        );
+        if (imageResponse.ok) {
+          featuredImage = await imageResponse.json();
+        }
+      } catch (error) {
+        console.error('Error fetching Unsplash image:', error);
+        // Continue with empty featuredImage if fetch fails
+      }
+
       const tripData: CreateTripRequest = {
         title: tripName,
         startDate: dates.from,
@@ -87,6 +103,7 @@ export default function ReviewPage() {
           dietaryRestrictions: tripDietaryRestrictions,
         },
         city,
+        featuredImage: featuredImage ?? undefined,
       };
 
       const response = await fetch('/api/trips', {
