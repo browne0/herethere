@@ -1,9 +1,10 @@
 import React from 'react';
 
-import { OverlayViewF, OVERLAY_MOUSE_TARGET } from '@react-google-maps/api';
-import { Check, Bookmark } from 'lucide-react';
+import { OVERLAY_MOUSE_TARGET, OverlayViewF } from '@react-google-maps/api';
+import { Bookmark, Check } from 'lucide-react';
 
 import { ActivityRecommendation } from '@/lib/types/recommendations';
+import { cn } from '@/lib/utils';
 
 interface CustomMarkerProps {
   activity: ActivityRecommendation;
@@ -14,7 +15,7 @@ interface CustomMarkerProps {
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   labelPosition: 'left' | 'right';
-  showLabel?: boolean;
+  hoveredActivityId: string | null;
 }
 
 const CustomMarker = React.memo(
@@ -25,12 +26,21 @@ const CustomMarker = React.memo(
     tripStatus,
     onClick,
     labelPosition,
-    showLabel = false,
+    hoveredActivityId,
   }: CustomMarkerProps) => {
     const getMarkerContent = () => {
       if (tripStatus === 'planned') {
         return (
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-green-500 shadow-lg border-[0.5px] border-gray-200">
+          <div
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-full bg-green-500 shadow-lg border-[0.5px] border-gray-200 transition-opacity duration-200',
+              {
+                'opacity-100': !hoveredActivityId || isHighlighted,
+                'opacity-40': hoveredActivityId && !isHighlighted,
+                'animate-bounce duration-500': isHighlighted,
+              }
+            )}
+          >
             <Check className="h-5 w-5 text-white" />
           </div>
         );
@@ -38,7 +48,16 @@ const CustomMarker = React.memo(
 
       if (tripStatus === 'interested') {
         return (
-          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200">
+          <div
+            className={cn(
+              'flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-lg border border-gray-200 transition-opacity duration-200',
+              {
+                'opacity-100': !hoveredActivityId || isHighlighted,
+                'opacity-40': hoveredActivityId && !isHighlighted,
+                'animate-bounce': isHighlighted,
+              }
+            )}
+          >
             <Bookmark
               className="h-5 w-5 text-yellow-300 fill-yellow-300"
               stroke="black"
@@ -65,16 +84,20 @@ const CustomMarker = React.memo(
           <button
             onClick={onClick}
             className={`group/marker relative block cursor-pointer rounded-full
-              ${isHighlighted || isInTrip ? 'z-50' : 'hover:z-40 z-30'}`}
+              ${isHighlighted ? 'z-50' : 'hover:z-40 z-30'}`}
           >
             {getMarkerContent()}
-            {(showLabel || isHighlighted) && (
+            {isHighlighted && (
               <div
                 className={`pointer-events-none absolute max-w-[160px] text-xs font-medium leading-tight text-foreground whitespace-nowrap
-                  ${labelPosition === 'right' ? 'left-full ml-2' : 'right-full mr-2'} 
-                  top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? 'text-left' : 'text-right'}`}
+                ${labelPosition === 'right' ? 'left-full ml-2' : 'right-full mr-2'} 
+                top-1/2 -translate-y-1/2 ${labelPosition === 'right' ? 'text-left' : 'text-right'}`}
               >
-                <span className="rounded-sm bg-background/95 px-2 py-1 shadow-sm">
+                <span
+                  className={cn('rounded-sm bg-background/95 px-2 py-1 shadow-sm', {
+                    'border-2 border-black': isHighlighted,
+                  })}
+                >
                   {activity.name}
                 </span>
               </div>

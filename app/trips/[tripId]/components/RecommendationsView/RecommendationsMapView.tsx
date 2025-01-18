@@ -7,20 +7,21 @@ import {
   OVERLAY_MOUSE_TARGET,
   OverlayViewF,
 } from '@react-google-maps/api';
-import { MapPin, Loader2 } from 'lucide-react';
+import { Loader2, MapPin } from 'lucide-react';
 
 import { useGoogleMapsStatus } from '@/components/maps/GoogleMapsProvider';
 import { Card, CardContent } from '@/components/ui/card';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
+import { cn } from '@/lib/utils';
+import { type ParsedTrip } from '../../types';
 import CustomMarker from './CustomMarker';
 import { MapLegend } from './MapLegend';
-import { type ParsedTrip } from '../../types';
 
 // Constants
 const MIN_LABEL_DISTANCE = 105;
-const DEFAULT_ZOOM = 13;
+const DEFAULT_ZOOM = 14;
 const MIN_ZOOM_FOR_LABELS = 12;
 
 // Types
@@ -232,8 +233,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
   const renderMarkers = activities.map(activity => {
     const tripActivity = trip?.activities.find(ta => ta.recommendationId === activity.id);
     const isInTrip = !!tripActivity;
-    const shouldShowLabel = visibleLabels.has(activity.id);
-    const isHighlighted = hoveredActivityId === activity.id || selectedActivityId === activity.id;
+    const isHighlighted = hoveredActivityId === activity.id;
 
     if (isInTrip) {
       return (
@@ -250,7 +250,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
           onMouseEnter={() => onMarkerHover(activity.id)}
           onMouseLeave={() => onMarkerHover(null)}
           labelPosition="right"
-          showLabel={shouldShowLabel}
+          hoveredActivityId={hoveredActivityId}
         />
       );
     }
@@ -267,9 +267,10 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
             setSelectedActivity(activity);
             onMarkerSelect(activity.id);
           }}
-          // opacity={hoveredActivityId ? (hoveredActivityId === activity.id ? 1 : 0.5) : 1}
+          opacity={hoveredActivityId ? (hoveredActivityId === activity.id ? 1 : 0.5) : 1}
+          animation={hoveredActivityId === activity.id ? google.maps.Animation.BOUNCE : undefined}
         />
-        {(shouldShowLabel || isHighlighted) && (
+        {isHighlighted && (
           <OverlayViewF
             position={{
               lat: activity.location.latitude,
@@ -282,7 +283,11 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
             })}
           >
             <div className="pointer-events-none absolute max-w-[160px] text-xs font-medium leading-tight text-foreground whitespace-nowrap">
-              <span className="rounded-sm bg-background/95 px-2 py-1 shadow-sm">
+              <span
+                className={cn('rounded-sm bg-background/95 px-2 py-1 shadow-sm', {
+                  'border-2 border-black': isHighlighted,
+                })}
+              >
                 {activity.name}
               </span>
             </div>

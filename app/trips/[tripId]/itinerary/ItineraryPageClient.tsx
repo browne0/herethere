@@ -6,13 +6,14 @@ import { useRouter } from 'next/navigation';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import type { ParsedTrip, ParsedItineraryActivity } from '../types';
-import ItineraryMap from './components/ItineraryMap';
-import { ItineraryView } from './components/ItineraryView';
+import AddActivityModal from '../components/AddActivityModal';
 import DateEditModal from '../components/DateEditModal';
 import TripCityModal from '../components/TripCityModal';
 import TripEditModal from '../components/TripEditModal';
 import TripHeader from '../components/TripHeader';
+import type { ParsedItineraryActivity, ParsedTrip } from '../types';
+import ItineraryMap from './components/ItineraryMap';
+import { ItineraryView } from './components/ItineraryView';
 
 interface ItineraryPageClientProps {
   initialTrip: ParsedTrip;
@@ -24,6 +25,9 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+  const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const router = useRouter();
 
   const handleTripUpdate = (updatedTrip: ParsedTrip) => {
@@ -45,9 +49,15 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
         onDateClick={() => setIsDateModalOpen(true)}
         onCityClick={() => setIsCityModalOpen(true)}
       />
-      <ItineraryView />
+      <ItineraryView onMarkerHover={setHoveredActivityId} onMarkerSelect={setSelectedActivityId} />
       <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)]">
-        <ItineraryMap initialTrip={initialTrip} />
+        <ItineraryMap
+          onMarkerHover={setHoveredActivityId}
+          onMarkerSelect={setSelectedActivityId}
+          selectedActivityId={selectedActivityId}
+          hoveredActivityId={hoveredActivityId}
+          initialTrip={initialTrip}
+        />
       </div>
       <TripEditModal
         isOpen={isEditModalOpen}
@@ -64,6 +74,7 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
         onClose={() => setIsCityModalOpen(false)}
         onUpdateTrip={handleTripUpdate}
       />
+      <AddActivityModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
     </div>
   );
 }

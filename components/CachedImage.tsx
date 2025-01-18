@@ -50,6 +50,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
         className={`object-cover ${className}`}
         sizes={sizes}
         priority={priority}
+        unoptimized
       />
       {author && (
         <div className="absolute bottom-2 right-2 z-10" onClick={e => e.stopPropagation()}>

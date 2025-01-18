@@ -1,5 +1,5 @@
 import { protos } from '@googlemaps/places';
-import { formatInTimeZone } from 'date-fns-tz';
+import { formatInTimeZone, toZonedTime } from 'date-fns-tz';
 
 import { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import {
@@ -440,10 +440,10 @@ function canScheduleActivity(
     }
 
     // Compare times in local timezone
-    const slotStartLocal = formatInTimeZone(slot.start, timezone, 'HH:mm');
-    const slotEndLocal = formatInTimeZone(slot.end, timezone, 'HH:mm');
-    const openTimeLocal = formatInTimeZone(openingTime, timezone, 'HH:mm');
-    const closeTimeLocal = formatInTimeZone(closingTime, timezone, 'HH:mm');
+    const slotStartLocal = toZonedTime(slot.start, timezone);
+    const slotEndLocal = toZonedTime(slot.end, timezone);
+    const openTimeLocal = toZonedTime(openingTime, timezone);
+    const closeTimeLocal = toZonedTime(closingTime, timezone);
 
     return slotStartLocal >= openTimeLocal && slotEndLocal <= closeTimeLocal;
   });
@@ -496,14 +496,11 @@ export function isTimeWithinPeriod(
     return false;
   }
 
-  const localTimeStr = formatInTimeZone(time, timezone, 'HH:mm:ss E');
-  const [timeStr] = localTimeStr.split(' ');
-  const [hours, minutes] = timeStr.split(':').map(Number);
-  const timeMinutes = hours * 60 + minutes;
+  const zonedTime = toZonedTime(time, timezone);
+  const openingTime = new Date(zonedTime);
+  openingTime.setHours(period.open.hour!, period.open.minute || 0, 0, 0);
 
-  const openMinutes = period.open.hour! * 60 + (period.open.minute || 0);
-
-  return timeMinutes >= openMinutes;
+  return zonedTime >= openingTime;
 }
 
 export async function clearSchedulingData(tripId: string): Promise<void> {

@@ -19,10 +19,10 @@ const MIN_ZOOM_FOR_LABELS = 12;
 
 interface ItineraryMapProps {
   initialTrip: ParsedTrip;
-  onMarkerHover?: (activityId: string | null) => void;
-  onMarkerSelect?: (activityId: string | null) => void;
-  hoveredActivityId?: string | null;
-  selectedActivityId?: string | null;
+  onMarkerHover: (activityId: string | null) => void;
+  onMarkerSelect: (activityId: string | null) => void;
+  hoveredActivityId: string | null;
+  selectedActivityId: string | null;
   currentDayIndex?: number; // Optional - if provided, highlights current day's activities
 }
 
@@ -39,6 +39,7 @@ interface DayActivities {
   date: Date;
   timezone: string;
   activities: Array<{
+    activityId: string;
     activity: ActivityRecommendation;
     status: 'planned' | 'interested';
     startTime: Date;
@@ -96,8 +97,6 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
   onMarkerHover,
   onMarkerSelect,
   hoveredActivityId,
-  selectedActivityId,
-  currentDayIndex,
   initialTrip,
 }) => {
   const { trip } = useActivitiesStore();
@@ -131,6 +130,7 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
         date: currentDate,
         timezone: trip.city.timezone,
         activities: dayActivities.map(ta => ({
+          activityId: ta.id,
           activity: ta.recommendation,
           status: ta.status as 'planned' | 'interested',
           startTime: new Date(ta.startTime!),
@@ -258,9 +258,8 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
 
   // Render markers for each day's activities
   const renderDayMarkers = (day: DayActivities) => {
-    return day.activities.map(({ activity, status }) => {
-      const isHighlighted = hoveredActivityId === activity.id || selectedActivityId === activity.id;
-      const shouldShowLabel = visibleLabels.has(activity.id) || isHighlighted;
+    return day.activities.map(({ activityId, activity, status }) => {
+      const isHighlighted = hoveredActivityId === activityId;
 
       return (
         <CustomMarker
@@ -269,14 +268,14 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
           isInTrip={true}
           tripStatus={status}
           isHighlighted={isHighlighted}
+          hoveredActivityId={hoveredActivityId}
           onClick={() => {
             setSelectedActivity(activity);
-            onMarkerSelect?.(activity.id);
+            onMarkerSelect(activity.id);
           }}
-          onMouseEnter={() => onMarkerHover?.(activity.id)}
-          onMouseLeave={() => onMarkerHover?.(null)}
+          onMouseEnter={() => onMarkerHover(activity.id)}
+          onMouseLeave={() => onMarkerHover(null)}
           labelPosition="right"
-          showLabel={shouldShowLabel}
         />
       );
     });

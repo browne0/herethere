@@ -2,18 +2,11 @@ import { Bookmark, Calendar, Info, ListChecks, X } from 'lucide-react';
 import Link from 'next/link';
 
 import { Button } from '@/components/ui/button';
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from '@/components/ui/pagination';
+import { Pagination } from '@/components/ui/pagination';
 import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { cn } from '@/lib/utils';
 
 import { ActivityCategoryType } from '../../types';
 import { ActivitySheet } from '../ActivitySheet';
@@ -41,36 +34,8 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
     const { currentPage, totalPages } = currentCategory.pagination;
 
     return (
-      <div className="bg-white border-t py-4 px-2 relative">
-        <Pagination>
-          <PaginationContent className="flex justify-center items-center gap-2">
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={e => {
-                  e.preventDefault();
-                  onPageChange(currentPage - 1);
-                }}
-                className={cn({
-                  'pointer-events-none opacity-50': currentPage === 1,
-                })}
-              />
-            </PaginationItem>
-
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={e => {
-                  e.preventDefault();
-                  onPageChange(currentPage + 1);
-                }}
-                className={cn({
-                  'pointer-events-none opacity-50': currentPage === totalPages,
-                })}
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+      <div className="bg-white border-t relative">
+        <Pagination currentPage={currentPage} totalPages={totalPages} onPageChange={onPageChange} />
       </div>
     );
   };

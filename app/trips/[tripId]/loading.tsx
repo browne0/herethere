@@ -63,7 +63,7 @@ export default function TripLoading() {
         {/* Desktop content skeleton */}
         <div className="flex">
           <div className="w-7/12 p-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="space-y-3">
                   <Skeleton className="h-48 w-full rounded-lg" />
