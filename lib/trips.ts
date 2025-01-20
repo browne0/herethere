@@ -52,27 +52,3 @@ export const popularDestinations = [
     timezone: 'Europe/Madrid',
   },
 ];
-
-export interface RouteSegment {
-  distance: string;
-  duration: string;
-  startActivity: {
-    id: string;
-    name: string;
-    category: string;
-    startTime: string;
-    endTime: string;
-  };
-  endActivity: {
-    id: string;
-    name: string;
-    category: string;
-    startTime: string;
-    endTime: string;
-  };
-}
-
-export interface Coordinates {
-  latitude: number;
-  longitude: number;
-}

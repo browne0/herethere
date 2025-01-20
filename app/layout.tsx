@@ -3,9 +3,11 @@ import { Inter } from 'next/font/google';
 
 import { PageLayout } from '@/components/layout/PageLayout';
 import { GoogleMapsProvider } from '@/components/maps/GoogleMapsProvider';
-import './globals.css';
 import QueryProvider from '@/components/QueryProvider';
 import { Toaster } from '@/components/ui/sonner';
+import { Metadata, Viewport } from 'next';
+import './globals.css';
+import { baseMetadata } from './lib/metadata';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -25,3 +27,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+
+export const metadata: Metadata = {
+  ...baseMetadata,
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+};

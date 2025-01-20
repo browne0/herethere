@@ -1,5 +1,7 @@
 import { ParsedTrip, TripPreferences } from '@/app/trips/[tripId]/types';
 import { prisma } from '@/lib/db';
+import { BudgetLevel } from '@/lib/types';
+import { Prisma } from '@prisma/client';
 
 interface GetTripOptions {
   userId: string;
@@ -23,6 +25,18 @@ interface UpdateTripOptions {
     preferences: TripPreferences;
   };
   include?: string[];
+}
+
+interface CreateTripOptions {
+  userId: string;
+  title: string;
+  startDate: Date;
+  endDate: Date;
+  preferences: {
+    budget: BudgetLevel;
+    activities: string[];
+  };
+  city: Prisma.CityCreateInput;
 }
 
 export const tripService = {
@@ -91,6 +105,10 @@ export const tripService = {
       if (start > end) {
         throw new Error('Start date must be before end date');
       }
+
+      // Set end date to end of day (23:59:59.999)
+      end.setHours(23, 59, 59, 999);
+      data.endDate = end;
     }
 
     // Build include object for Prisma
@@ -206,5 +224,51 @@ export const tripService = {
         activitiesRemoved: deletedTrip._count.activities,
       };
     });
+  },
+
+  async createTrip({ userId, city: cityData, startDate, endDate, ...tripData }: CreateTripOptions) {
+    // Create or update the city
+    const city = await prisma.city.upsert({
+      where: {
+        name_countryCode: {
+          name: cityData.name,
+          countryCode: cityData.countryCode,
+        },
+      },
+      create: {
+        name: cityData.name,
+        countryCode: cityData.countryCode,
+        latitude: cityData.latitude,
+        longitude: cityData.longitude,
+        placeId: cityData.placeId,
+        timezone: cityData.timezone,
+      },
+      update: {},
+    });
+
+    // Set end date to end of day
+    const end = new Date(endDate);
+    end.setHours(23, 59, 59, 999);
+
+    // Create the trip
+    const trip = await prisma.trip.create({
+      data: {
+        ...tripData,
+        city: {
+          connect: {
+            id: city.id,
+          },
+        },
+        user: {
+          connect: {
+            id: userId,
+          },
+        },
+        startDate: new Date(startDate),
+        endDate: end,
+      },
+    });
+
+    return trip;
   },
 };

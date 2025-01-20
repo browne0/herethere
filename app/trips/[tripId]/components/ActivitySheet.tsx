@@ -3,7 +3,7 @@
 import React, { useMemo, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { MapPin, Star, MoreVertical, Heart, Trash2, Plus, Search, X } from 'lucide-react';
+import { Heart, MapPin, MoreVertical, Plus, Search, Star, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { formatNumberIntl } from '@/lib/utils';
 
@@ -37,6 +37,7 @@ const MiniActivityCard = ({
         updates: { status },
         activityId: activity.id,
       });
+      toast.success('Activity status updated');
     } catch (error) {
       toast.error('Failed to update status', {
         description: error instanceof Error ? error.message : 'An error occurred',
@@ -188,7 +189,14 @@ export const ActivitySheet = () => {
   );
 
   return (
-    <SheetContent side="right" className="px-0 pb-0 rounded-l-lg w-full lg:max-w-2xl">
+    <SheetContent
+      overlay={false}
+      side="activity-right"
+      className="px-0 pb-0 rounded-l-lg w-6/12 top-[144px] h-[calc(100vh-144px)]"
+      onInteractOutside={e => {
+        e.preventDefault();
+      }}
+    >
       <SheetHeader className="px-4">
         <SheetTitle>Selected Activities</SheetTitle>
         <SheetDescription className="sr-only">Selected activities list</SheetDescription>

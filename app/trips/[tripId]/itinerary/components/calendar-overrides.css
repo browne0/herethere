@@ -47,3 +47,7 @@
 .fc .fc-timegrid-slot-minor {
   border-top-style: none;
 }
+
+.fc {
+  @apply mx-4;
+}

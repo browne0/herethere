@@ -4,8 +4,6 @@ import { Metadata } from 'next';
 
 import { Footer } from '@/components/landing/Footer';
 
-import { baseMetadata } from '../lib/metadata';
-
 const PrivacyPolicy: React.FC = () => {
   return (
     <>
@@ -109,5 +107,5 @@ const PrivacyPolicy: React.FC = () => {
 export default PrivacyPolicy;
 
 export const metadata: Metadata = {
-  ...baseMetadata,
+  title: 'Privacy Policy',
 };

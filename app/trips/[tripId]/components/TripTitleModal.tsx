@@ -7,42 +7,31 @@ import { useMutation } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
-import DateRangePicker from '@/components/DateRangePicker';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ParsedTrip } from '../types';
 
-interface DateEditModalProps {
+interface TripTitleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onUpdateTrip: (updatedTrip: ParsedTrip) => void;
 }
 
-export default function DateEditModal({ isOpen, onClose, onUpdateTrip }: DateEditModalProps) {
+export default function TripTitleModal({ isOpen, onClose, onUpdateTrip }: TripTitleModalProps) {
   const { trip } = useActivitiesStore();
-
-  const [selectedDates, setSelectedDates] = React.useState({
-    startDate: trip?.startDate ? new Date(trip.startDate) : null,
-    endDate: trip?.endDate ? new Date(trip.endDate) : null,
-  });
+  const [title, setTitle] = React.useState(trip?.title ?? '');
 
   const hasChanges = React.useMemo(() => {
     if (!trip) return false;
-
-    const originalStartDate = trip.startDate ? new Date(trip.startDate) : null;
-    const originalEndDate = trip.endDate ? new Date(trip.endDate) : null;
-
-    return (
-      selectedDates.startDate?.toDateString() !== originalStartDate?.toDateString() ||
-      selectedDates.endDate?.toDateString() !== originalEndDate?.toDateString()
-    );
-  }, [selectedDates, trip]);
+    return title !== trip.title;
+  }, [title, trip]);
 
   const updateTripMutation = useMutation({
     mutationFn: async () => {
-      if (!trip || !selectedDates.startDate || !selectedDates.endDate) {
+      if (!trip || !title.trim()) {
         throw new Error('Missing required data');
       }
 
@@ -50,8 +39,7 @@ export default function DateEditModal({ isOpen, onClose, onUpdateTrip }: DateEdi
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          startDate: selectedDates.startDate,
-          endDate: selectedDates.endDate,
+          title: title.trim(),
         }),
       });
 
@@ -61,24 +49,21 @@ export default function DateEditModal({ isOpen, onClose, onUpdateTrip }: DateEdi
     onSuccess: async data => {
       await onUpdateTrip(data);
       onClose();
-      toast.success('Trip dates updated successfully');
+      toast.success('Trip title updated successfully');
     },
     onError: () => {
-      toast.error('Failed to update trip dates');
+      toast.error('Failed to update trip title');
     },
   });
 
   React.useEffect(() => {
     if (isOpen && trip) {
-      setSelectedDates({
-        startDate: trip.startDate ? new Date(trip.startDate) : null,
-        endDate: trip.endDate ? new Date(trip.endDate) : null,
-      });
+      setTitle(trip.title);
     }
   }, [isOpen, trip]);
 
   const handleSave = () => {
-    if (!selectedDates.startDate || !selectedDates.endDate) return;
+    if (!title.trim()) return;
     updateTripMutation.mutate();
   };
 
@@ -88,19 +73,20 @@ export default function DateEditModal({ isOpen, onClose, onUpdateTrip }: DateEdi
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit Trip Dates</DialogTitle>
+          <DialogTitle>Edit Trip Name</DialogTitle>
+          <DialogDescription className="sr-only">Edit your trip's title.</DialogDescription>
         </DialogHeader>
-        <DialogDescription className="sr-only">
-          Edit the start and end dates of your trip.
-        </DialogDescription>
 
         <div className="py-4">
-          <DateRangePicker
-            startDate={selectedDates.startDate}
-            endDate={selectedDates.endDate}
-            onChange={setSelectedDates}
-            minDate={new Date()}
-          />
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Trip Name</label>
+            <Input
+              placeholder="Name your trip"
+              value={title}
+              onChange={e => setTitle(e.target.value)}
+              className="max-w-lg"
+            />
+          </div>
         </div>
 
         <div className="flex justify-end gap-4 mt-4">
@@ -109,7 +95,7 @@ export default function DateEditModal({ isOpen, onClose, onUpdateTrip }: DateEdi
           </Button>
           <Button
             onClick={handleSave}
-            disabled={!selectedDates.startDate || !selectedDates.endDate || !hasChanges}
+            disabled={!title.trim() || updateTripMutation.isPending || !hasChanges}
           >
             {updateTripMutation.isPending && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
             {updateTripMutation.isPending ? 'Saving...' : 'Save Changes'}

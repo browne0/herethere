@@ -1,12 +1,11 @@
 import { auth } from '@clerk/nextjs/server';
-import { Metadata, Viewport } from 'next';
+import { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
 
 import { ParsedTrip } from './[tripId]/types';
 import { TripsList } from './components/TripsList';
-import { baseMetadata } from '../lib/metadata';
 
 export default async function TripsPage() {
   const { userId } = await auth();
@@ -39,11 +38,5 @@ export default async function TripsPage() {
 }
 
 export const metadata: Metadata = {
-  ...baseMetadata,
-};
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
+  title: 'Trips',
 };

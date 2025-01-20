@@ -9,7 +9,7 @@ import {
   Sparkles,
   Star,
 } from 'lucide-react';
-import { Metadata, Viewport } from 'next';
+import { Metadata } from 'next';
 import { notFound, redirect } from 'next/navigation';
 
 import { forYouRecommendationsService } from '@/app/api/services/recommendations/forYouRecommendations';
@@ -25,11 +25,11 @@ import {
   LocationContext,
   ScoringParams,
 } from '@/app/api/services/recommendations/types';
-import { baseMetadata } from '@/app/lib/metadata';
 import { prisma } from '@/lib/db';
 import { UserPreferences } from '@/lib/stores/preferences';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 
+import { tripService } from '@/app/api/services/trips';
 import { TripPageClient } from './TripPageClient';
 import {
   ActivityCategoryType,
@@ -146,8 +146,8 @@ export default async function TripPage({
 
   const recommendationsData = {
     cityId: trip.city.id,
-    ...getTripPreferences(trip?.preferences),
     ...getUserPreferences(user?.preferences),
+    ...getTripPreferences(trip?.preferences),
     locationContext,
     phase,
     selectedActivities: trip.activities as unknown as ParsedItineraryActivity[],
@@ -340,12 +340,35 @@ export default async function TripPage({
   );
 }
 
-export const metadata: Metadata = {
-  ...baseMetadata,
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: { tripId: string };
+}): Promise<Metadata> {
+  try {
+    const { userId } = await auth();
+    const { tripId } = await params;
+    if (!userId) {
+      return {
+        title: 'Trip',
+      };
+    }
 
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-};
+    const trip = await tripService.getTrip({
+      userId,
+      tripId,
+      include: ['city'],
+    });
+
+    return {
+      title: `${trip.title} - ${trip.city.name}`,
+      description: `Your trip to ${trip.city.name} from ${new Date(
+        trip.startDate
+      ).toLocaleDateString()} to ${new Date(trip.endDate).toLocaleDateString()}`,
+    };
+  } catch (_error) {
+    return {
+      title: 'Trip',
+    };
+  }
+}

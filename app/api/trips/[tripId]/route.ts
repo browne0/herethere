@@ -17,7 +17,7 @@ export async function GET(request: NextRequest, { params }: { params: { tripId: 
 
     const trip = await tripService.getTrip({
       userId,
-      tripId: tripId,
+      tripId,
       include,
     });
 

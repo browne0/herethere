@@ -9,7 +9,6 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { ParsedTrip } from '../types';
@@ -22,14 +21,12 @@ interface TripCityModalProps {
 
 export default function TripCityModal({ isOpen, onClose, onUpdateTrip }: TripCityModalProps) {
   const { trip } = useActivitiesStore();
-
-  const [title, setTitle] = React.useState(trip?.title ?? '');
   const [city, setCity] = React.useState(trip?.city ?? null);
 
   const hasChanges = React.useMemo(() => {
     if (!trip || !city) return false;
-    return title !== trip.title || city.id !== trip.city.id;
-  }, [title, city, trip]);
+    return city.id !== trip.city.id;
+  }, [city, trip]);
 
   const updateTripMutation = useMutation({
     mutationFn: async (updatedData: Partial<ParsedTrip>) => {
@@ -56,17 +53,15 @@ export default function TripCityModal({ isOpen, onClose, onUpdateTrip }: TripCit
 
   React.useEffect(() => {
     if (isOpen && trip) {
-      setTitle(trip.title);
       setCity(trip.city);
     }
   }, [isOpen, trip]);
 
   const handleSave = () => {
-    if (!trip || !city || !title.trim()) return;
+    if (!trip || !city) return;
 
     updateTripMutation.mutate({
       cityId: city.id,
-      title: title.trim(),
     });
   };
 
@@ -93,24 +88,13 @@ export default function TripCityModal({ isOpen, onClose, onUpdateTrip }: TripCit
       <DialogContent className="sm:max-w-2xl p-0 gap-0 sm:h-auto max-h-[90vh] flex flex-col focus-visible:ring-0">
         <DialogHeader className="flex justify-between border-b p-4 bg-white rounded-t-lg">
           <DialogTitle className="text-lg font-semibold text-center sm:text-left">
-            Trip Details
+            Trip Destination
           </DialogTitle>
-          <DialogDescription className="sr-only">Edit your trip's details</DialogDescription>
+          <DialogDescription className="sr-only">Edit your trip's destination</DialogDescription>
         </DialogHeader>
 
         <div className="flex-1 overflow-y-auto">
           <div className="px-4 py-6 space-y-6">
-            {/* Trip Name */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Trip Name</label>
-              <Input
-                placeholder="Name your trip"
-                value={title}
-                onChange={e => setTitle(e.target.value)}
-                className="max-w-lg"
-              />
-            </div>
-
             {/* City Selection */}
             <div className="space-y-2">
               <label className="text-sm font-medium">Destination</label>
@@ -130,7 +114,7 @@ export default function TripCityModal({ isOpen, onClose, onUpdateTrip }: TripCit
             </Button>
             <Button
               onClick={handleSave}
-              disabled={!title.trim() || updateTripMutation.isPending || !hasChanges}
+              disabled={updateTripMutation.isPending || !hasChanges}
               className="flex-1 sm:flex-none"
             >
               {updateTripMutation.isPending && (

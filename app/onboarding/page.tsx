@@ -4,8 +4,6 @@ import { redirect } from 'next/navigation';
 
 import { prisma } from '@/lib/db';
 
-import { baseMetadata } from '../lib/metadata';
-
 export default async function OnboardingPage() {
   const { userId } = await auth();
 
@@ -32,5 +30,5 @@ export default async function OnboardingPage() {
 }
 
 export const metadata: Metadata = {
-  ...baseMetadata,
+  title: 'Onboarding',
 };

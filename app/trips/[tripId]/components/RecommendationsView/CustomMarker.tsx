@@ -22,7 +22,6 @@ const CustomMarker = React.memo(
   ({
     activity,
     isHighlighted,
-    isInTrip,
     tripStatus,
     onClick,
     labelPosition,

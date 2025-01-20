@@ -15,9 +15,15 @@ interface TripHeaderProps {
   onEditClick: () => void;
   onDateClick: () => void;
   onCityClick: () => void;
+  onTitleClick: () => void;
 }
 
-export const TripHeader = ({ onEditClick, onDateClick, onCityClick }: TripHeaderProps) => {
+export const TripHeader = ({
+  onEditClick,
+  onDateClick,
+  onCityClick,
+  onTitleClick,
+}: TripHeaderProps) => {
   const { trip } = useActivitiesStore();
 
   const addedActivities = trip?.activities.filter(act => act.status === 'planned') ?? [];
@@ -83,18 +89,28 @@ export const TripHeader = ({ onEditClick, onDateClick, onCityClick }: TripHeader
           {/* Center section */}
           <div className="flex items-center rounded-full border border-gray-200">
             <div className="flex items-center">
-              <button
+              <Button
                 onClick={onCityClick}
+                variant="ghost"
                 className="text-sm font-medium px-3 py-2 hover:bg-gray-100 transition-colors rounded-l-full"
+                disabled
               >
                 {trip.city.name}
-              </button>
-              <button
+              </Button>
+              <Button
+                onClick={onTitleClick}
+                variant="ghost"
+                className="text-sm font-medium px-3 py-2 hover:bg-gray-100 transition-colors border-l border-gray-200 rounded-none"
+              >
+                {trip.title}
+              </Button>
+              <Button
                 onClick={onDateClick}
+                variant="ghost"
                 className="text-sm font-medium px-3 py-2 border-l border-gray-200 hover:bg-gray-100 transition-colors rounded-r-full"
               >
-                {formatDate(trip.startDate)} – {formatDate(trip.endDate)}
-              </button>
+                {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
+              </Button>
             </div>
           </div>
 

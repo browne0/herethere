@@ -2,13 +2,17 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
-import { EventContentArg, EventDropArg } from '@fullcalendar/core/index.js';
-import interactionPlugin from '@fullcalendar/interaction';
-import listPlugin from '@fullcalendar/list';
+import {
+  EventClickArg,
+  EventContentArg,
+  EventDropArg,
+  EventSourceInput,
+} from '@fullcalendar/core/index.js';
+import interactionPlugin, { DateClickArg } from '@fullcalendar/interaction';
+import momentTimezonePlugin from '@fullcalendar/moment-timezone';
 import FullCalendar from '@fullcalendar/react';
 import timeGridPlugin from '@fullcalendar/timegrid';
-import { addDays } from 'date-fns';
-import { AlertTriangle, CalendarDays, MapPin } from 'lucide-react';
+import { AlertTriangle, CalendarDays } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import './calendar-overrides.css';
@@ -17,7 +21,9 @@ import { ActivityStatus, ParsedItineraryActivity } from '@/app/trips/[tripId]/ty
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
+import { cn } from '@/lib/utils';
 import { ItineraryHeader } from './ItineraryHeader';
+import { ItineraryList } from './ItineraryList';
 import ItineraryLoading from './ItineraryLoading';
 import ItineraryRebalancing from './ItineraryRebalancing';
 
@@ -55,7 +61,7 @@ const statusColors: Record<ActivityStatus, string> = {
 export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewProps) {
   const { trip, setTrip } = useActivitiesStore();
   const { updateActivity } = useActivityMutations();
-  const [view, setView] = useState<'listMonth' | 'timeGrid'>('listMonth');
+  const [view, setView] = useState<'timeGrid' | 'itineraryList'>('itineraryList');
   const [isRebalancing, setIsRebalancing] = useState(false);
 
   const calendarRef = useRef<FullCalendar>(null);
@@ -89,7 +95,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
     }
   }, [rebalanceSchedule, trip]);
 
-  const scheduledEvents = useMemo(() => {
+  const scheduledEvents: EventSourceInput = useMemo(() => {
     if (!trip) return [];
 
     return trip?.activities
@@ -122,39 +128,6 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
         return fullAddress.split(',')[0].trim();
       };
 
-      if (view === 'listMonth') {
-        return (
-          <div
-            className="flex flex-col space-y-1 py-1"
-            onMouseEnter={() => onMarkerHover(event.id)}
-            onMouseLeave={() => onMarkerHover(null)}
-          >
-            <div className="font-medium flex items-center gap-2">
-              {event.title}
-              {event.extendedProps.warning && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <AlertTriangle className="fill-yellow-400 h-3.5 w-3.5 text-black" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{event.extendedProps.warning}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-            </div>
-            <div className="flex flex-col space-y-2 text-sm text-gray-600">
-              <div className="flex items-center">
-                <MapPin className="h-4 w-4 mr-1" />
-                <span>{event.extendedProps.location}</span>
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      // Grid view event rendering
       return (
         <div
           className="p-1 overflow-hidden relative"
@@ -175,7 +148,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
               </Tooltip>
             </TooltipProvider>
           )}
-          <div className="pr-4">
+          <div className={cn({ 'pr-4': event.extendedProps.warning })}>
             <div className="font-medium text-xs break-words">{event.title}</div>
             <div className="text-xs opacity-75 truncate">{eventInfo.timeText}</div>
             <div className="text-xs opacity-75 truncate">
@@ -185,7 +158,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
         </div>
       );
     },
-    [onMarkerHover, view]
+    [onMarkerHover]
   );
 
   const EmptyState = () => (
@@ -205,6 +178,8 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
   );
 
   if (!trip) return <ItineraryLoading />;
+
+  if (trip.activities.length === 0 && !isRebalancing) return <EmptyState />;
 
   if (isRebalancing && trip)
     return (
@@ -255,6 +230,14 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
 
   const numDays = getDaysBetweenDates(trip.startDate, trip.endDate);
 
+  const handleDateClick = (arg: DateClickArg) => {
+    console.log(arg);
+  };
+
+  const handleEventClick = (arg: EventClickArg) => {
+    console.log(arg);
+  };
+
   return (
     <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)] flex flex-col">
       <ItineraryHeader
@@ -268,53 +251,56 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
         view={view}
         onViewChange={newView => {
           setView(newView);
-          if (calendarRef.current) {
-            calendarRef.current.getApi().changeView(newView);
-          }
         }}
         disableViewToggle={scheduledEvents.length === 0}
       />
-      {/* Calendar */}
-      <div className="flex-1 overflow-hidden bg-white px-4 mb-4">
-        <FullCalendar
-          plugins={[timeGridPlugin, interactionPlugin, listPlugin]}
-          initialView={view}
-          headerToolbar={{
-            right: 'prev,next',
-            center: '',
-            left: '',
-          }}
-          views={{
-            timeGrid: {
-              type: 'timeGrid',
-              duration: { days: numDays > 7 ? 7 : numDays },
-            },
-          }}
-          events={scheduledEvents}
-          editable={true}
-          eventDrop={handleEventDrop}
-          eventContent={renderEventContent}
-          slotMinTime="00:00:00"
-          scrollTime="08:00:00"
-          scrollTimeReset={false}
-          allDaySlot={false}
-          eventOverlap={true}
-          stickyHeaderDates={false}
-          noEventsContent={<EmptyState />}
-          height="100%"
-          dayHeaderFormat={{
-            weekday: 'long',
-            month: 'numeric',
-            day: 'numeric',
-            omitCommas: true,
-          }}
-          validRange={{
-            start: trip.startDate,
-            end: addDays(trip.endDate, 1),
-          }}
-          nowIndicator
-          ref={calendarRef}
-        />
+      {/* Calendar or List View */}
+      <div className="flex-1 overflow-hidden bg-white mb-4">
+        {view === 'timeGrid' ? (
+          <FullCalendar
+            plugins={[timeGridPlugin, interactionPlugin, momentTimezonePlugin]}
+            initialView="timeGrid"
+            headerToolbar={{
+              right: 'prev,next',
+              center: '',
+              left: '',
+            }}
+            views={{
+              timeGrid: {
+                type: 'timeGrid',
+                duration: { days: numDays > 7 ? 7 : numDays },
+              },
+            }}
+            events={scheduledEvents}
+            editable={true}
+            eventDrop={handleEventDrop}
+            eventContent={renderEventContent}
+            slotMinTime="00:00:00"
+            scrollTime="08:00:00"
+            scrollTimeReset={false}
+            allDaySlot={false}
+            eventOverlap={true}
+            dateClick={handleDateClick}
+            eventClick={handleEventClick}
+            stickyHeaderDates={false}
+            height="100%"
+            dayHeaderFormat={{
+              weekday: 'long',
+              month: 'numeric',
+              day: 'numeric',
+              omitCommas: true,
+            }}
+            validRange={{
+              start: trip.startDate,
+              end: trip.endDate,
+            }}
+            nowIndicator
+            ref={calendarRef}
+            timeZone={trip.city.timezone}
+          />
+        ) : (
+          <ItineraryList onMarkerHover={onMarkerHover} />
+        )}
       </div>
     </div>
   );

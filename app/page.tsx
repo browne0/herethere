@@ -1,5 +1,4 @@
 import { auth } from '@clerk/nextjs/server';
-import { Metadata, Viewport } from 'next';
 import { redirect } from 'next/navigation';
 
 import { FAQ } from '@/components/landing/FAQ';
@@ -8,8 +7,6 @@ import { Footer } from '@/components/landing/Footer';
 import { Hero } from '@/components/landing/Hero';
 import { HowItWorks } from '@/components/landing/HowItWorks';
 import { MainCTA } from '@/components/landing/MainCTA';
-
-import { baseMetadata } from './lib/metadata';
 
 export default async function HomePage() {
   const { userId } = await auth();
@@ -30,13 +27,3 @@ export default async function HomePage() {
     </>
   );
 }
-
-export const metadata: Metadata = {
-  ...baseMetadata,
-};
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-};

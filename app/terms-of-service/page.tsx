@@ -4,8 +4,6 @@ import { Metadata } from 'next';
 
 import { Footer } from '@/components/landing/Footer';
 
-import { baseMetadata } from '../lib/metadata';
-
 const TermsOfService: React.FC = () => {
   return (
     <>
@@ -124,5 +122,5 @@ const TermsOfService: React.FC = () => {
 export default TermsOfService;
 
 export const metadata: Metadata = {
-  ...baseMetadata,
+  title: 'Terms of Service',
 };

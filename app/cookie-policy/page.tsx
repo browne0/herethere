@@ -4,8 +4,6 @@ import { Metadata } from 'next';
 
 import { Footer } from '@/components/landing/Footer';
 
-import { baseMetadata } from '../lib/metadata';
-
 const CookiePolicy: React.FC = () => {
   return (
     <>
@@ -128,5 +126,5 @@ const CookiePolicy: React.FC = () => {
 export default CookiePolicy;
 
 export const metadata: Metadata = {
-  ...baseMetadata,
+  title: 'Cookie Policy',
 };

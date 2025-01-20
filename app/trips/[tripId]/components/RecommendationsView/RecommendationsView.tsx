@@ -140,14 +140,14 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
         </div>
 
         <div className="flex overflow-hidden">
-          <div className="w-7/12 mt-[144px]">
+          <div className="w-6/12 mt-[144px]">
             <ActivityList
               currentCategory={currentCategory}
               onPageChange={handlePageChange}
               onHover={setHoveredActivityId}
             />
           </div>
-          <div className="w-5/12 fixed top-[144px] right-0 bottom-0">
+          <div className="w-6/12 fixed top-[144px] right-0 bottom-0">
             <RecommendationsMapView
               activities={currentCategory?.activities || []}
               currentCategory={selectedCategory}

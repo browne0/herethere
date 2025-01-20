@@ -7,13 +7,14 @@ import { toast } from 'sonner';
 
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { RecommendationsView } from './components/RecommendationsView/RecommendationsView';
-import { ActivityCategoryType, ParsedTrip } from './types';
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
 import DateEditModal from './components/DateEditModal';
+import { RecommendationsView } from './components/RecommendationsView/RecommendationsView';
 import TripCityModal from './components/TripCityModal';
 import TripEditModal from './components/TripEditModal';
 import TripHeader from './components/TripHeader';
+import TripTitleModal from './components/TripTitleModal';
+import { ActivityCategoryType, ParsedTrip } from './types';
 
 interface TripPageClientProps {
   trip: ParsedTrip;
@@ -27,6 +28,7 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+  const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
 
   // Initialize store with trip activities
   useEffect(() => {
@@ -67,6 +69,7 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
         onEditClick={() => setIsEditModalOpen(true)}
         onDateClick={() => setIsDateModalOpen(true)}
         onCityClick={() => setIsCityModalOpen(true)}
+        onTitleClick={() => setIsTitleModalOpen(true)}
       />
       <RecommendationsView onDeleteClick={() => setIsDeleteDialogOpen(true)} />
       <DeleteTripDialog
@@ -88,6 +91,11 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
       <TripCityModal
         isOpen={isCityModalOpen}
         onClose={() => setIsCityModalOpen(false)}
+        onUpdateTrip={handleTripUpdate}
+      />
+      <TripTitleModal
+        isOpen={isTitleModalOpen}
+        onClose={() => setIsTitleModalOpen(false)}
         onUpdateTrip={handleTripUpdate}
       />
     </div>

@@ -1,9 +1,8 @@
+import { Button } from '@/components/ui/button';
 import { CalendarDays, List } from 'lucide-react';
 import Link from 'next/link';
 
-import { Button } from '@/components/ui/button';
-
-type ViewType = 'listMonth' | 'timeGrid';
+type ViewType = 'itineraryList' | 'timeGrid';
 
 interface ItineraryHeaderProps {
   tripId: string;
@@ -35,12 +34,17 @@ export function ItineraryHeader({
 
   return (
     <div className="px-4 py-3 border-b bg-white">
-      <Link
-        href={`/trips/${tripId}`}
-        className="mb-2 text-sm text-gray-600 hover:text-gray-900 flex items-center w-fit"
-      >
-        ← Back to Recommendations
-      </Link>
+      <div className="flex items-center justify-between py-1">
+        <Link
+          href={`/trips/${tripId}`}
+          className="mb-2 text-sm text-gray-600 hover:text-gray-900 flex items-center w-fit"
+        >
+          ← Back to Recommendations
+        </Link>
+        <Button variant="outline" size="sm" onClick={onRebalance} disabled={isRebalancing}>
+          {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
+        </Button>
+      </div>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold">{title}</h1>
@@ -67,23 +71,20 @@ export function ItineraryHeader({
 
         {onViewChange && (
           <div className="flex items-center gap-4">
-            <Button variant="outline" size="sm" onClick={onRebalance} disabled={isRebalancing}>
-              {isRebalancing ? 'Optimizing...' : 'Optimize Schedule'}
-            </Button>
             <div
               className={`bg-gray-100 p-1 rounded-lg flex ${disableViewToggle || isRebalancing ? 'opacity-50 pointer-events-none' : ''}`}
             >
               <button
-                onClick={() => onViewChange('listMonth')}
+                onClick={() => onViewChange('itineraryList')}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
-                  view === 'listMonth'
+                  view === 'itineraryList'
                     ? 'bg-white shadow-sm text-gray-900'
                     : 'text-gray-600 hover:text-gray-900'
                 }`}
                 disabled={disableViewToggle || isRebalancing}
               >
                 <List className="h-4 w-4" />
-                <span>List</span>
+                <span>Trip Overview</span>
               </button>
               <button
                 onClick={() => onViewChange('timeGrid')}
@@ -95,7 +96,7 @@ export function ItineraryHeader({
                 disabled={disableViewToggle || isRebalancing}
               >
                 <CalendarDays className="h-4 w-4" />
-                <span>Calendar</span>
+                <span>Adjust Schedule</span>
               </button>
             </div>
           </div>
