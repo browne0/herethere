@@ -11,6 +11,7 @@ import DateEditModal from '../components/DateEditModal';
 import TripCityModal from '../components/TripCityModal';
 import TripEditModal from '../components/TripEditModal';
 import TripHeader from '../components/TripHeader';
+import TripTitleModal from '../components/TripTitleModal';
 import type { ParsedItineraryActivity, ParsedTrip } from '../types';
 import ItineraryMap from './components/ItineraryMap';
 import { ItineraryView } from './components/ItineraryView';
@@ -25,6 +26,7 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
+  const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
   const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -46,6 +48,7 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
     <div className="flex h-screen">
       <TripHeader
         onEditClick={() => setIsEditModalOpen(true)}
+        onTitleClick={() => setIsTitleModalOpen(true)}
         onDateClick={() => setIsDateModalOpen(true)}
         onCityClick={() => setIsCityModalOpen(true)}
       />
@@ -75,6 +78,11 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
         onUpdateTrip={handleTripUpdate}
       />
       <AddActivityModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
+      <TripTitleModal
+        isOpen={isTitleModalOpen}
+        onClose={() => setIsTitleModalOpen(false)}
+        onUpdateTrip={handleTripUpdate}
+      />
     </div>
   );
 }

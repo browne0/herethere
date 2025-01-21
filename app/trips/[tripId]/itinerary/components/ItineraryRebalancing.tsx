@@ -1,5 +1,3 @@
-import React from 'react';
-
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { ItineraryHeader } from './ItineraryHeader';
@@ -28,7 +26,7 @@ const ItineraryRebalancing = ({
         startDate={startDate}
         endDate={endDate}
         isRebalancing={true}
-        view="listMonth"
+        view="itineraryList"
         onViewChange={() => {}}
       />
 
