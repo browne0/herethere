@@ -190,9 +190,8 @@ export const ActivitySheet = () => {
 
   return (
     <SheetContent
-      overlay={false}
       side="activity-right"
-      className="px-0 pb-0 rounded-l-lg w-6/12 top-[144px] h-[calc(100vh-144px)]"
+      className="px-0 pb-0 w-6/12 top-[144px] h-[calc(100vh-144px)]"
       onInteractOutside={e => {
         e.preventDefault();
       }}

@@ -33,7 +33,7 @@ export function ItineraryHeader({
   const end = endDate instanceof Date ? endDate : new Date(endDate);
 
   return (
-    <div className="px-4 py-3 border-b bg-white">
+    <div className="px-4 py-3 bg-white">
       <div className="flex items-center justify-between py-1">
         <Link
           href={`/trips/${tripId}`}

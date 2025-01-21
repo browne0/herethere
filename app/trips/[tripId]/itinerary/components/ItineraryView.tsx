@@ -22,6 +22,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
 import { cn } from '@/lib/utils';
+import { addDays } from 'date-fns';
 import { ItineraryHeader } from './ItineraryHeader';
 import { ItineraryList } from './ItineraryList';
 import ItineraryLoading from './ItineraryLoading';
@@ -268,7 +269,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
             views={{
               timeGrid: {
                 type: 'timeGrid',
-                duration: { days: numDays > 7 ? 7 : numDays },
+                duration: { days: numDays > 4 ? 4 : numDays },
               },
             }}
             events={scheduledEvents}
@@ -292,7 +293,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
             }}
             validRange={{
               start: trip.startDate,
-              end: trip.endDate,
+              end: addDays(trip.endDate, 1),
             }}
             nowIndicator
             ref={calendarRef}

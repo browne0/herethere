@@ -67,7 +67,7 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
           </div>
         </div>
         <div className="flex gap-2">
-          <Sheet>
+          <Sheet modal={false}>
             <SheetTrigger asChild>
               <Button variant="outline" size="sm">
                 View Activities

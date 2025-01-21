@@ -1,17 +1,32 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Sheet } from '@/components/ui/sheet';
+import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { format } from 'date-fns';
 import { AlertTriangle, CalendarDays, Clock, MapPin, Pen, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
 import { ActivityDetailSheet } from '../../components/ActivityDetailSheet';
 import { ParsedItineraryActivity } from '../../types';
 
 interface ItineraryListProps {
   onMarkerHover: (activityId: string | null) => void;
 }
+
+const EmptyState = ({ tripId }: { tripId: string }) => (
+  <div className="h-full flex flex-col items-center justify-center text-gray-500 p-8">
+    <CalendarDays className="h-12 w-12 mb-4" />
+    <h3 className="text-lg font-medium mb-2">No activities scheduled yet</h3>
+    <p className="text-center text-sm mb-4">
+      Add activities from the recommendations list to start building your itinerary.
+    </p>
+    <Link
+      href={`/trips/${tripId}`}
+      className="text-sm font-medium text-blue-600 hover:text-blue-700"
+    >
+      Browse Recommendations →
+    </Link>
+  </div>
+);
 
 function groupActivitiesByDay(activities: ParsedItineraryActivity[]) {
   const groups: { [key: string]: { date: Date; activities: ParsedItineraryActivity[] } } = {};
@@ -39,31 +54,11 @@ function formatTimeRange(start: Date, end: Date): string {
 }
 
 export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
-  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-  const [isSheetOpen, setIsSheetOpen] = useState(false);
   const { trip } = useActivitiesStore();
 
-  const handleActivityClick = (newActivityId: string) => {
-    if (selectedActivityId === newActivityId) {
-      // If clicking the same activity, just toggle the sheet
-      setIsSheetOpen(!isSheetOpen);
-    } else {
-      // If clicking a different activity while sheet is open,
-      // update the activity ID without closing the sheet
-      setSelectedActivityId(newActivityId);
-      setIsSheetOpen(true);
-    }
-  };
-
-  const handleSheetClose = () => {
-    setIsSheetOpen(false);
-    // Optionally reset the selected activity after animation completes
-    setTimeout(() => {
-      setSelectedActivityId(null);
-    }, 300); // Match this with your sheet animation duration
-  };
-
   if (!trip) return null;
+
+  if (trip.activities.length === 0) return <EmptyState tripId={trip.id} />;
 
   const scheduledActivities = trip.activities.filter(
     activity => activity.status === 'planned' && activity.startTime && activity.endTime
@@ -94,7 +89,7 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
       <div className="h-full overflow-y-auto">
         {groupedDays.map(dayGroup => (
           <div key={format(dayGroup.date, 'yyyy-MM-dd')} className="mb-6">
-            <div className="sticky top-0 flex justify-between items-center bg-white py-2 px-4 z-10">
+            <div className="sticky top-0 flex justify-between items-center bg-white p-4 z-10 border-b border-t">
               <h2 className="text-lg font-semibold">
                 {format(dayGroup.date, 'EEEE, MMMM d, yyyy')}
               </h2>
@@ -120,12 +115,15 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div className="space-y-2">
-                        <button
-                          onClick={() => handleActivityClick(activity.recommendation.id)}
-                          className="font-medium text-lg text-left hover:text-blue-600 hover:underline"
-                        >
-                          {activity.recommendation.name}
-                        </button>
+                        <Sheet modal={false}>
+                          <SheetTrigger asChild>
+                            <button className="font-medium text-lg text-left hover:text-blue-600">
+                              {activity.recommendation.name}
+                            </button>
+                          </SheetTrigger>
+                          <ActivityDetailSheet activityId={activity.recommendation.id} />
+                        </Sheet>
+
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Clock className="h-4 w-4" />
                           <span>
@@ -168,14 +166,6 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
           </div>
         ))}
       </div>
-
-      <Sheet open={isSheetOpen} onOpenChange={handleSheetClose}>
-        <ActivityDetailSheet
-          activityId={selectedActivityId}
-          isOpen={isSheetOpen}
-          onClose={handleSheetClose}
-        />
-      </Sheet>
     </>
   );
 }
