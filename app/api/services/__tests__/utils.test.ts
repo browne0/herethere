@@ -71,6 +71,8 @@ describe('Scheduling Utils', () => {
       lastViatorSync: null,
       createdAt: new Date(),
       updatedAt: new Date(),
+      tiktokVideos: [],
+      lastTikTokSync: null,
     },
     city: {
       name: 'New York',
