@@ -267,6 +267,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
             setSelectedActivity(activity);
             onMarkerSelect(activity.id);
           }}
+          zIndex={hoveredActivityId === activity.id ? 2 : 1}
           opacity={hoveredActivityId ? (hoveredActivityId === activity.id ? 1 : 0.5) : 1}
           animation={hoveredActivityId === activity.id ? google.maps.Animation.BOUNCE : undefined}
         />

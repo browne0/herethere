@@ -47,7 +47,7 @@ export const CachedImage: React.FC<CachedImageProps> = ({
         src={imageUrl}
         fill
         alt={alt}
-        className={`object-cover ${className}`}
+        className={`${className}`}
         sizes={sizes}
         priority={priority}
         unoptimized

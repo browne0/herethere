@@ -5,6 +5,7 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { format } from 'date-fns';
 import { AlertTriangle, CalendarDays, Clock, MapPin, Pen, Plus } from 'lucide-react';
 import Link from 'next/link';
+import { useState } from 'react';
 import { ActivityDetailSheet } from '../../components/ActivityDetailSheet';
 import { ParsedItineraryActivity } from '../../types';
 
@@ -55,6 +56,7 @@ function formatTimeRange(start: Date, end: Date): string {
 
 export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
   const { trip } = useActivitiesStore();
+  const [openActivityId, setOpenActivityId] = useState<string | null>(null);
 
   if (!trip) return null;
 
@@ -90,7 +92,7 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
         {groupedDays.map(dayGroup => (
           <div key={format(dayGroup.date, 'yyyy-MM-dd')} className="mb-6">
             <div className="sticky top-0 flex justify-between items-center bg-white p-4 z-10 border-b border-t">
-              <h2 className="text-lg font-semibold">
+              <h2 className="text-base sm:text-lg font-semibold">
                 {format(dayGroup.date, 'EEEE, MMMM d, yyyy')}
               </h2>
               <Button variant="outline">
@@ -115,13 +117,20 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                   <CardContent className="pt-4">
                     <div className="flex items-start justify-between">
                       <div className="space-y-2">
-                        <Sheet modal={false}>
+                        <Sheet
+                          modal={false}
+                          open={openActivityId === activity.id}
+                          onOpenChange={open => setOpenActivityId(open ? activity.id : null)}
+                        >
                           <SheetTrigger asChild>
                             <button className="font-medium text-lg text-left hover:text-blue-600">
                               {activity.recommendation.name}
                             </button>
                           </SheetTrigger>
-                          <ActivityDetailSheet activityId={activity.recommendation.id} />
+                          <ActivityDetailSheet
+                            activityId={activity.recommendation.id}
+                            isOpen={openActivityId === activity.id}
+                          />
                         </Sheet>
 
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">

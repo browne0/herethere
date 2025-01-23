@@ -46,6 +46,13 @@ export interface Features {
   servesVegetarianFood?: boolean;
 }
 
+export interface TikTokVideo {
+  video_id: string;
+  like_count: number;
+  share_count: number;
+  play_count: number;
+}
+
 export interface ActivityRecommendation {
   id: string;
   name: string;
@@ -92,6 +99,10 @@ export interface ActivityRecommendation {
   viatorProductId: string | null;
   viatorData: any | null; // Store full Viator product data
   lastViatorSync: Date | null;
+
+  // TikTok integration
+  tiktokVideos: TikTokVideo[];
+  lastTikTokSync: Date | null;
 
   // Restaurant-specific fields (optional)
   cuisineTypes?: string[];

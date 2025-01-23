@@ -71,6 +71,8 @@ model ActivityRecommendation {
   features             Json?
   primaryType          String?
   priceLevel           PriceLevel
+  tiktokVideos         Json[]               @default([])
+  lastTikTokSync       DateTime?
   city                 City                 @relation(fields: [cityId], references: [id])
   itineraryActivities  ItineraryActivity[]
 

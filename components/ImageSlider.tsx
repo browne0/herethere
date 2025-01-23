@@ -1,4 +1,4 @@
-import React, { useRef, TouchEvent } from 'react';
+import React, { TouchEvent, useRef } from 'react';
 
 import { ChevronLeft, ChevronRight, MapPin } from 'lucide-react';
 
@@ -134,7 +134,7 @@ const ImageSlider: React.FC<ImageSliderProps> = ({ images, alt, className = '', 
             <CachedImage
               photo={image}
               alt={`${alt} - Image ${index + 1}`}
-              className="w-full h-full"
+              className="w-full h-full object-cover"
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
               priority={index === 0}
             />

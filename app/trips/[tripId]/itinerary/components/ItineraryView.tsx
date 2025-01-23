@@ -22,7 +22,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 
 import { cn } from '@/lib/utils';
-import { addDays } from 'date-fns';
 import { ItineraryHeader } from './ItineraryHeader';
 import { ItineraryList } from './ItineraryList';
 import ItineraryLoading from './ItineraryLoading';
@@ -240,7 +239,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
   };
 
   return (
-    <div className="mt-[65px] lg:w-1/2 h-[calc(100vh-65px)] flex flex-col">
+    <div className="flex flex-col h-full">
       <ItineraryHeader
         tripId={trip.id}
         title={trip.title}
@@ -258,47 +257,49 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
       {/* Calendar or List View */}
       <div className="flex-1 overflow-hidden bg-white mb-4">
         {view === 'timeGrid' ? (
-          <FullCalendar
-            plugins={[timeGridPlugin, interactionPlugin, momentTimezonePlugin]}
-            initialView="timeGrid"
-            headerToolbar={{
-              right: 'prev,next',
-              center: '',
-              left: '',
-            }}
-            views={{
-              timeGrid: {
-                type: 'timeGrid',
-                duration: { days: numDays > 4 ? 4 : numDays },
-              },
-            }}
-            events={scheduledEvents}
-            editable={true}
-            eventDrop={handleEventDrop}
-            eventContent={renderEventContent}
-            slotMinTime="00:00:00"
-            scrollTime="08:00:00"
-            scrollTimeReset={false}
-            allDaySlot={false}
-            eventOverlap={true}
-            dateClick={handleDateClick}
-            eventClick={handleEventClick}
-            stickyHeaderDates={false}
-            height="100%"
-            dayHeaderFormat={{
-              weekday: 'long',
-              month: 'numeric',
-              day: 'numeric',
-              omitCommas: true,
-            }}
-            validRange={{
-              start: trip.startDate,
-              end: addDays(trip.endDate, 1),
-            }}
-            nowIndicator
-            ref={calendarRef}
-            timeZone={trip.city.timezone}
-          />
+          <div className="h-full">
+            <FullCalendar
+              plugins={[timeGridPlugin, interactionPlugin, momentTimezonePlugin]}
+              initialView="timeGrid"
+              headerToolbar={{
+                right: 'prev,next',
+                center: '',
+                left: '',
+              }}
+              views={{
+                timeGrid: {
+                  type: 'timeGrid',
+                  duration: { days: numDays > 3 ? 3 : numDays },
+                },
+              }}
+              events={scheduledEvents}
+              editable={true}
+              eventDrop={handleEventDrop}
+              eventContent={renderEventContent}
+              slotMinTime="00:00:00"
+              scrollTime="08:00:00"
+              scrollTimeReset={false}
+              allDaySlot={false}
+              eventOverlap={true}
+              dateClick={handleDateClick}
+              eventClick={handleEventClick}
+              stickyHeaderDates={false}
+              height="100%"
+              dayHeaderFormat={{
+                weekday: 'long',
+                month: 'numeric',
+                day: 'numeric',
+                omitCommas: true,
+              }}
+              validRange={{
+                start: trip.startDate,
+                end: trip.endDate,
+              }}
+              nowIndicator
+              ref={calendarRef}
+              timeZone={trip.city.timezone}
+            />
+          </div>
         ) : (
           <ItineraryList onMarkerHover={onMarkerHover} />
         )}
