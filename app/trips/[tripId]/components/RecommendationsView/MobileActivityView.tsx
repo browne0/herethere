@@ -1,16 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
-  MapPin,
-  Star,
-  MoreVertical,
-  Heart,
-  Plus,
-  Trash2,
-  Search,
   ArrowUpDown,
+  Heart,
   Info,
+  MapPin,
+  MoreVertical,
+  Plus,
+  Search,
+  Star,
+  Trash2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -24,18 +24,18 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
-import ActivityList from './ActivityList';
-import MobileCategoryNavigation from './MobileCategoryNavigation';
 import {
   ActivityCategoryType,
-  ParsedTrip,
-  ParsedItineraryActivity,
   ActivityStatus,
+  ParsedItineraryActivity,
+  ParsedTrip,
 } from '../../types';
+import ActivityList from './ActivityList';
+import MobileCategoryNavigation from './MobileCategoryNavigation';
 
 interface MiniActivityCardProps {
   activity: ParsedItineraryActivity;
@@ -438,37 +438,39 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
   }
 
   return (
-    <Tabs defaultValue="discover" className="h-full flex flex-col">
-      <div className="fixed top-8 left-0 right-0 bg-white z-10 border-b">
-        <div className="px-4 py-2">
-          <TabsList className="w-full">
-            <TabsTrigger value="discover" className="flex-1">
-              Discover
-            </TabsTrigger>
-            <TabsTrigger value="my-activities" className="flex-1">
-              My Activities ({trip.activities.length})
-            </TabsTrigger>
-          </TabsList>
-        </div>
-      </div>
+    <Tabs defaultValue="discover">
+      {/* Fixed Headers */}
+      <div className="fixed top-[64px] left-0 right-0 bg-white z-10">
+        <TabsList className="w-full px-4 py-2 border-b">
+          <TabsTrigger value="discover" className="flex-1">
+            Discover
+          </TabsTrigger>
+          <TabsTrigger value="my-activities" className="flex-1">
+            My Activities ({trip.activities.length})
+          </TabsTrigger>
+        </TabsList>
 
-      <div className="flex-1 overflow-hidden mt-[57px] pb-[54px] h-full">
-        <TabsContent value="discover" className="h-full mt-0">
+        <div className="border-b">
           <MobileCategoryNavigation
             categories={categories}
             selectedCategory={currentCategory}
             onCategoryChange={onCategoryChange}
           />
-          <div className="h-full flex flex-col">
-            <ActivityList
-              currentCategory={currentCategory}
-              onPageChange={onPageChange}
-              onHover={onHover}
-            />
-          </div>
-        </TabsContent>
+        </div>
+      </div>
 
-        <TabsContent value="my-activities" className="h-full mt-0">
+      {/* Scrollable Content */}
+      <div className="pt-[168px]">
+        {' '}
+        {/* Account for fixed header heights */}
+        <TabsContent value="discover">
+          <ActivityList
+            currentCategory={currentCategory}
+            onPageChange={onPageChange}
+            onHover={onHover}
+          />
+        </TabsContent>
+        <TabsContent value="my-activities">
           <MyActivitiesContent />
         </TabsContent>
       </div>

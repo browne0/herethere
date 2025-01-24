@@ -102,7 +102,10 @@ export function Lightbox({ images, alt, className = '' }: LightboxProps) {
         <DialogDescription className="sr-only">
           {`Viewing ${images.length} photos of ${alt}`}
         </DialogDescription>
-        <DialogContent className="max-w-[90vw] h-[90vh] p-0" circleClose>
+        <DialogContent
+          className="max-w-[100vw] h-[100vh] md:max-w-[90vw] md:h-[90vh] p-0 border-none"
+          circleClose
+        >
           <div
             className="relative w-full h-full flex items-center justify-center bg-black/95"
             onTouchStart={handleTouchStart}

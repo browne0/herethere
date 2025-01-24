@@ -128,7 +128,8 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                             </button>
                           </SheetTrigger>
                           <ActivityDetailSheet
-                            activityId={activity.recommendation.id}
+                            type="itinerary"
+                            activity={activity}
                             isOpen={openActivityId === activity.id}
                           />
                         </Sheet>

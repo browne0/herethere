@@ -17,6 +17,7 @@ import TripEditModal from '../components/TripEditModal';
 import TripHeader from '../components/TripHeader';
 import TripTitleModal from '../components/TripTitleModal';
 import type { ParsedItineraryActivity, ParsedTrip } from '../types';
+import ItineraryLoading from './components/ItineraryLoading';
 import ItineraryMap from './components/ItineraryMap';
 import { ItineraryView } from './components/ItineraryView';
 
@@ -59,6 +60,10 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
   useEffect(() => {
     setTrip(initialTrip);
   }, [initialTrip, initialActivities, setTrip]);
+
+  if (!trip) {
+    return <ItineraryLoading />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col">

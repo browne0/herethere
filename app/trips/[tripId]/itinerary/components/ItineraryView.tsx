@@ -24,7 +24,6 @@ import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitie
 import { cn } from '@/lib/utils';
 import { ItineraryHeader } from './ItineraryHeader';
 import { ItineraryList } from './ItineraryList';
-import ItineraryLoading from './ItineraryLoading';
 import ItineraryRebalancing from './ItineraryRebalancing';
 
 interface ItineraryViewProps {
@@ -177,7 +176,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
     </div>
   );
 
-  if (!trip) return <ItineraryLoading />;
+  if (!trip) return null;
 
   if (trip.activities.length === 0 && !isRebalancing) return <EmptyState />;
 

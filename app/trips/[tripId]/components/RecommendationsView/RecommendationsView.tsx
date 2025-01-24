@@ -1,13 +1,13 @@
 import React, { useCallback, useMemo, useState } from 'react';
 
-import { Sliders, Trash2 } from 'lucide-react';
+import { Map, Sliders, Trash2, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Drawer } from 'vaul';
 
 import { Button } from '@/components/ui/button';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import { cn } from '@/lib/utils';
 
+import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import ActivityList from './ActivityList';
 import CategoryNavigation from './CategoryNavigation';
 import MobileActivityView from './MobileActivityView';
@@ -68,6 +68,7 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
   const [snap, setSnap] = useState<number | string | null>(0.5);
   const snapPoints = [0.15, 0.5, 0.905];
   const activeSnapPercentage = typeof snap === 'number' ? snap : 0.5;
+  const [showMap, setShowMap] = useState(false);
 
   // Global state
   const { trip, categories } = useActivitiesStore();
@@ -107,6 +108,10 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
   const currentCategory = useMemo(() => {
     return categories.find(category => category.type === selectedCategory);
   }, [categories, selectedCategory]);
+
+  if (!trip) {
+    return null;
+  }
 
   return (
     <div className="relative bg-gray-50">
@@ -163,58 +168,51 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
 
       {/* Mobile Layout */}
       <div className="lg:hidden flex flex-col h-[100dvh]">
-        {/* Map */}
-        <ResponsiveMapContainer
-          className="pt-[64px]"
-          snap={activeSnapPercentage}
-          snapPoints={snapPoints}
-        >
-          <RecommendationsMapView
-            activities={currentCategory?.activities || []}
-            currentCategory={selectedCategory}
-            onMarkerHover={setHoveredActivityId}
-            onMarkerSelect={setSelectedActivityId}
-            hoveredActivityId={hoveredActivityId}
-            selectedActivityId={selectedActivityId}
+        {/* Main Content */}
+        <div className="h-full overflow-y-auto">
+          <MobileActivityView
+            categories={categories}
+            currentCategory={currentCategory}
+            onCategoryChange={handleCategoryChange}
+            onPageChange={handlePageChange}
+            onHover={setHoveredActivityId}
             trip={trip}
           />
-        </ResponsiveMapContainer>
+        </div>
 
-        {/* Drawer */}
-        {typeof document !== 'undefined' && trip && (
-          <Drawer.Root
-            open
-            modal={false}
-            snapPoints={snapPoints}
-            activeSnapPoint={snap}
-            setActiveSnapPoint={setSnap}
-            dismissible={false}
-            snapToSequentialPoint
-          >
-            <Drawer.Overlay className="fixed inset-0 bg-black/40" />
-            <Drawer.Content className="bg-white flex flex-col rounded-t-[10px] fixed top-0 left-0 right-0 min-h-[25dvh] max-h-[100dvh] z-50">
-              <div className="p-4 flex-none">
-                <Drawer.Handle className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-gray-300" />
-              </div>
-
-              <Drawer.Title className="sr-only">Selected Activities</Drawer.Title>
-              <Drawer.Description className="sr-only">
-                Activities for {trip.title}
-              </Drawer.Description>
-
-              <div className={cn({ 'overflow-y-auto': activeSnapPercentage >= snapPoints[1] })}>
-                <MobileActivityView
-                  categories={categories}
-                  currentCategory={currentCategory}
-                  onCategoryChange={handleCategoryChange}
-                  onPageChange={handlePageChange}
-                  onHover={setHoveredActivityId}
-                  trip={trip}
-                />
-              </div>
-            </Drawer.Content>
-          </Drawer.Root>
-        )}
+        {/* Map Sheet */}
+        <Sheet open={showMap} onOpenChange={setShowMap}>
+          <SheetTrigger asChild>
+            <Button
+              onClick={() => setShowMap(true)}
+              className="fixed bottom-6 right-6 rounded-full w-12 h-12 p-0 shadow-lg bg-primary hover:bg-primary/90"
+              size="icon"
+            >
+              <Map className="h-5 w-5" />
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[100dvh] p-0" closeButtonPosition="left">
+            <div className="relative h-full">
+              <Button
+                onClick={() => setShowMap(false)}
+                className="absolute top-4 left-4 z-10 rounded-full w-8 h-8 p-0"
+                size="icon"
+                variant="secondary"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+              <RecommendationsMapView
+                activities={currentCategory?.activities || []}
+                currentCategory={selectedCategory}
+                onMarkerHover={setHoveredActivityId}
+                onMarkerSelect={setSelectedActivityId}
+                hoveredActivityId={hoveredActivityId}
+                selectedActivityId={selectedActivityId}
+                trip={trip}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
       </div>
     </div>
   );

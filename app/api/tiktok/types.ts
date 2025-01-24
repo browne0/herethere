@@ -1,107 +1,16 @@
-export interface EnsembleDataResponse {
+export interface TikTokResponse {
   data: {
-    nextCursor: number;
-    data: TikTokPost[];
+    id: string;
+    description: string;
+    is_commerce: boolean;
+    video_count: number;
+    view_count: number;
+    posts: Post[];
   };
 }
 
-export interface TikTokPost {
-  added_sound_music_info: {
-    album: string;
-    artists: Artist[];
-    audition_duration: number;
-    author: string;
-    author_deleted: boolean;
-    author_position: null;
-    avatar_large: MediaUrl;
-    avatar_medium: MediaUrl;
-    avatar_thumb: MediaUrl;
-    binded_challenge_id: number;
-    can_not_reuse: boolean;
-    collect_stat: number;
-    commercial_right_type: number;
-    cover_hd: MediaUrl;
-    cover_large: MediaUrl;
-    cover_medium: MediaUrl;
-    cover_thumb: MediaUrl;
-    dmv_auto_show: boolean;
-    duration: number;
-    duration_high_precision: {
-      audition_duration_precision: number;
-      duration_precision: number;
-      shoot_duration_precision: number;
-      video_duration_precision: number;
-    };
-    end_time: number;
-    external_song_info: any[];
-    extra: string;
-    has_commerce_right: boolean;
-    id: number;
-    id_str: string;
-    is_audio_url_with_cookie: boolean;
-    is_author_artist: boolean;
-    is_commerce_music: boolean;
-    is_del_video: boolean;
-    is_matched_metadata: boolean;
-    is_original: boolean;
-    is_original_sound: boolean;
-    is_pgc: boolean;
-    is_play_music: boolean;
-    is_restricted: boolean;
-    is_shooting_allow: boolean;
-    is_video_self_see: boolean;
-    language: string;
-    log_extra: string;
-    lyric_short_position: null;
-    matched_song: {
-      author: string;
-      chorus_info: {
-        duration_ms: number;
-        start_ms: number;
-      };
-      cover_medium: MediaUrl;
-      full_duration: number;
-      h5_url: string;
-      id: string;
-      performers: null;
-      title: string;
-    };
-    meme_song_info: Record<string, unknown>;
-    mid: string;
-    multi_bit_rate_play_info: null;
-    music_release_info: {
-      group_release_date: number;
-      is_new_release_song: boolean;
-    };
-    mute_share: boolean;
-    offline_desc: string;
-    owner_handle: string;
-    owner_nickname: string;
-    play_url: MediaUrl;
-    position: null;
-    prevent_download: boolean;
-    prevent_item_download_status: number;
-    preview_end_time: number;
-    preview_start_time: number;
-    reason_type: number;
-    recommend_status: number;
-    redirect: boolean;
-    schema_url: string;
-    search_highlight: null;
-    shoot_duration: number;
-    source_platform: number;
-    start_time: number;
-    status: number;
-    strong_beat_url: MediaUrl;
-    style_value: number[];
-    tag_list: null;
-    theme_value: number[];
-    title: string;
-    tt_to_dsp_song_infos: null;
-    uncert_artists: null;
-    user_count: number;
-    video_duration: number;
-  };
+interface Post {
+  added_sound_music_info: MusicInfo;
   aigc_info: {
     aigc_label_type: number;
     created_by_ai: boolean;
@@ -111,348 +20,69 @@ export interface TikTokPost {
     effect: number;
     type: number;
   };
-  author: {
-    accept_private_policy: boolean;
-    account_labels: null;
-    account_region: string;
-    ad_cover_url: null;
-    advance_feature_item_order: null;
-    advanced_feature_info: null;
-    apple_account: number;
-    authority_status: number;
-    avatar_168x168: MediaUrl;
-    avatar_300x300: MediaUrl;
-    avatar_larger: MediaUrl;
-    avatar_medium: MediaUrl;
-    avatar_thumb: MediaUrl;
-    avatar_uri: string;
-    aweme_count: number;
-    aweme_hotsoon_auth: number;
-    aweme_hotsoon_auth_relation: number;
-    ban_user_functions: any[];
-    bind_phone: string;
-    bio_email_status: number;
-    bio_secure_url: string;
-    bio_url: string;
-    birthday: string;
-    birthday_hide_level: number;
-    can_message_follow_status_list: null;
-    can_set_fund_password: boolean;
-    cha_list: null;
-    challenge_list: null;
-    comment_filter_status: number;
-    comment_setting: number;
-    commerce_user_level: number;
-    constellation: number;
-    cover_url: null;
-    create_time: number;
-    custom_verify: string;
-    cv_level: string;
-    data_label_list: null;
-    display_info: null;
-    download_prompt_ts: number;
-    enable_nearby_visible: boolean;
-    endorsement_info_list: null;
-    enterprise_verify_reason: string;
-    favoriting_count: number;
-    fb_expire_time: number;
-    follow_status: number;
-    follower_count: number;
-    follower_request_status: number;
-    follower_status: number;
-    following_count: number;
-    gender: number;
-    geofencing: null;
-    google_account: string;
-    has_email: boolean;
-    has_facebook_token: boolean;
-    has_insights: boolean;
-    has_orders: boolean;
-    has_twitter_token: boolean;
-    has_youtube_token: boolean;
-    hide_location: boolean;
-    hide_search: boolean;
-    homepage_bottom_toast: null;
-    im_role_ids: null;
-    ins_id: string;
-    interest_tags: null;
-    is_ad_fake: boolean;
-    is_block: boolean;
-    is_blocked: boolean;
-    is_discipline_member: boolean;
-    is_gov_media_vip: boolean;
-    is_mix_user: boolean;
-    is_phone_binded: boolean;
-    is_star: boolean;
-    is_verified: boolean;
-    item_list: null;
-    language: string;
-    live_agreement: number;
-    live_agreement_time: number;
-    live_commerce: boolean;
-    live_verify: number;
-    mention_status: number;
-    nickname: string;
-    nickname_update_reminder: boolean;
-    open_insight_time: number;
-    need_points: null;
-    need_recommend: number;
-    neiguang_shield: number;
-    new_story_cover: null;
-    platform_sync_info: null;
-    prevent_download: boolean;
-    qa_status: number;
-    react_setting: number;
-    reflow_page_gid: number;
-    reflow_page_uid: number;
-    region: string;
-    relative_users: null;
-    room_id: number;
-    school_category: number;
-    school_id: string;
-    search_highlight: null;
-    sec_uid: string;
-    secret: number;
-    share_info: {
-      share_desc: string;
-      share_desc_info: string;
-      share_qrcode_url: MediaUrl;
-      share_title: string;
-      share_title_myself: string;
-      share_title_other: string;
-      share_url: string;
-      share_weibo_desc: string;
-    };
-    share_qrcode_uri: string;
-    shield_comment_notice: number;
-    shield_digg_notice: number;
-    shield_follow_notice: number;
-    short_id: string;
-    show_image_bubble: boolean;
-    show_nearby_active: boolean;
-    signature: string;
-    signature_display_lines: number;
-    signature_extra: null;
-    special_follow_status: number;
-    special_lock: number;
-    special_people_labels: null;
-    status: number;
-    story_count: number;
-    story_open: boolean;
-    sync_to_toutiao: number;
-    text_extra: null;
-    total_favorited: number;
-    tw_expire_time: number;
-    twitter_id: string;
-    twitter_name: string;
-    type_label: null;
-    uid: string;
-    unique_id: string;
-    unique_id_modify_time: number;
-    user_age: number;
-    user_canceled: boolean;
-    user_mode: number;
-    user_not_see: number;
-    user_not_show: number;
-    user_period: number;
-    user_permissions: null;
-    user_rate: number;
-    user_tags: null;
-    verification_type: number;
-    verify_info: string;
-    video_icon: MediaUrl;
-    white_cover_url: null;
-    with_commerce_entry: boolean;
-    with_fusion_shop_entry: boolean;
-    with_shop_entry: boolean;
-    youtube_channel_id: string;
-    youtube_channel_title: string;
-    youtube_expire_time: number;
-  };
+  author: Author;
+  author_user_id: number;
+  aweme_id: string;
+  aweme_type: number;
+  cha_list: ChallengeInfo[] | null;
   challenge_position: null;
-  challenges: Challenge[];
-  comment_permission_info: {
-    can_comment: boolean;
-    comment_permission: number;
-    item_detail_entry: boolean;
-    press_entry: boolean;
-    toast_guide: boolean;
-  };
+  cmt_swt: boolean;
+  collect_stat: number;
+  comment_config: CommentConfig;
+  comment_topbar_info: null;
   commerce_config_data: null;
-  commerce_info: {
-    adv_promotable: boolean;
-    auction_ad_invited: boolean;
-    with_comment_filter_words: boolean;
-  };
+  commerce_info: CommerceInfo;
+  content_desc: string;
+  content_desc_extra: ContentDescExtra[];
+  content_type: string;
+  create_time: number;
   desc: string;
   desc_language: string;
   distance: string;
   distribute_type: number;
-  geofencing: null;
-  geofencing_regions: null;
+  duration: number;
+  geofencing: any[];
   group_id: string;
   hybrid_label: null;
-  image_album_music_info: {
-    begin_time: number;
-    end_time: number;
-    volume: number;
-  };
-  image_comment_info: {
-    comment_toast: string;
-    comment_type: number;
-  };
   image_infos: null;
-  image_post_info: {
-    image_type: number;
-    music_volume: number;
-  };
-  images: null;
-  impression_data: {
-    group_id_list_a: null;
-    group_id_list_b: null;
-    group_id_list_c: null;
-    similar_id_list_a: null;
-    similar_id_list_b: null;
-  };
-  interaction_stickers: null;
-  is_collects_selected: number;
-  is_duet_sing: boolean;
-  is_first_video: boolean;
+  interact_permission: InteractPermission;
+  is_ads: boolean;
   is_hash_tag: number;
-  is_image_beat: boolean;
-  is_life_item: boolean;
   is_pgcshow: boolean;
-  is_preview: number;
   is_relieve: boolean;
-  is_share_post: boolean;
-  is_story: number;
   is_top: number;
   is_vr: boolean;
   item_comment_settings: number;
   item_duet: number;
   item_react: number;
   item_stitch: number;
-  label_top_text: null;
-  long_video: null;
-  music: Music;
+  music: MusicInfo;
+  music_begin_time_in_ms: number;
+  music_end_time_in_ms: number;
+  music_selected_from: string;
+  music_title_style: number;
+  music_volume: string;
   nickname_position: null;
   origin_comment_ids: null;
-  original_images: null;
-  packed_clips: null;
-  photo_search_entrance: {
-    ecom_type: number;
+  origin_volume: string;
+  original_client_text: {
+    markup_text: string;
+    text_extra: TextExtra[];
   };
+  picked_users: any[];
+  playlist_blocked: boolean;
   position: null;
   prevent_download: boolean;
-  preview_title: string;
-  preview_video_status: number;
-  promotions: Promotion[];
-  ref_tts_id_list: null;
-  ref_voice_modify_id_list: null;
+  products_info: null;
   region: string;
-  risk_infos: {
-    content: string;
-    risk_sink: boolean;
-    type: number;
-    vote: boolean;
-    warn: boolean;
-  };
-  share_info: {
-    bool_persist: number;
-    share_desc: string;
-    share_link_desc: string;
-    share_quote: string;
-    share_signature_desc: string;
-    share_signature_url: string;
-    share_title: string;
-    share_title_myself: string;
-    share_title_other: string;
-    share_url: string;
-    share_weibo_desc: string;
-  };
+  risk_infos: RiskInfo;
+  share_info: ShareInfo;
   share_url: string;
-  sort_label: string;
-  statistics: {
-    admire_count: number;
-    aweme_id: string;
-    collect_count: number;
-    comment_count: number;
-    digg_count: number;
-    play_count: number;
-    share_count: number;
-  };
-  status: {
-    allow_comment: boolean;
-    allow_share: boolean;
-    aweme_edit_info: {
-      edited_mark_offset: number[];
-      edited_mark_size: number[];
-      edited_mark_url: string;
-      with_edited_mark: boolean;
-    };
-    allow_react: boolean;
-    download_status: number;
-    in_reviewing: boolean;
-    is_delete: boolean;
-    is_private: boolean;
-    is_prohibited: boolean;
-    private_status: number;
-    review_result: {
-      review_status: number;
-    };
-  };
-  stickers: string;
+  statistics: Statistics;
+  status: ItemStatus;
   text_extra: TextExtra[];
-  text_sticker_major_lang: string;
-  title_language: string;
-  ttec_suggest_words: {
-    ttec_suggest_words: null;
-  };
-  tts_voice_ids: null;
-  uniqid_position: null;
-  user_digged: number;
-  video: {
-    CoverTsp: number;
-    ai_dynamic_cover: MediaUrl;
-    ai_dynamic_cover_bak: MediaUrl;
-    animated_cover: MediaUrl;
-    big_thumbs: any[];
-    bit_rate: BitRate[];
-    cdn_url_expired: number;
-    cover: MediaUrl;
-    cover_is_custom: boolean;
-    download_addr: MediaUrl;
-    duration: number;
-    dynamic_cover: MediaUrl;
-    has_watermark: boolean;
-    height: number;
-    is_bytevc1: number;
-    is_callback: boolean;
-    is_h265: number;
-    meta: string;
-    need_set_token: boolean;
-    origin_cover: MediaUrl;
-    play_addr: MediaUrl;
-    play_addr_265: MediaUrl;
-    play_addr_h264: MediaUrl;
-    ratio: string;
-    source_HDR_type: number;
-    tags: null;
-    width: number;
-  };
-  video_control: {
-    allow_download: boolean;
-    allow_duet: boolean;
-    allow_dynamic_wallpaper: boolean;
-    allow_music: boolean;
-    allow_react: boolean;
-    allow_stitch: boolean;
-    draft_progress_bar: number;
-    prevent_download_type: number;
-    share_type: number;
-    show_progress_bar: number;
-    timer_status: number;
-  };
+  video: Video;
+  video_control: VideoControl;
   video_labels: any[];
   video_text: any[];
   voice_filter_ids: null;
@@ -460,39 +90,104 @@ export interface TikTokPost {
   without_watermark: boolean;
 }
 
-interface Challenge {
-  cha_name: string;
-  cid: string;
+interface MusicInfo {
+  album: string;
+  artists: Artist[];
+  audition_duration: number;
+  author: string;
+  author_deleted: boolean;
+  author_position: null;
+  avatar_large: ImageAsset;
+  avatar_medium: ImageAsset;
+  avatar_thumb: ImageAsset;
+  binded_challenge_id: number;
+  can_not_reuse: boolean;
   collect_stat: number;
-  connect_music: any[];
-  desc: string;
-  is_challenge: number;
-  is_commerce: boolean;
-  is_pgcshow: boolean;
-  schema: string;
-  search_highlight: null;
-  share_info: {
-    bool_persist: number;
-    share_desc: string;
-    share_desc_info: string;
-    share_quote: string;
-    share_signature_desc: string;
-    share_signature_url: string;
-    share_title: string;
-    share_title_myself: string;
-    share_title_other: string;
-    share_url: string;
-    share_weibo_desc: string;
+  commercial_right_type: number;
+  cover_hd: ImageAsset;
+  cover_large: ImageAsset;
+  cover_medium: ImageAsset;
+  cover_thumb: ImageAsset;
+  duration: number;
+  duration_high_precision: {
+    audition_duration_precision: number;
+    duration_precision: number;
+    shoot_duration_precision: number;
+    video_duration_precision: number;
   };
-  show_items: null;
-  sub_type: number;
-  type: number;
+  end_time: number;
+  external_song_info: any[];
+  extra: string;
+  id: number;
+  id_str: string;
+  is_audio_url_with_cookie: boolean;
+  is_author_artist: boolean;
+  is_commerce_music: boolean;
+  is_del_video: boolean;
+  is_matched_metadata: boolean;
+  is_original: boolean;
+  is_original_sound: boolean;
+  is_pgc: boolean;
+  is_play_music: boolean;
+  is_restricted: boolean;
+  is_video_self_see: boolean;
+  language: string;
+  log_extra: string;
+  matched_pgc_sound?: {
+    artist_infos: null;
+    author: string;
+    mixed_author: string;
+    mixed_title: string;
+    music_release_info: {
+      group_release_date: number;
+      is_new_release_song: boolean;
+    };
+    title: string;
+    uncert_artists: null;
+  };
+  matched_song: {
+    author: string;
+    chorus_info?: {
+      duration_ms: number;
+      start_ms: number;
+    };
+    cover_medium: ImageAsset;
+    full_duration: number;
+    h5_url: string;
+    id: string;
+    performers: null;
+    title: string;
+  };
+  meme_song_info: Record<string, any>;
+  mid: string;
+  music_release_info?: {
+    group_release_date: number;
+    is_new_release_song: boolean;
+  };
+  mute_share: boolean;
+  offline_desc: string;
+  owner_handle: string;
+  owner_nickname: string;
+  play_url: ImageAsset;
+  prevent_download: boolean;
+  preview_end_time: number;
+  preview_start_time: number;
+  reason_type: number;
+  redirect: boolean;
+  schema_url: string;
+  shoot_duration: number;
+  source_platform: number;
+  start_time: number;
+  status: number;
+  strong_beat_url: ImageAsset;
+  tag_list: null;
+  title: string;
   user_count: number;
-  view_count: number;
+  video_duration: number;
 }
 
 interface Artist {
-  avatar: MediaUrl;
+  avatar: ImageAsset;
   enter_type: number;
   follow_status: number;
   follower_status: number;
@@ -508,11 +203,134 @@ interface Artist {
   uid: string;
 }
 
-interface MediaUrl {
+interface Author {
+  accept_private_policy: boolean;
+  account_labels: null;
+  account_region: string;
+  ad_cover_url: null;
+  advance_feature_item_order: null;
+  advanced_feature_info: null;
+  apple_account: number;
+  authority_status: number;
+  avatar_168x168: ImageAsset;
+  avatar_300x300: ImageAsset;
+  avatar_larger: ImageAsset;
+  avatar_medium: ImageAsset;
+  avatar_thumb: ImageAsset;
+  avatar_uri: string;
+  aweme_count: number;
+  bind_phone: string;
+  birthday: string;
+  bold_fields: null;
+  can_message_follow_status_list: null;
+  can_set_geofencing: null;
+  cha_list: null;
+  comment_filter_status: number;
+  comment_setting: number;
+  commerce_user_level: number;
+  cover_url: ImageAsset[];
+  create_time: number;
+  custom_verify: string;
+  cv_level: string;
+  download_prompt_ts: number;
+  download_setting: number;
+  duet_setting: number;
+  enterprise_verify_reason: string;
+  events: null;
+  favoriting_count: number;
+  fb_expire_time: number;
+  follow_status: number;
+  follower_count: number;
+  follower_status: number;
+  following_count: number;
+  gender: number;
+  geofencing: any[];
+  google_account: string;
+  has_email: boolean;
+  has_facebook_token: boolean;
+  has_insights: boolean;
+  has_orders: boolean;
+  has_twitter_token: boolean;
+  has_youtube_token: boolean;
+  hide_search: boolean;
+  homepage_bottom_toast: null;
+  ins_id: string;
+  is_ad_fake: boolean;
+  is_block: boolean;
+  is_discipline_member: boolean;
+  is_phone_binded: boolean;
+  is_star: boolean;
+  language: string;
+  live_agreement: number;
+  live_commerce: boolean;
+  live_verify: number;
+  mutual_relation_avatars: null;
+  need_recommend: number;
+  nickname: string;
+  platform_sync_info: null;
+  prevent_download: boolean;
+  react_setting: number;
+  reflow_page_gid: number;
+  reflow_page_uid: number;
+  region: string;
+  relative_users: null;
+  room_id: number;
+  sec_uid: string;
+  secret: number;
+  share_info: UserShareInfo;
+  shield_comment_notice: number;
+  shield_digg_notice: number;
+  shield_follow_notice: number;
+  short_id: string;
+  signature: string;
+  special_lock: number;
+  status: number;
+  stitch_setting: number;
+  total_favorited: number;
+  tw_expire_time: number;
+  twitter_id: string;
+  type_label: null;
+  uid: string;
+  unique_id: string;
+  unique_id_modify_time: number;
+  user_canceled: boolean;
+  user_mode: number;
+  user_period: number;
+  user_rate: number;
+  user_tags: null;
+  verification_type: number;
+  verify_info: string;
+  video_icon: ImageAsset;
+  white_cover_url: null;
+  with_commerce_entry: boolean;
+  with_fusion_shop_entry: boolean;
+  with_shop_entry: boolean;
+  youtube_channel_id: string;
+  youtube_expire_time: number;
+}
+
+interface Video {
+  bit_rate: BitRate[];
+  bit_rate_audio: any[];
+  cdn_url_expired: number;
+  cover: ImageAsset;
+  download_addr: VideoAddress;
+  duration: number;
+  dynamic_cover: ImageAsset;
+  has_watermark: boolean;
   height: number;
-  uri: string;
-  url_list: string[];
-  url_prefix: null;
+  is_bytevc1: number;
+  is_callback: boolean;
+  is_h265: number;
+  meta: string;
+  need_set_token: boolean;
+  origin_cover: ImageAsset;
+  play_addr: VideoAddress;
+  play_addr_265: VideoAddress;
+  play_addr_h264: VideoAddress;
+  ratio: string;
+  source_HDR_type: number;
+  tags: null;
   width: number;
 }
 
@@ -525,213 +343,144 @@ interface BitRate {
   gear_name: string;
   is_bytevc1: number;
   is_h265: number;
-  play_addr: MediaUrl;
+  play_addr: VideoAddress;
   quality_type: number;
   video_extra: string;
 }
 
-interface Music {
-  album: string;
-  artists: Artist[];
-  author: string;
-  author_deleted: boolean;
-  author_position: null;
-  avatar_large: MediaUrl;
-  avatar_medium: MediaUrl;
-  avatar_thumb: MediaUrl;
-  binded_challenge_id: number;
-  can_background_play: boolean;
-  collect_stat: number;
-  cover_hd: MediaUrl;
-  cover_large: MediaUrl;
-  cover_medium: MediaUrl;
-  cover_thumb: MediaUrl;
-  duration: number;
-  external_song_info: any[];
-  extra: string;
-  id: number;
-  id_str: string;
-  is_audio_url_with_cookie: boolean;
-  is_commerce_music: boolean;
-  is_del_video: boolean;
-  is_matched_metadata: boolean;
-  is_original: boolean;
-  is_original_sound: boolean;
-  is_pgc: boolean;
-  is_restricted: boolean;
-  is_video_self_see: boolean;
-  luna_info: {
-    is_luna_user: boolean;
-  };
-  lyric_short_position: null;
-  matched_pgc_sound: {
-    author: string;
-    mixed_author: string;
-    mixed_title: string;
-    title: string;
-  };
-  matched_song: {
-    author: string;
-    chorus_info: {
-      duration_ms: number;
-      start_ms: number;
-    };
-    cover_medium: MediaUrl;
-    h5_url: string;
-    id: string;
-    performers: null;
-    title: string;
-  };
-  mid: string;
-  mute_share: boolean;
-  offline_desc: string;
-  owner_handle: string;
-  owner_id: string;
-  owner_nickname: string;
-  play_url: MediaUrl;
-  position: null;
-  prevent_download: boolean;
-  preview_end_time: number;
-  preview_start_time: number;
-  reason_type: number;
-  redirect: boolean;
-  schema_url: string;
-  search_highlight: null;
-  shoot_duration: number;
-  source_platform: number;
-  status: number;
-  strong_beat_url: MediaUrl;
-  tag_list: null;
-  title: string;
-  user_count: number;
-  video_duration: number;
+interface VideoAddress {
+  data_size: number;
+  file_cs: string;
+  file_hash: string;
+  height: number;
+  uri: string;
+  url_key?: string;
+  url_list: string[];
+  url_prefix: null;
+  width: number;
 }
 
-interface Promotion {
-  ad_id: string;
-  ad_tag_position: number;
-  anchor_info: {
-    content: string;
-    display_info: string;
-    id: string;
-    log_extra: string;
-    title: string;
-    type: number;
+interface ImageAsset {
+  height: number;
+  width: number;
+  uri: string;
+  url_list: string[];
+  url_prefix: null;
+}
+
+interface VideoControl {
+  allow_download: boolean;
+  allow_duet: boolean;
+  allow_dynamic_wallpaper: boolean;
+  allow_music: boolean;
+  allow_react: boolean;
+  allow_stitch: boolean;
+  draft_progress_bar: number;
+  prevent_download_type: number;
+  share_type: number;
+  show_progress_bar: number;
+  timer_status: number;
+}
+
+interface CommentConfig {
+  emoji_recommend_list: null;
+  long_press_recommend_list: null;
+  preload: {
+    preds: string;
   };
-  click_track_url_list: {
-    click_track_url: string;
-    click_track_url_list: string[];
-    need_replace_url: boolean;
-    track_url: string;
+  quick_comment: {
+    enabled: boolean;
   };
-  comment_area: {
-    comment_area_text: string;
-    comment_area_text_color: string;
-  };
-  commerce_info: {
-    ad_auth_status: number;
-    ad_auth_target_type: number;
-    ad_closed_time: number;
-    ad_schedule_time: number;
-    buy_new_logistics_info: string;
-    can_shop: boolean;
-    coupon_info: null;
-    delivery_type: number;
-    detail_entry_tip: string;
-    disable_shop_entry: boolean;
-    disable_vote_entry: boolean;
-    goods_source: string;
-    has_red_packet: number;
-    hybrid_entry_type: number;
-    is_ad_ex: boolean;
-    is_cart: boolean;
-    is_interest_cart: boolean;
-    is_preview: boolean;
-    item_source: string;
-    label_icon_list: any[];
-    marketing_text_info: string;
-    marketing_type: number;
-    pay_type: number;
-    preview_flow_source: number;
-    preview_page_id: string;
-    product_id: string;
-    promotion_id: string;
-    show_check_in: boolean;
-    show_comments: boolean;
-    show_digg: boolean;
-    show_follow: boolean;
-    show_forward: boolean;
-    show_play: boolean;
-    show_report: boolean;
-    show_share: boolean;
-    show_shop_entry: boolean;
-    show_subscribe: boolean;
-    show_user_info: boolean;
-    source_page: string;
-    title: string;
-    track_id: string;
-    type: number;
-    vote_info: null;
-    vote_type: number;
-  };
-  display_subtype: number;
-  display_type: number;
-  effective_play_time: number;
-  end_time: number;
-  follow_button: {
-    attribute: number;
-    button_text: string;
-    button_type: number;
-  };
-  hot_list: {
-    extra: string;
-    footer: string;
-    group_id: string;
-    header: string;
-    pattern_type: number;
-    title: string;
-    type: number;
-  };
-  image_info: {
-    height: number;
-    image_url: MediaUrl;
-    width: number;
-  };
-  label: {
-    color: string;
-    color_type: number;
-    text: string;
-  };
-  log_extra: string;
-  music_info: {
-    author: string;
-    id: number;
-    id_str: string;
-    music_id: string;
-    music_name: string;
-    music_status: number;
-    title: string;
-  };
-  promotion_id: string;
-  promotion_source: number;
-  show_button_bar: number;
-  show_mask: boolean;
-  show_mask_times: number;
-  start_time: number;
-  title: string;
-  track_info: {
-    click_track_url: string;
-    click_track_url_list: string[];
-    impression_track_url: string;
-    impression_track_url_list: string[];
-  };
+  quick_comment_emoji_recommend_list: null;
+}
+
+interface CommerceInfo {
+  adv_promotable: boolean;
+  auction_ad_invited: boolean;
+  branded_content_type: number;
+  with_comment_filter_words: boolean;
+}
+
+interface ContentDescExtra {
+  end: number;
+  hashtag_id: string;
+  hashtag_name: string;
+  is_commerce: boolean;
+  start: number;
   type: number;
-  video_structure: {
-    height: number;
-    image_url: MediaUrl;
-    width: number;
+}
+
+interface InteractPermission {
+  allow_adding_to_story: number;
+  duet: number;
+  duet_privacy_setting: number;
+  stitch: number;
+  stitch_privacy_setting: number;
+  upvote: number;
+}
+
+interface RiskInfo {
+  content: string;
+  risk_sink: boolean;
+  type: number;
+  vote: boolean;
+  warn: boolean;
+}
+
+interface ShareInfo {
+  bool_persist: number;
+  share_desc: string;
+  share_link_desc: string;
+  share_quote: string;
+  share_signature_desc: string;
+  share_signature_url: string;
+  share_title: string;
+  share_title_myself: string;
+  share_title_other: string;
+  share_url: string;
+  share_weibo_desc: string;
+}
+
+interface UserShareInfo {
+  share_desc: string;
+  share_desc_info: string;
+  share_qrcode_url: ImageAsset;
+  share_title: string;
+  share_title_myself: string;
+  share_title_other: string;
+  share_url: string;
+  share_weibo_desc: string;
+}
+
+interface Statistics {
+  aweme_id: string;
+  collect_count: number;
+  comment_count: number;
+  digg_count: number;
+  download_count: number;
+  forward_count: number;
+  lose_comment_count: number;
+  lose_count: number;
+  play_count: number;
+  share_count: number;
+  whatsapp_share_count: number;
+}
+
+interface ItemStatus {
+  allow_comment: boolean;
+  allow_share: boolean;
+  aweme_id: string;
+  download_status: number;
+  in_reviewing: boolean;
+  is_delete: boolean;
+  is_prohibited: boolean;
+  private_status: number;
+  review_result: {
+    review_status: number;
   };
-  web_url: string;
+  reviewed: number;
+  self_see: boolean;
+  with_goods: boolean;
 }
 
 interface TextExtra {
@@ -743,4 +492,73 @@ interface TextExtra {
   start: number;
   type: number;
   user_id: string;
+}
+
+interface ChallengeInfo {
+  author: ChallengeAuthor;
+  banner_list: null;
+  cha_attrs: null;
+  cha_name: string;
+  cid: string;
+  collect_stat: number;
+  connect_music: any[];
+  desc: string;
+  extra_attr: {
+    is_live: boolean;
+  };
+  hashtag_profile: string;
+  is_challenge: number;
+  is_commerce: boolean;
+  is_pgcshow: boolean;
+  schema: string;
+  search_highlight: null;
+  share_info: ChallengeShareInfo;
+  show_items: null;
+  sub_type: number;
+  type: number;
+  use_count: number;
+  user_count: number;
+  view_count: number;
+}
+
+interface ChallengeAuthor {
+  account_labels: null;
+  ad_cover_url: null;
+  advance_feature_item_order: null;
+  advanced_feature_info: null;
+  bold_fields: null;
+  can_message_follow_status_list: null;
+  can_set_geofencing: null;
+  cha_list: null;
+  cover_url: null;
+  events: null;
+  followers_detail: null;
+  geofencing: null;
+  homepage_bottom_toast: null;
+  item_list: null;
+  mutual_relation_avatars: null;
+  need_points: null;
+  platform_sync_info: null;
+  relative_users: null;
+  search_highlight: null;
+  shield_edit_field_info: null;
+  type_label: null;
+  user_profile_guide: null;
+  user_tags: null;
+  white_cover_url: null;
+}
+
+interface ChallengeShareInfo {
+  bool_persist: number;
+  now_invitation_card_image_urls: null;
+  share_desc: string;
+  share_desc_info: string;
+  share_quote: string;
+  share_signature_desc: string;
+  share_signature_url: string;
+  share_title: string;
+  share_title_myself: string;
+  share_title_other: string;
+  share_url: string;
+  share_weibo_desc: string;
 }

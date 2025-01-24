@@ -1,4 +1,4 @@
-import { Loader2, Star, MapPin, CalendarPlus, Check, Bookmark } from 'lucide-react';
+import { Bookmark, CalendarPlus, Check, Loader2, MapPin, Star } from 'lucide-react';
 import { toast } from 'sonner';
 
 import ImageSlider from '@/components/ImageSlider';
@@ -13,7 +13,10 @@ import {
 import { ActivityRecommendation } from '@/lib/types/recommendations';
 import { formatNumberIntl } from '@/lib/utils';
 
+import { Sheet, SheetTrigger } from '@/components/ui/sheet';
+import { useState } from 'react';
 import { ActivityCategoryType, ActivityStatus } from '../../types';
+import { ActivityDetailSheet } from '../ActivityDetailSheet';
 
 type RestaurantTypes = typeof RESTAURANT_TYPES;
 type RestaurantType = keyof RestaurantTypes;
@@ -125,6 +128,8 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
 
   const isActivityLoading = useActivityLoading(activity.id);
 
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
+
   const handleAction = async (newStatus: ActivityStatus) => {
     if (!trip || isActivityLoading) return;
 
@@ -168,105 +173,124 @@ export function ActivityCard({ activity, category, onHover }: ActivityCardProps)
   const images = activity.images as unknown as ActivityImages;
 
   return (
-    <div
-      className={`bg-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden`}
-      onMouseEnter={() => onHover(activity.id)}
-      onMouseLeave={() => onHover(null)}
-    >
-      {/* Fixed height container for consistent card sizing */}
-      <div className="h-[370px] flex flex-col">
-        {/* Image container */}
-        <div className="relative w-full h-full md:h-[200px]">
-          <ImageSlider
-            images={images?.urls}
-            alt={activity.name}
-            className="rounded-t-xl"
-            activityId={activity.id}
-          />
-          {activity.isMustSee && (
-            <div className="absolute top-3 left-3">
-              <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
-                Must See
-              </Badge>
-            </div>
-          )}
-        </div>
-
-        {/* Content container */}
-        <div className="flex flex-col flex-grow p-3">
-          <div className="flex items-center gap-1 text-sm mb-2">
-            <Star className="w-3.5 h-3.5 text-black-500 fill-black" />
-            <span className="font-medium">{activity.rating?.toFixed(1)}</span>
-            <span className="text-gray-600">({formatNumberIntl(activity.reviewCount)})</span>
-            <span className="text-gray-600 mx-1">·</span>
-            <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
+    <Sheet open={isDetailOpen} onOpenChange={setIsDetailOpen} modal={false}>
+      <div
+        className={`bg-white shadow-md hover:shadow-lg transition-all duration-200 rounded-xl overflow-hidden`}
+        onMouseEnter={() => onHover(activity.id)}
+        onMouseLeave={() => onHover(null)}
+      >
+        {/* Fixed height container for consistent card sizing */}
+        <div className="h-[370px] flex flex-col">
+          {/* Image container */}
+          <div className="relative w-full h-full md:h-[200px]">
+            <ImageSlider
+              images={images?.urls}
+              alt={activity.name}
+              className="rounded-t-xl"
+              activityId={activity.id}
+            />
+            {activity.isMustSee && (
+              <div className="absolute top-3 left-3">
+                <Badge className="bg-amber-400 hover:bg-amber-400 text-black font-medium px-2 py-1">
+                  Must See
+                </Badge>
+              </div>
+            )}
           </div>
 
-          <h3 className="font-medium text-sm leading-tight line-clamp-2">{activity.name}</h3>
-          <p className="text-sm gap-1 text-gray-500 mb-2">{getPrimaryTypeDisplay(activity)}</p>
-          <p className="flex items-center gap-1.5 text-sm text-gray-500">
-            <MapPin className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">
-              {(activity.location as { neighborhood: string })?.neighborhood ||
-                'Location unavailable'}
-            </span>
-          </p>
+          {/* Content container */}
+          <div className="flex flex-col flex-grow p-3">
+            <SheetTrigger asChild>
+              <button
+                className="text-left hover:text-primary transition-colors"
+                onClick={() => setIsDetailOpen(true)}
+              >
+                <div className="flex items-center gap-1 text-sm mb-2">
+                  <Star className="w-3.5 h-3.5 text-black-500 fill-black" />
+                  <span className="font-medium">{activity.rating?.toFixed(1)}</span>
+                  <span className="text-gray-600">({formatNumberIntl(activity.reviewCount)})</span>
+                  <span className="text-gray-600 mx-1">·</span>
+                  <span className="text-gray-600">{getDurationDisplay(activity.duration)}</span>
+                </div>
 
-          {/* Push button to bottom */}
-          <div className="flex-grow" />
+                <h3 className="font-medium text-md sm:text-sm leading-tight line-clamp-2">
+                  {activity.name}
+                </h3>
 
-          <div className="flex gap-2 mt-2.5">
-            <Button
-              onClick={() => handleAction('planned')}
-              disabled={isActivityLoading}
-              variant={currentStatus === 'planned' ? 'default' : 'outline'}
-              className={`w-1/2 text-xs ${
-                currentStatus === 'planned'
-                  ? 'bg-primary hover:bg-primary/90'
-                  : 'border-primary/20 hover:bg-primary/10'
-              }`}
-            >
-              {isActivityLoading ? (
-                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-              ) : (
-                <>
-                  {currentStatus === 'planned' ? (
-                    <div className="inline-flex items-center justify-center bg-green-500 rounded-full p-[1.5px]">
-                      <Check className="text-background p-[0.5px]" />
-                    </div>
-                  ) : (
-                    <CalendarPlus className="w-2.5 h-2.5" />
-                  )}
-                </>
-              )}
-              {currentStatus === 'planned' ? 'Added to trip' : 'Add to trip'}
-            </Button>
+                <p className="text-sm gap-1 text-gray-500 mb-2">
+                  {getPrimaryTypeDisplay(activity)}
+                </p>
+                <p className="flex items-center gap-1.5 text-sm text-gray-500">
+                  <MapPin className="w-4 h-4 flex-shrink-0" />
+                  <span className="truncate">
+                    {(activity.location as { neighborhood: string })?.neighborhood ||
+                      'Location unavailable'}
+                  </span>
+                </p>
+              </button>
+            </SheetTrigger>
 
-            <Button
-              onClick={() => handleAction('interested')}
-              disabled={isActivityLoading}
-              variant="outline"
-              className={`w-1/2 text-xs ${
-                currentStatus === 'interested'
-                  ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-primary/20 hover:bg-primary/10'
-                  : 'border-primary/20 hover:bg-primary/10'
-              }`}
-            >
-              {isActivityLoading ? (
-                <Loader2 className="w-2.5 h-2.5 animate-spin" />
-              ) : (
-                <Bookmark
-                  className={`w-2.5 h-2.5 ${currentStatus === 'interested' ? 'text-yellow-300 fill-yellow-300' : ''}`}
-                  strokeWidth={1.5}
-                  stroke="black"
-                />
-              )}
-              Interested
-            </Button>
+            {/* Push button to bottom */}
+            <div className="flex-grow" />
+
+            <div className="flex gap-2 mt-2.5">
+              <Button
+                onClick={() => handleAction('planned')}
+                disabled={isActivityLoading}
+                variant={currentStatus === 'planned' ? 'default' : 'outline'}
+                className={`w-1/2 text-xs ${
+                  currentStatus === 'planned'
+                    ? 'bg-primary hover:bg-primary/90'
+                    : 'border-primary/20 hover:bg-primary/10'
+                }`}
+              >
+                {isActivityLoading ? (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                ) : (
+                  <>
+                    {currentStatus === 'planned' ? (
+                      <div className="inline-flex items-center justify-center bg-green-500 rounded-full p-[1.5px]">
+                        <Check className="text-background p-[0.5px]" />
+                      </div>
+                    ) : (
+                      <CalendarPlus className="w-2.5 h-2.5" />
+                    )}
+                  </>
+                )}
+                {currentStatus === 'planned' ? 'Added to trip' : 'Add to trip'}
+              </Button>
+
+              <Button
+                onClick={() => handleAction('interested')}
+                disabled={isActivityLoading}
+                variant="outline"
+                className={`w-1/2 text-xs ${
+                  currentStatus === 'interested'
+                    ? 'bg-gray-100 text-gray-900 hover:bg-gray-200 border-primary/20 hover:bg-primary/10'
+                    : 'border-primary/20 hover:bg-primary/10'
+                }`}
+              >
+                {isActivityLoading ? (
+                  <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                ) : (
+                  <Bookmark
+                    className={`w-2.5 h-2.5 ${currentStatus === 'interested' ? 'text-yellow-300 fill-yellow-300' : ''}`}
+                    strokeWidth={1.5}
+                    stroke="black"
+                  />
+                )}
+                Interested
+              </Button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+      {existingActivity ? (
+        <ActivityDetailSheet type="itinerary" activity={existingActivity} isOpen={isDetailOpen} />
+      ) : (
+        <ActivityDetailSheet type="recommendation" activity={activity} isOpen={isDetailOpen} />
+      )}
+    </Sheet>
   );
 }
 
