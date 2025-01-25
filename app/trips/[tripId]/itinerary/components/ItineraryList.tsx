@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetTrigger } from '@/components/ui/sheet';
@@ -7,6 +8,7 @@ import { AlertTriangle, CalendarDays, Clock, MapPin, Pen, Plus } from 'lucide-re
 import Link from 'next/link';
 import { useState } from 'react';
 import { ActivityDetailSheet } from '../../components/ActivityDetailSheet';
+import { getPrimaryTypeDisplay } from '../../components/RecommendationsView/ActivityCard';
 import { ParsedItineraryActivity } from '../../types';
 
 interface ItineraryListProps {
@@ -115,8 +117,8 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                   onMouseLeave={() => onMarkerHover(null)}
                 >
                   <CardContent className="pt-4">
-                    <div className="flex items-start justify-between">
-                      <div className="space-y-2">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
                         <Sheet
                           modal={false}
                           open={openActivityId === activity.id}
@@ -133,40 +135,43 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                             isOpen={openActivityId === activity.id}
                           />
                         </Sheet>
+                        <Badge variant="secondary">
+                          {getPrimaryTypeDisplay(activity.recommendation)}
+                        </Badge>
+                      </div>
 
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {formatTimeRange(
+                            new Date(activity.startTime!),
+                            new Date(activity.endTime!)
+                          )}
+                        </span>
+                      </div>
+                      {activity.recommendation.location.address && (
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span>
-                            {formatTimeRange(
-                              new Date(activity.startTime!),
-                              new Date(activity.endTime!)
-                            )}
-                          </span>
-                        </div>
-                        {activity.recommendation.location.address && (
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <MapPin className="h-4 w-4" />
+                          <MapPin className="h-4 w-4" />
 
-                            <a
-                              href={`https://www.google.com/maps/place/?q=place_id:${activity.recommendation.googlePlaceId}`}
-                              target="_blank"
-                              className="hover:underline hover:text-blue-600"
-                              rel="noreferrer"
-                            >
-                              <span>{activity.recommendation.location.address}</span>
-                            </a>
-                          </div>
-                        )}
-                        {activity.warning && (
-                          <div className="text-sm text-yellow-600 mt-2 flex items-center gap-2">
-                            <AlertTriangle className="fill-yellow-400 h-3.5 w-3.5 text-black" />
-                            {activity.warning}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Pen className="h-4 w-4" />
-                          <span>Notes</span>
+                          <a
+                            href={`https://www.google.com/maps/place/?q=place_id:${activity.recommendation.googlePlaceId}`}
+                            target="_blank"
+                            className="hover:underline hover:text-blue-600"
+                            rel="noreferrer"
+                          >
+                            <span>{activity.recommendation.location.address}</span>
+                          </a>
                         </div>
+                      )}
+                      {activity.warning && (
+                        <div className="text-sm text-yellow-600 mt-2 flex items-center gap-2">
+                          <AlertTriangle className="fill-yellow-400 h-3.5 w-3.5 text-black" />
+                          {activity.warning}
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Pen className="h-4 w-4" />
+                        <span>Notes</span>
                       </div>
                     </div>
                   </CardContent>

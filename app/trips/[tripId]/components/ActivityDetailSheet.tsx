@@ -11,6 +11,7 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 import type { ActivityRecommendation } from '@/lib/types/recommendations';
 import { TikTokVideo } from '@/lib/types/recommendations';
 import { cn, formatNumberIntl } from '@/lib/utils';
+import { getPrimaryTypeDisplay } from './RecommendationsView/ActivityCard';
 
 type ActivityDetailSheetProps = {
   isOpen: boolean;
@@ -85,6 +86,9 @@ export function ActivityDetailSheet({ activity, type, isOpen }: ActivityDetailSh
         'h-screen lg:top-[144px] lg:h-[calc(100vh-144px)]': type === 'recommendation',
       })}
       circleClose
+      onInteractOutside={e => {
+        e.preventDefault();
+      }}
     >
       <div className="h-[400px] relative flex-shrink-0">
         <Lightbox images={images?.urls} alt={recommendation.name} />
@@ -131,12 +135,9 @@ export function ActivityDetailSheet({ activity, type, isOpen }: ActivityDetailSh
           </div>
         </div>
 
-        {type === 'itinerary' && (
-          <div className="mt-4">
-            <h3 className="font-medium text-gray-900 mb-2">Status</h3>
-            <Badge>{activity.status}</Badge>
-          </div>
-        )}
+        <div className="mt-4">
+          <Badge className="capitalize">{getPrimaryTypeDisplay(recommendation)}</Badge>
+        </div>
 
         {recommendation.description && (
           <div className="mt-4 text-gray-600">

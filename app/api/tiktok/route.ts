@@ -4,21 +4,6 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const client = new EDClient({ token: process.env.ENSEMBLEDATA_API_KEY! });
 
-// function placeToHashtag(placeName: string) {
-//   // Only split on comma as it's the most reliable separator for descriptions
-//   const nameOnly = placeName.split(/\s*,\s*/)[0].trim();
-
-//   return (
-//     '#' +
-//     nameOnly
-//       .normalize('NFD')
-//       .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
-//       .replace(/[^\w\s]/g, '') // Remove special characters
-//       .replace(/\s+/g, '') // Remove spaces
-//       .toLowerCase()
-//   );
-// }
-
 export async function GET(request: NextRequest) {
   try {
     const searchParams = new URL(request.url).searchParams;

@@ -276,6 +276,7 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
               eventDrop={handleEventDrop}
               eventContent={renderEventContent}
               slotMinTime="00:00:00"
+              slotMaxTime="23:59:59"
               scrollTime="08:00:00"
               scrollTimeReset={false}
               allDaySlot={false}

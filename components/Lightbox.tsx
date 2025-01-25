@@ -82,13 +82,7 @@ export function Lightbox({ images, alt, className = '' }: LightboxProps) {
         className={`relative w-full h-full cursor-pointer ${className}`}
         onClick={() => setIsOpen(true)}
       >
-        <CachedImage
-          photo={images[0]}
-          alt={alt}
-          className="w-full h-full object-cover"
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority
-        />
+        <CachedImage photo={images[0]} alt={alt} className="w-full h-full object-cover" priority />
         {images.length > 1 && (
           <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded-md text-sm">
             {images.length} photos
