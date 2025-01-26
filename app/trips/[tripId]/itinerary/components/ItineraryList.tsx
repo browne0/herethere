@@ -2,14 +2,16 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Sheet, SheetTrigger } from '@/components/ui/sheet';
-import { useActivitiesStore } from '@/lib/stores/activitiesStore';
+import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { format } from 'date-fns';
-import { AlertTriangle, CalendarDays, Clock, MapPin, Pen, Plus } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Clock, MapPin, Plus } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { ActivityDetailSheet } from '../../components/ActivityDetailSheet';
 import { getPrimaryTypeDisplay } from '../../components/RecommendationsView/ActivityCard';
 import { ParsedItineraryActivity } from '../../types';
+import ItineraryNoteSection from './ItineraryNoteSection';
 
 interface ItineraryListProps {
   onMarkerHover: (activityId: string | null) => void;
@@ -59,6 +61,7 @@ function formatTimeRange(start: Date, end: Date): string {
 export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
   const { trip } = useActivitiesStore();
   const [openActivityId, setOpenActivityId] = useState<string | null>(null);
+  const { updateActivity } = useActivityMutations();
 
   if (!trip) return null;
 
@@ -109,7 +112,7 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
               {dayGroup.activities.map(activity => (
                 <Card
                   key={activity.id}
-                  className="border-l-4 mx-4 transition-all duration-200 hover:shadow-md hover:-translate-y-0.5"
+                  className="border-l-4 mx-4 transition-all duration-200 hover:shadow-md"
                   style={{
                     borderLeftColor: activity.status === 'planned' ? '#4285f4' : '#d1d5db',
                   }}
@@ -169,10 +172,20 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                           {activity.warning}
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Pen className="h-4 w-4" />
-                        <span>Notes</span>
-                      </div>
+                      <ItineraryNoteSection
+                        activityId={activity.id}
+                        initialNote={activity.note || ''}
+                        onSave={async note => {
+                          try {
+                            await updateActivity.mutateAsync({
+                              activityId: activity.id,
+                              updates: { note: note },
+                            });
+                          } catch (_error) {
+                            toast.error('Failed to save note');
+                          }
+                        }}
+                      />
                     </div>
                   </CardContent>
                 </Card>

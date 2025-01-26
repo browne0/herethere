@@ -72,7 +72,10 @@ const activityApi = {
 
 // Types for activity updates - these match the fields that can be modified
 export type UpdateableActivityFields = Partial<
-  Pick<ParsedItineraryActivity, 'status' | 'startTime' | 'endTime' | 'transitTimeFromPrevious'>
+  Pick<
+    ParsedItineraryActivity,
+    'status' | 'startTime' | 'endTime' | 'transitTimeFromPrevious' | 'note'
+  >
 >;
 
 // Create the base store with UI state management
@@ -108,6 +111,7 @@ function createOptimisticActivity(
     transitTimeFromPrevious: 0,
     createdAt: new Date(),
     updatedAt: new Date(),
+    note: '',
     city,
     warning: null,
   };

@@ -1,15 +1,12 @@
 'use client';
 
 import { SignedIn } from '@clerk/nextjs';
-import { ChevronLeft, List } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
 
 import { HereThereUserButton } from '@/components/nav';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-
-import { ActivitySheet } from './ActivitySheet';
 
 interface TripHeaderProps {
   onEditClick: () => void;
@@ -60,7 +57,7 @@ export const TripHeader = ({
           </button>
 
           <div className="flex items-center gap-2">
-            <Sheet>
+            {/* <Sheet>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <List className="h-5 w-5" />
@@ -72,7 +69,7 @@ export const TripHeader = ({
                 </Button>
               </SheetTrigger>
               <ActivitySheet />
-            </Sheet>
+            </Sheet> */}
             <HereThereUserButton />
           </div>
         </div>

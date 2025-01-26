@@ -90,6 +90,7 @@ model ItineraryActivity {
   endTime                 DateTime?
   status                  String                 @default("planned")
   transitTimeFromPrevious Int
+  note                    String                 @default("") @db.Text
   createdAt               DateTime               @default(now())
   updatedAt               DateTime               @updatedAt
   warning                 String?
