@@ -28,6 +28,7 @@ export default function TripNamePage() {
           value={tripName}
           onChange={e => setTripName(e.target.value)}
           className="w-full"
+          maxLength={50}
         />
 
         <div className="flex justify-end mt-8">

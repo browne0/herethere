@@ -49,6 +49,7 @@ interface MobileActivityViewProps {
   onCategoryChange: (category: string) => void;
   onPageChange: (page: number) => void;
   onHover: (id: string | null) => void;
+  onActivityDelete: (activity: ParsedItineraryActivity) => void;
   trip: ParsedTrip;
 }
 
@@ -430,6 +431,7 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
   onCategoryChange,
   onPageChange,
   onHover,
+  onActivityDelete,
 }) => {
   const { categories, trip } = useActivitiesStore();
 
@@ -468,6 +470,7 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
             currentCategory={currentCategory}
             onPageChange={onPageChange}
             onHover={onHover}
+            onActivityDelete={onActivityDelete}
           />
         </TabsContent>
         <TabsContent value="my-activities">

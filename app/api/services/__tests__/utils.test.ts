@@ -41,6 +41,7 @@ describe('Scheduling Utils', () => {
     endTime: null,
     transitTimeFromPrevious: 0,
     warning: null,
+    note: '',
     recommendation: {
       id: `rec_${id}`,
       name: `Activity ${id}`,

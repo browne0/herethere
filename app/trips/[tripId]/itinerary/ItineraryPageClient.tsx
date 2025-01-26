@@ -96,7 +96,7 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
       {/* Mobile map button and sheet */}
       {!isDesktop && (
         <Sheet open={isMapOpen} onOpenChange={setIsMapOpen}>
-          <SheetTitle>Map</SheetTitle>
+          <SheetTitle className="sr-only">Map</SheetTitle>
           <SheetTrigger asChild>
             <Button
               className="fixed bottom-6 right-6 shadow-lg rounded-full w-14 h-14 p-0 z-50"

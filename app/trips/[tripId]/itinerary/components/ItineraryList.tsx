@@ -20,6 +20,7 @@ import AddActivityPopover from '../../components/AddActivityPopover';
 import { getPrimaryTypeDisplay } from '../../components/RecommendationsView/ActivityCard';
 import { ParsedItineraryActivity } from '../../types';
 import ItineraryNoteSection from './ItineraryNoteSection';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
 
 interface ItineraryListProps {
   onMarkerHover: (activityId: string | null) => void;
@@ -76,6 +77,7 @@ export function ItineraryList({
   const { trip } = useActivitiesStore();
   const [openActivityId, setOpenActivityId] = useState<string | null>(null);
   const { updateActivity } = useActivityMutations();
+  const isMobile = useMediaQuery('(max-width: 640px)');
 
   if (!trip) return null;
 
@@ -112,7 +114,9 @@ export function ItineraryList({
           <div key={format(dayGroup.date, 'yyyy-MM-dd')} className="mb-6">
             <div className="sticky top-0 flex justify-between items-center bg-white p-4 z-10 border-b border-t">
               <h2 className="text-base sm:text-lg font-semibold">
-                {format(dayGroup.date, 'EEEE, MMMM d, yyyy')}
+                {isMobile
+                  ? format(dayGroup.date, 'EEEE, MMM d')
+                  : format(dayGroup.date, 'EEEE, MMMM d, yyyy')}
               </h2>
               <AddActivityPopover date={dayGroup.date} />
             </div>

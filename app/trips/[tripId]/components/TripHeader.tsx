@@ -23,9 +23,6 @@ export const TripHeader = ({
 }: TripHeaderProps) => {
   const { trip } = useActivitiesStore();
 
-  const addedActivities = trip?.activities.filter(act => act.status === 'planned') ?? [];
-  const interestedActivities = trip?.activities.filter(act => act.status === 'interested') ?? [];
-
   const formatDate = (date: Date | string) => {
     if (!date) return '';
     const d = new Date(date);
@@ -41,7 +38,7 @@ export const TripHeader = ({
     <header className="fixed top-0 left-0 right-0 bg-white border-b border-gray-200 z-50">
       <div className="mx-auto px-4">
         {/* Mobile Header */}
-        <div className="flex sm:hidden items-center justify-between h-16">
+        <div className="flex md:hidden items-center justify-between h-16">
           <Link href="/trips" className="p-2 -ml-2">
             <ChevronLeft className="w-6 h-6" />
           </Link>
@@ -57,25 +54,12 @@ export const TripHeader = ({
           </button>
 
           <div className="flex items-center gap-2">
-            {/* <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative">
-                  <List className="h-5 w-5" />
-                  {(addedActivities.length > 0 || interestedActivities.length > 0) && (
-                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-                      {addedActivities.length + interestedActivities.length}
-                    </span>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <ActivitySheet />
-            </Sheet> */}
             <HereThereUserButton />
           </div>
         </div>
 
         {/* Desktop Header */}
-        <div className="hidden sm:flex items-center h-16">
+        <div className="hidden md:flex items-center h-16">
           {/* Left section */}
           <div className="flex-1 flex">
             <Link href="/" className="flex items-center flex-shrink-0">

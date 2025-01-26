@@ -260,7 +260,7 @@ export function ItineraryView({
         disableViewToggle={scheduledEvents.length === 0}
       />
       {/* Calendar or List View */}
-      <div className="flex-1 overflow-hidden bg-white mb-4">
+      <div className="flex-1 overflow-hidden bg-white">
         {view === 'timeGrid' ? (
           <div className="h-full">
             <FullCalendar
