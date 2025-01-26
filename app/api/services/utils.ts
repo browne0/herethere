@@ -121,7 +121,7 @@ export function scheduleActivities(
     );
 
     // Schedule other activities around meals
-    const timeSlots = generateTimeSlots(currentDate);
+    const timeSlots = generateTimeSlots(currentDate, timezone);
 
     // For each unscheduled activity, find and score possible placements
     for (const activity of otherActivities) {
@@ -371,19 +371,25 @@ function scheduleMeals(
   return meals;
 }
 
-function generateTimeSlots(date: Date): TimeSlot[] {
+function generateTimeSlots(date: Date, timezone: string): TimeSlot[] {
   return Object.entries(TIME_SLOTS).map(([type, times]) => {
     const start = new Date(date);
     const [startHour, startMinute] = times.start.split(':');
-    start.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
+
+    // Convert to timezone-aware time
+    const zonedStart = toZonedTime(start, timezone);
+    zonedStart.setHours(parseInt(startHour), parseInt(startMinute), 0, 0);
 
     const end = new Date(date);
     const [endHour, endMinute] = times.end.split(':');
-    end.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
+
+    // Convert to timezone-aware time
+    const zonedEnd = toZonedTime(end, timezone);
+    zonedEnd.setHours(parseInt(endHour), parseInt(endMinute), 0, 0);
 
     return {
-      start,
-      end,
+      start: zonedStart,
+      end: zonedEnd,
       type: type as 'morning' | 'afternoon' | 'evening',
     };
   });

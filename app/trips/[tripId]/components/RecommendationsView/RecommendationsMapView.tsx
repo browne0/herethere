@@ -282,6 +282,7 @@ const RecommendationsMapView: React.FC<RecommendationsMapViewProps> = ({
               x: 20, // Offset to position label to the right of marker
               y: -25,
             })}
+            zIndex={50}
           >
             <div className="pointer-events-none absolute max-w-[160px] text-xs font-medium leading-tight text-foreground whitespace-nowrap">
               <span

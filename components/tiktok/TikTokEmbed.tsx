@@ -1,54 +1,61 @@
-'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
 
 interface TikTokEmbedProps {
   videoId: string;
+  onVideoComplete?: () => void;
 }
 
-export const TikTokEmbed: React.FC<TikTokEmbedProps> = ({ videoId }) => {
-  const [isInView, setIsInView] = useState(false);
-  const [hasBeenLoaded, setHasBeenLoaded] = useState(false);
-  const containerRef = useRef<HTMLDivElement>(null);
+export interface TikTokEmbedRef {
+  play: () => void;
+}
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      entries => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            setIsInView(true);
-            setHasBeenLoaded(true);
-          } else {
-            setIsInView(false);
-          }
-        });
+export const TikTokEmbed = forwardRef<TikTokEmbedRef, TikTokEmbedProps>(
+  ({ videoId, onVideoComplete }, ref) => {
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+
+    useImperativeHandle(ref, () => ({
+      play: () => {
+        if (iframeRef.current) {
+          iframeRef.current.contentWindow?.postMessage(
+            {
+              type: 'play',
+              'x-tiktok-player': true,
+            },
+            '*'
+          );
+        }
       },
-      {
-        root: null,
-        rootMargin: '50px',
-        threshold: 0,
-      }
-    );
+    }));
 
-    if (containerRef.current) {
-      observer.observe(containerRef.current);
-    }
+    useEffect(() => {
+      const handleMessage = (event: MessageEvent) => {
+        const data = event.data;
+        if (!data['x-tiktok-player']) return;
 
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
+        if (data.type === 'onStateChange') {
+          if (data.value === 0 && onVideoComplete) {
+            onVideoComplete();
+          }
+        }
+      };
 
-  return (
-    <div ref={containerRef} style={{ width: '325px', height: '578px' }}>
-      {isInView || hasBeenLoaded ? (
+      window.addEventListener('message', handleMessage);
+      return () => window.removeEventListener('message', handleMessage);
+    }, [onVideoComplete]);
+
+    return (
+      <div className="w-[325px] h-[578px]">
         <iframe
+          ref={iframeRef}
           src={`https://www.tiktok.com/player/v1/${videoId}`}
-          style={{ width: '100%', height: '100%' }}
+          className="w-full h-full"
           allow="fullscreen"
         />
-      ) : (
-        <div className="w-full h-full bg-gray-100 animate-pulse rounded-lg" />
-      )}
-    </div>
-  );
-};
+      </div>
+    );
+  }
+);
+
+TikTokEmbed.displayName = 'TikTokEmbed';
+
+export default TikTokEmbed;

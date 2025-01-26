@@ -1,10 +1,10 @@
 import { Clock, MapPin, Star } from 'lucide-react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 import type { ParsedItineraryActivity } from '@/app/trips/[tripId]/types';
 import { Lightbox } from '@/components/Lightbox';
-import { TikTokEmbed } from '@/components/tiktok/TikTokEmbed';
+import { TikTokEmbed, TikTokEmbedRef } from '@/components/tiktok/TikTokEmbed';
 import { Badge } from '@/components/ui/badge';
 import { SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
@@ -36,12 +36,22 @@ function getDurationDisplay(minutes: number): string {
 }
 
 export function ActivityDetailSheet({ activity, type, isOpen }: ActivityDetailSheetProps) {
+  const recommendation = type === 'itinerary' ? activity.recommendation : activity;
+
   const [isLoadingVideos, setIsLoadingVideos] = useState(false);
   const { trip } = useActivitiesStore();
-  const [tiktokVideos, setTiktokVideos] = useState<TikTokVideo[]>([]);
+  const [tiktokVideos, setTiktokVideos] = useState<TikTokVideo[]>(recommendation.tiktokVideos);
+  const [currentVideoIndex, setCurrentVideoIndex] = useState(0);
+  const videosContainerRef = useRef<HTMLDivElement>(null);
+  const videoRefs = useRef<{ [key: string]: React.RefObject<TikTokEmbedRef> }>({});
 
-  // Get the recommendation object regardless of activity type
-  const recommendation = type === 'itinerary' ? activity.recommendation : activity;
+  useEffect(() => {
+    tiktokVideos.forEach(video => {
+      if (!videoRefs.current[video.video_id]) {
+        videoRefs.current[video.video_id] = React.createRef();
+      }
+    });
+  }, [tiktokVideos]);
 
   useEffect(() => {
     const fetchTikTokVideos = async () => {
@@ -76,6 +86,37 @@ export function ActivityDetailSheet({ activity, type, isOpen }: ActivityDetailSh
 
   const images = recommendation.images as unknown as {
     urls: Array<{ url: string; cdnUrl: string }>;
+  };
+
+  const handleVideoComplete = () => {
+    if (currentVideoIndex < tiktokVideos.length - 1) {
+      const nextIndex = currentVideoIndex + 1;
+      setCurrentVideoIndex(nextIndex);
+
+      // Get the next video's ID
+      const nextVideoId = tiktokVideos[nextIndex].video_id;
+
+      // Scroll to next video
+      const nextVideo = videosContainerRef.current?.children[nextIndex];
+      nextVideo?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' });
+
+      // Play the next video after a short delay to allow for smooth scrolling
+      setTimeout(() => {
+        videoRefs.current[nextVideoId]?.current?.play();
+      }, 500);
+    } else {
+      // Optional: loop back to first video
+      setCurrentVideoIndex(0);
+      const firstVideoId = tiktokVideos[0].video_id;
+      videosContainerRef.current?.children[0]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'start',
+      });
+      setTimeout(() => {
+        videoRefs.current[firstVideoId]?.current?.play();
+      }, 500);
+    }
   };
 
   return (
@@ -166,10 +207,16 @@ export function ActivityDetailSheet({ activity, type, isOpen }: ActivityDetailSh
             <h2 className="text-xl font-bold mb-2">Related videos from TikTok</h2>
             <div className="relative">
               <div className="overflow-x-auto">
-                <div className="flex gap-4 pb-4">
-                  {tiktokVideos.map(({ video_id }) => (
-                    <div key={video_id} className="flex-shrink-0">
-                      <TikTokEmbed videoId={video_id} />
+                <div ref={videosContainerRef} className="flex gap-4 pb-4">
+                  {tiktokVideos.map((video, index) => (
+                    <div key={video.video_id} className="flex-shrink-0">
+                      <TikTokEmbed
+                        ref={videoRefs.current[video.video_id]}
+                        videoId={video.video_id}
+                        onVideoComplete={
+                          index === currentVideoIndex ? handleVideoComplete : undefined
+                        }
+                      />
                     </div>
                   ))}
                 </div>

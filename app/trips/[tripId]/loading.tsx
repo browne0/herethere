@@ -62,8 +62,8 @@ export default function TripLoading() {
 
         {/* Desktop content skeleton */}
         <div className="flex">
-          <div className="w-7/12 p-4">
-            <div className="grid grid-cols-3 gap-4">
+          <div className="w-6/12 p-4">
+            <div className="grid grid-cols-2 gap-4">
               {[...Array(6)].map((_, i) => (
                 <div key={i} className="space-y-3">
                   <Skeleton className="h-48 w-full rounded-lg" />
@@ -75,7 +75,7 @@ export default function TripLoading() {
           </div>
 
           {/* Desktop map skeleton */}
-          <div className="w-5/12 fixed top-[144px] right-0 bottom-0">
+          <div className="w-6/12 fixed top-[144px] right-0 bottom-0">
             <Skeleton className="w-full h-full" />
           </div>
         </div>

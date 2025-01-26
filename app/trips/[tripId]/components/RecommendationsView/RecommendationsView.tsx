@@ -5,7 +5,6 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
-import { cn } from '@/lib/utils';
 
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import ActivityList from './ActivityList';
@@ -17,45 +16,6 @@ interface RecommendationsViewProps {
   onDeleteClick: () => void;
 }
 
-interface ResponsiveMapContainerProps {
-  /** The React children to render inside the container */
-  children: React.ReactNode;
-  /** Current snap point value between 0 and 1 */
-  snap: number;
-  /** Array of available snap points */
-  snapPoints: number[];
-  /** Optional className for additional styling */
-  className?: string;
-}
-
-const ResponsiveMapContainer = ({ children, snap, className }: ResponsiveMapContainerProps) => {
-  // Calculate height based on snap point
-  const getMapHeight = (): string => {
-    if (snap > 0.5) {
-      return '90dvh';
-    }
-
-    // Convert snap points to viewport percentages
-    const snapPercent = snap * 100;
-
-    // Calculate remaining viewport height
-    const remainingHeight = 100 - snapPercent;
-
-    return `${remainingHeight}vh`;
-  };
-
-  return (
-    <div
-      className={cn('relative w-full transition-all duration-300 ease-in-out', className)}
-      style={{
-        height: getMapHeight(),
-      }}
-    >
-      {children}
-    </div>
-  );
-};
-
 export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -65,9 +25,6 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
   const selectedCategory = searchParams.get('category') || 'for-you';
   const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-  const [snap, setSnap] = useState<number | string | null>(0.5);
-  const snapPoints = [0.15, 0.5, 0.905];
-  const activeSnapPercentage = typeof snap === 'number' ? snap : 0.5;
   const [showMap, setShowMap] = useState(false);
 
   // Global state
