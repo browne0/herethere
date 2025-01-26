@@ -136,6 +136,7 @@ export function RecommendationsView({ onDeleteClick, onActivityDelete }: Recomme
             onCategoryChange={handleCategoryChange}
             onPageChange={handlePageChange}
             onHover={setHoveredActivityId}
+            onActivityDelete={onActivityDelete}
             trip={trip}
           />
         </div>
