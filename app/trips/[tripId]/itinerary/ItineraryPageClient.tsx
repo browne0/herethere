@@ -10,8 +10,9 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { Map, X } from 'lucide-react';
-import AddActivityModal from '../components/AddActivityModal';
 import DateEditModal from '../components/DateEditModal';
+import { DeleteActivityDialog } from '../components/DeleteActivityDialog';
+import { MoveToInterestedDialog } from '../components/MoveToInterestedDialog';
 import TripCityModal from '../components/TripCityModal';
 import TripEditModal from '../components/TripEditModal';
 import TripHeader from '../components/TripHeader';
@@ -34,8 +35,9 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
   const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
   const [hoveredActivityId, setHoveredActivityId] = useState<string | null>(null);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<ParsedItineraryActivity | null>(null);
+  const [activityToMove, setActivityToMove] = useState<ParsedItineraryActivity | null>(null);
   const isDesktop = useMediaQuery('(min-width: 1024px)');
   const router = useRouter();
 
@@ -80,6 +82,8 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
           <ItineraryView
             onMarkerHover={setHoveredActivityId}
             onMarkerSelect={setSelectedActivityId}
+            onDeleteActivity={setActivityToDelete}
+            onMoveToInterested={setActivityToMove}
           />
         </div>
 
@@ -132,11 +136,20 @@ export function ItineraryPageClient({ initialTrip, initialActivities }: Itinerar
         onClose={() => setIsCityModalOpen(false)}
         onUpdateTrip={handleTripUpdate}
       />
-      <AddActivityModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />
       <TripTitleModal
         isOpen={isTitleModalOpen}
         onClose={() => setIsTitleModalOpen(false)}
         onUpdateTrip={handleTripUpdate}
+      />
+      <DeleteActivityDialog
+        isOpen={activityToDelete !== null}
+        onClose={() => setActivityToDelete(null)}
+        activity={activityToDelete}
+      />
+      <MoveToInterestedDialog
+        isOpen={activityToMove !== null}
+        onClose={() => setActivityToMove(null)}
+        activity={activityToMove}
       />
     </div>
   );

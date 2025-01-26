@@ -188,15 +188,11 @@ const ItineraryMap: React.FC<ItineraryMapProps> = ({
       lng: initialTrip.city.longitude,
     });
     map.setZoom(DEFAULT_ZOOM);
-
-    const scheduledActivities = trip?.activities.filter(
-      activity => activity.status === 'planned' && activity.startTime && activity.endTime
-    );
     // Adjust bounds if there are activities
-    if (scheduledActivities.length > 0) {
+    if (trip.activities.length > 0) {
       const bounds = new google.maps.LatLngBounds();
 
-      scheduledActivities.forEach(activity => {
+      trip.activities.forEach(activity => {
         bounds.extend({
           lat: activity.recommendation.location.latitude,
           lng: activity.recommendation.location.longitude,

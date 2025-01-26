@@ -29,6 +29,8 @@ import ItineraryRebalancing from './ItineraryRebalancing';
 interface ItineraryViewProps {
   onMarkerHover: (activityId: string | null) => void;
   onMarkerSelect: (activityId: string | null) => void;
+  onDeleteActivity: (activity: ParsedItineraryActivity) => void;
+  onMoveToInterested: (activity: ParsedItineraryActivity) => void;
 }
 
 function isValidActivityStatus(status: string): status is ActivityStatus {
@@ -57,7 +59,11 @@ const statusColors: Record<ActivityStatus, string> = {
   cancelled: '#ef4444',
 };
 
-export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewProps) {
+export function ItineraryView({
+  onMarkerHover,
+  onDeleteActivity,
+  onMoveToInterested,
+}: ItineraryViewProps) {
   const { trip, setTrip } = useActivitiesStore();
   const { updateActivity } = useActivityMutations();
   const [view, setView] = useState<'timeGrid' | 'itineraryList'>('itineraryList');
@@ -301,7 +307,11 @@ export function ItineraryView({ onMarkerHover, onMarkerSelect }: ItineraryViewPr
             />
           </div>
         ) : (
-          <ItineraryList onMarkerHover={onMarkerHover} />
+          <ItineraryList
+            onMarkerHover={onMarkerHover}
+            onDeleteActivity={onDeleteActivity}
+            onMoveToInterested={onMoveToInterested}
+          />
         )}
       </div>
     </div>

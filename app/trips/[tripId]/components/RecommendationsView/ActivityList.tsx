@@ -8,7 +8,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { ActivityCategoryType } from '../../types';
+import { ActivityCategoryType, ParsedItineraryActivity } from '../../types';
 import { ActivitySheet } from '../ActivitySheet';
 import ActivityCard from './ActivityCard';
 
@@ -16,9 +16,15 @@ interface ActivityListProps {
   currentCategory?: ActivityCategoryType;
   onPageChange: (page: number) => void;
   onHover: (id: string | null) => void;
+  onActivityDelete: (activity: ParsedItineraryActivity) => void;
 }
 
-const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListProps) => {
+const ActivityList = ({
+  currentCategory,
+  onPageChange,
+  onHover,
+  onActivityDelete,
+}: ActivityListProps) => {
   const { trip } = useActivitiesStore();
   const addedCount = trip?.activities.filter(act => act.status === 'planned').length ?? 0;
   const interestedCount = trip?.activities.filter(act => act.status === 'interested').length ?? 0;
@@ -73,7 +79,7 @@ const ActivityList = ({ currentCategory, onPageChange, onHover }: ActivityListPr
                 View Activities
               </Button>
             </SheetTrigger>
-            <ActivitySheet />
+            <ActivitySheet onActivityDelete={onActivityDelete} />
           </Sheet>
           <TooltipProvider>
             <Tooltip>

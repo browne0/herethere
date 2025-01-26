@@ -78,7 +78,7 @@ const ItineraryNoteSection = ({ initialNote, onSave }: ItineraryNoteSectionProps
       <Button
         onClick={() => setIsEditing(!isEditing)}
         variant="ghost"
-        className="h-auto p-0 text-sm text-muted-foreground hover:text-blue-600 hover:bg-transparent transition-colors w-full justify-start font-normal"
+        className="h-auto p-0 text-sm text-muted-foreground hover:text-blue-600 hover:bg-transparent transition-colors justify-start font-normal"
       >
         <Pen className={`h-4 w-4`} />
         {hasContent ? 'Edit notes' : 'Add notes'}

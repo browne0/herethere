@@ -1,20 +1,30 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Sheet, SheetTrigger } from '@/components/ui/sheet';
 import { useActivitiesStore, useActivityMutations } from '@/lib/stores/activitiesStore';
 import { format } from 'date-fns';
-import { AlertTriangle, CalendarDays, Clock, MapPin, Plus } from 'lucide-react';
+import { AlertTriangle, CalendarDays, Clock, MapPin, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ActivityDetailSheet } from '../../components/ActivityDetailSheet';
+import AddActivityPopover from '../../components/AddActivityPopover';
 import { getPrimaryTypeDisplay } from '../../components/RecommendationsView/ActivityCard';
 import { ParsedItineraryActivity } from '../../types';
 import ItineraryNoteSection from './ItineraryNoteSection';
 
 interface ItineraryListProps {
   onMarkerHover: (activityId: string | null) => void;
+  onDeleteActivity: (activity: ParsedItineraryActivity) => void;
+  onMoveToInterested: (activity: ParsedItineraryActivity) => void;
 }
 
 const EmptyState = ({ tripId }: { tripId: string }) => (
@@ -58,7 +68,11 @@ function formatTimeRange(start: Date, end: Date): string {
   return `${format(start, 'h:mm a')} - ${format(end, 'h:mm a')}`;
 }
 
-export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
+export function ItineraryList({
+  onMarkerHover,
+  onDeleteActivity,
+  onMoveToInterested,
+}: ItineraryListProps) {
   const { trip } = useActivitiesStore();
   const [openActivityId, setOpenActivityId] = useState<string | null>(null);
   const { updateActivity } = useActivityMutations();
@@ -100,12 +114,7 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
               <h2 className="text-base sm:text-lg font-semibold">
                 {format(dayGroup.date, 'EEEE, MMMM d, yyyy')}
               </h2>
-              <Button variant="outline">
-                Add activity{' '}
-                <span className="">
-                  <Plus className="w-4 h-4" />
-                </span>
-              </Button>
+              <AddActivityPopover date={dayGroup.date} />
             </div>
 
             <div className="space-y-4 mt-4">
@@ -119,7 +128,7 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                   onMouseEnter={() => onMarkerHover(activity.id)}
                   onMouseLeave={() => onMarkerHover(null)}
                 >
-                  <CardContent className="pt-4">
+                  <CardContent className="pt-4 relative">
                     <div className="space-y-2">
                       <div className="flex items-center justify-between">
                         <Sheet
@@ -186,6 +195,30 @@ export function ItineraryList({ onMarkerHover }: ItineraryListProps) {
                           }
                         }}
                       />
+                      <div className="absolute bottom-2 right-2">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              className="h-4 w-4 p-3 rounded-full focus-visible:ring-0"
+                            >
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" side="top" sideOffset={2}>
+                            <DropdownMenuItem onClick={() => onMoveToInterested(activity)}>
+                              Move to interested
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => onDeleteActivity(activity)}
+                              className="text-red-600"
+                            >
+                              Remove
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

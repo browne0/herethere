@@ -1,5 +1,7 @@
 import { City } from '@prisma/client';
 import { useMutation } from '@tanstack/react-query';
+import { debounce } from 'lodash';
+import React from 'react';
 import { create } from 'zustand';
 
 import type {
@@ -9,7 +11,6 @@ import type {
   ParsedTrip,
 } from '@/app/trips/[tripId]/types';
 import { ActivityRecommendation } from '@/lib/types/recommendations';
-import { debounce } from '@/lib/utils/debounce';
 
 // Core store state interface - Keep this minimal and focused on UI state
 interface ActivitiesState {
@@ -117,10 +118,50 @@ function createOptimisticActivity(
   };
 }
 
+// Create a properly Promise-wrapped debounced function
+const createDebouncedUpdate = () => {
+  let currentPromise: Promise<any> | null = null;
+  let resolveCurrentPromise: ((value: any) => void) | null = null;
+  let rejectCurrentPromise: ((error: Error) => void) | null = null;
+
+  const debouncedFn = debounce(
+    async (tripId: string, activityId: string, updates: UpdateableActivityFields) => {
+      try {
+        const result = await activityApi.updateActivity(tripId, activityId, updates);
+        resolveCurrentPromise?.(result);
+      } catch (error) {
+        rejectCurrentPromise?.(error as Error);
+      } finally {
+        currentPromise = null;
+        resolveCurrentPromise = null;
+        rejectCurrentPromise = null;
+      }
+    },
+    300,
+    { leading: false, trailing: true }
+  );
+
+  return (tripId: string, activityId: string, updates: UpdateableActivityFields) => {
+    // If there's already a promise in flight, return it
+    if (currentPromise) {
+      return currentPromise;
+    }
+
+    // Create a new promise
+    currentPromise = new Promise((resolve, reject) => {
+      resolveCurrentPromise = resolve;
+      rejectCurrentPromise = reject;
+      debouncedFn(tripId, activityId, updates);
+    });
+
+    return currentPromise;
+  };
+};
+
 // Mutation hooks for activity operations
 export function useActivityMutations() {
-  // Get tripId from the store
   const trip = useActivitiesStore(state => state.trip);
+  const debouncedUpdateApi = React.useRef(createDebouncedUpdate()).current;
 
   // Add activity mutation
   const addActivity = useMutation({
@@ -241,18 +282,6 @@ export function useActivityMutations() {
     },
   });
 
-  // Create debounced API call with explicit return type
-  const debouncedUpdateApi = debounce<
-    (
-      tripId: string,
-      activityId: string,
-      updates: UpdateableActivityFields
-    ) => Promise<{
-      activity: ParsedItineraryActivity;
-      warning: string | null;
-    }>
-  >((tripId, activityId, updates) => activityApi.updateActivity(tripId, activityId, updates), 300);
-
   // Update activity mutation
   const updateActivity = useMutation<
     { activity: ParsedItineraryActivity; warning: string | null },
@@ -262,11 +291,13 @@ export function useActivityMutations() {
   >({
     mutationFn: async ({ activityId, updates }) => {
       if (!trip) throw new Error('Cannot add activity without trip context');
-      return await debouncedUpdateApi(trip.id, activityId, updates);
+
+      // Now we can use the debounced api for all updates
+      const result = await debouncedUpdateApi(trip.id, activityId, updates);
+      return result;
     },
 
     onMutate: async ({ activityId, updates }) => {
-      // Immediate optimistic update
       const previousTrip = useActivitiesStore.getState().trip;
 
       useActivitiesStore.setState(state => ({
@@ -298,7 +329,6 @@ export function useActivityMutations() {
           loadingActivities: new Set([...state.loadingActivities].filter(id => id !== activityId)),
         }));
 
-        // Re-throw the error with a user-friendly message
         if (error instanceof Error) {
           switch (error.message) {
             case 'Activity is not open during the selected time':
@@ -328,7 +358,7 @@ export function useActivityMutations() {
                   ? {
                       ...activity,
                       ...result.activity,
-                      warning: result.warning || null, // Update warning from response
+                      warning: result.warning || null,
                     }
                   : activity
               ),

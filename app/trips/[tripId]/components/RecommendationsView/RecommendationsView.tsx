@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import { Map, Sliders, Trash2, X } from 'lucide-react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { ParsedItineraryActivity } from '../../types';
 import ActivityList from './ActivityList';
 import CategoryNavigation from './CategoryNavigation';
 import MobileActivityView from './MobileActivityView';
@@ -14,9 +15,10 @@ import RecommendationsMapView from './RecommendationsMapView';
 
 interface RecommendationsViewProps {
   onDeleteClick: () => void;
+  onActivityDelete: (activity: ParsedItineraryActivity) => void;
 }
 
-export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps) {
+export function RecommendationsView({ onDeleteClick, onActivityDelete }: RecommendationsViewProps) {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -107,6 +109,7 @@ export function RecommendationsView({ onDeleteClick }: RecommendationsViewProps)
               currentCategory={currentCategory}
               onPageChange={handlePageChange}
               onHover={setHoveredActivityId}
+              onActivityDelete={onActivityDelete}
             />
           </div>
           <div className="w-6/12 fixed top-[144px] right-0 bottom-0">

@@ -9,12 +9,14 @@ import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
 import { DeleteTripDialog } from '../components/DeleteTripDialog';
 import DateEditModal from './components/DateEditModal';
+import { DeleteActivityDialog } from './components/DeleteActivityDialog';
+import { MoveToInterestedDialog } from './components/MoveToInterestedDialog';
 import { RecommendationsView } from './components/RecommendationsView/RecommendationsView';
 import TripCityModal from './components/TripCityModal';
 import TripEditModal from './components/TripEditModal';
 import TripHeader from './components/TripHeader';
 import TripTitleModal from './components/TripTitleModal';
-import { ActivityCategoryType, ParsedTrip } from './types';
+import { ActivityCategoryType, ParsedItineraryActivity, ParsedTrip } from './types';
 
 interface TripPageClientProps {
   trip: ParsedTrip;
@@ -29,6 +31,8 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [isCityModalOpen, setIsCityModalOpen] = useState(false);
   const [isTitleModalOpen, setIsTitleModalOpen] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState<ParsedItineraryActivity | null>(null);
+  const [activityToMove, setActivityToMove] = useState<ParsedItineraryActivity | null>(null);
 
   // Initialize store with trip activities
   useEffect(() => {
@@ -71,7 +75,10 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
         onCityClick={() => setIsCityModalOpen(true)}
         onTitleClick={() => setIsTitleModalOpen(true)}
       />
-      <RecommendationsView onDeleteClick={() => setIsDeleteDialogOpen(true)} />
+      <RecommendationsView
+        onDeleteClick={() => setIsDeleteDialogOpen(true)}
+        onActivityDelete={setActivityToDelete}
+      />
       <DeleteTripDialog
         trip={trip}
         isOpen={isDeleteDialogOpen}
@@ -97,6 +104,16 @@ export function TripPageClient({ trip, categories }: TripPageClientProps) {
         isOpen={isTitleModalOpen}
         onClose={() => setIsTitleModalOpen(false)}
         onUpdateTrip={handleTripUpdate}
+      />
+      <DeleteActivityDialog
+        isOpen={activityToDelete !== null}
+        onClose={() => setActivityToDelete(null)}
+        activity={activityToDelete}
+      />
+      <MoveToInterestedDialog
+        isOpen={activityToMove !== null}
+        onClose={() => setActivityToMove(null)}
+        activity={activityToMove}
       />
     </div>
   );

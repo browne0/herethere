@@ -26,9 +26,11 @@ const ITEM_HEIGHT = 116;
 const MiniActivityCard = ({
   activity,
   isInterested,
+  onActivityDelete,
 }: {
   activity: ParsedItineraryActivity;
   isInterested: boolean;
+  onActivityDelete: (activity: ParsedItineraryActivity) => void;
 }) => {
   const { updateActivity, removeActivity } = useActivityMutations();
   const handleStatusChange = async (status: ActivityStatus) => {
@@ -48,10 +50,19 @@ const MiniActivityCard = ({
   const handleRemove = async () => {
     try {
       await removeActivity.mutateAsync(activity.id);
+      toast.success('Activity removed');
     } catch (error) {
       toast.error('Failed to remove activity', {
         description: error instanceof Error ? error.message : 'An error occurred',
       });
+    }
+  };
+
+  const handleDelete = () => {
+    if (activity.startTime && activity.endTime) {
+      onActivityDelete(activity);
+    } else {
+      handleRemove();
     }
   };
 
@@ -75,10 +86,10 @@ const MiniActivityCard = ({
               ) : (
                 <DropdownMenuItem onClick={() => handleStatusChange('interested')}>
                   <Heart className="h-4 w-4 mr-2" />
-                  Save for later
+                  Move to interested
                 </DropdownMenuItem>
               )}
-              <DropdownMenuItem onClick={handleRemove} className="text-red-600 focus:text-red-600">
+              <DropdownMenuItem onClick={handleDelete} className="text-red-600 focus:text-red-600">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Remove activity
               </DropdownMenuItem>
@@ -108,9 +119,11 @@ const MiniActivityCard = ({
 const VirtualizedActivityList = ({
   activities,
   isInterested,
+  onActivityDelete,
 }: {
   activities: ParsedItineraryActivity[];
   isInterested: boolean;
+  onActivityDelete: (activity: ParsedItineraryActivity) => void;
 }) => {
   const parentRef = React.useRef<HTMLDivElement>(null);
 
@@ -142,7 +155,11 @@ const VirtualizedActivityList = ({
               transform: `translateY(${virtualRow.start}px)`,
             }}
           >
-            <MiniActivityCard activity={activities[virtualRow.index]} isInterested={isInterested} />
+            <MiniActivityCard
+              activity={activities[virtualRow.index]}
+              isInterested={isInterested}
+              onActivityDelete={onActivityDelete}
+            />
           </div>
         ))}
       </div>
@@ -150,7 +167,11 @@ const VirtualizedActivityList = ({
   );
 };
 
-export const ActivitySheet = () => {
+export const ActivitySheet = ({
+  onActivityDelete,
+}: {
+  onActivityDelete: (activity: ParsedItineraryActivity) => void;
+}) => {
   const [searchQuery, setSearchQuery] = useState('');
   const { trip } = useActivitiesStore();
 
@@ -239,7 +260,11 @@ export const ActivitySheet = () => {
               subMessage="Try adjusting your search"
             />
           ) : (
-            <VirtualizedActivityList activities={filteredAdded} isInterested={false} />
+            <VirtualizedActivityList
+              activities={filteredAdded}
+              isInterested={false}
+              onActivityDelete={onActivityDelete}
+            />
           )}
         </TabsContent>
 
@@ -255,7 +280,11 @@ export const ActivitySheet = () => {
               subMessage="Try adjusting your search"
             />
           ) : (
-            <VirtualizedActivityList activities={filteredInterested} isInterested={true} />
+            <VirtualizedActivityList
+              activities={filteredInterested}
+              isInterested={true}
+              onActivityDelete={onActivityDelete}
+            />
           )}
         </TabsContent>
       </Tabs>
