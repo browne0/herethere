@@ -40,16 +40,16 @@ export const TripHeader = ({
         {/* Mobile Header */}
         <div className="flex md:hidden items-center justify-between h-16">
           <Link href="/trips" className="p-2 -ml-2">
-            <ChevronLeft className="w-6 h-6" />
+            HT
           </Link>
 
           <button
             onClick={onEditClick}
             className="flex-1 mx-4 py-1 text-center rounded-full border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200"
           >
-            <div className="text-sm">{trip.city.name}</div>
+            <div className="text-sm">{trip.title}</div>
             <div className="text-xs text-gray-500">
-              {formatDate(trip.startDate)} – {formatDate(trip.endDate)} · 1 traveler
+              {formatDate(trip.startDate)} – {formatDate(trip.endDate)} · {trip.city.name}
             </div>
           </button>
 
