@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 
 import { RESTAURANT_TYPES } from '@/constants';
 
@@ -66,9 +65,58 @@ export interface PreferencesState extends UserPreferences {
   reset: () => void;
 }
 
-export const usePreferences = create<PreferencesState>()(
-  persist(
-    set => ({
+export const usePreferences = create<PreferencesState>()(set => ({
+  // Initial Interest States
+  interests: [],
+
+  // Initial Pace States
+  energyLevel: null,
+  preferredStartTime: null,
+
+  // Initial Dietary States
+  dietaryRestrictions: [],
+  cuisinePreferences: {
+    preferred: [],
+    avoided: [],
+  },
+  mealImportance: {
+    breakfast: false,
+    lunch: false,
+    dinner: false,
+  },
+
+  crowdPreference: null,
+
+  // Initial Requirement States
+  transportPreferences: [],
+
+  // Initial Onboarding State
+  onboardingCompleted: false,
+
+  // Setters
+  setInterests: interests => set({ interests }),
+  setEnergyLevel: energyLevel => set({ energyLevel }),
+  setPreferredStartTime: preferredStartTime => set({ preferredStartTime }),
+  setDietaryRestrictions: dietaryRestrictions => set({ dietaryRestrictions }),
+  setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
+  setMealImportance: mealImportance => set({ mealImportance }),
+  setCrowdPreference: crowdPreference => set({ crowdPreference }),
+  setTransportPreferences: transportPreferences => set({ transportPreferences }),
+  setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
+  setAllPreferences: (preferences: Partial<PreferencesState>) =>
+    set(state => ({
+      ...state,
+      interests: preferences.interests ?? state.interests,
+      energyLevel: preferences.energyLevel ?? state.energyLevel,
+      preferredStartTime: preferences.preferredStartTime ?? state.preferredStartTime,
+      dietaryRestrictions: preferences.dietaryRestrictions ?? state.dietaryRestrictions,
+      cuisinePreferences: preferences.cuisinePreferences ?? state.cuisinePreferences,
+      mealImportance: preferences.mealImportance ?? state.mealImportance,
+      crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
+      transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
+    })),
+  reset: () => {
+    set(() => ({
       // Initial Interest States
       interests: [],
 
@@ -95,62 +143,6 @@ export const usePreferences = create<PreferencesState>()(
 
       // Initial Onboarding State
       onboardingCompleted: false,
-
-      // Setters
-      setInterests: interests => set({ interests }),
-      setEnergyLevel: energyLevel => set({ energyLevel }),
-      setPreferredStartTime: preferredStartTime => set({ preferredStartTime }),
-      setDietaryRestrictions: dietaryRestrictions => set({ dietaryRestrictions }),
-      setCuisinePreferences: cuisinePreferences => set({ cuisinePreferences }),
-      setMealImportance: mealImportance => set({ mealImportance }),
-      setCrowdPreference: crowdPreference => set({ crowdPreference }),
-      setTransportPreferences: transportPreferences => set({ transportPreferences }),
-      setOnboardingCompleted: onboardingCompleted => set({ onboardingCompleted }),
-      setAllPreferences: (preferences: Partial<PreferencesState>) =>
-        set(state => ({
-          ...state,
-          interests: preferences.interests ?? state.interests,
-          energyLevel: preferences.energyLevel ?? state.energyLevel,
-          preferredStartTime: preferences.preferredStartTime ?? state.preferredStartTime,
-          dietaryRestrictions: preferences.dietaryRestrictions ?? state.dietaryRestrictions,
-          cuisinePreferences: preferences.cuisinePreferences ?? state.cuisinePreferences,
-          mealImportance: preferences.mealImportance ?? state.mealImportance,
-          crowdPreference: preferences.crowdPreference ?? state.crowdPreference,
-          transportPreferences: preferences.transportPreferences ?? state.transportPreferences,
-        })),
-      reset: () => {
-        set(() => ({
-          // Initial Interest States
-          interests: [],
-
-          // Initial Pace States
-          energyLevel: null,
-          preferredStartTime: null,
-
-          // Initial Dietary States
-          dietaryRestrictions: [],
-          cuisinePreferences: {
-            preferred: [],
-            avoided: [],
-          },
-          mealImportance: {
-            breakfast: false,
-            lunch: false,
-            dinner: false,
-          },
-
-          crowdPreference: null,
-
-          // Initial Requirement States
-          transportPreferences: [],
-
-          // Initial Onboarding State
-          onboardingCompleted: false,
-        }));
-      },
-    }),
-    {
-      name: 'user-preferences', // name of the item in localStorage
-    }
-  )
-);
+    }));
+  },
+}));

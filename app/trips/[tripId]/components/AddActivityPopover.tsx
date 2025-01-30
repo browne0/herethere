@@ -153,6 +153,14 @@ function ActivityTabs({ onComplete, isDesktop }: { onComplete: () => void; isDes
     </div>
   );
 
+  if (!trip) return null;
+
+  const selectedActivity = trip.activities.find(a => a.id === selectedActivityId);
+  if (!selectedActivity) {
+    console.error('Activity not found:', selectedActivityId);
+    return null;
+  }
+
   return (
     <>
       <Tabs defaultValue={defaultTab} className="w-full">
@@ -257,11 +265,7 @@ function ActivityTabs({ onComplete, isDesktop }: { onComplete: () => void; isDes
           open={selectedActivityId !== null}
           onOpenChange={open => !open && setSelectedActivityId(null)}
         >
-          <ActivityDetailSheet
-            type="itinerary"
-            activity={trip?.activities.find(a => a.id === selectedActivityId)!}
-            isOpen={true}
-          />
+          <ActivityDetailSheet type="itinerary" activity={selectedActivity} isOpen={true} />
         </Sheet>
       )}
     </>
