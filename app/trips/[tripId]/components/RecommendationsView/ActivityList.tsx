@@ -147,7 +147,7 @@ const ActivityList = ({
           <p className="text-gray-500 text-lg">No activities found for this category.</p>
         </div>
       ) : (
-        <div className="px-4 grid gap-4 grid-cols-1 md:grid-cols-2 pb-8">
+        <div className="px-4 grid gap-4 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 pb-8">
           {currentCategory.activities.map(activity => (
             <ActivityCard
               key={activity.id}

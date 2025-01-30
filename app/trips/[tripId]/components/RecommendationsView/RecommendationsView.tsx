@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { useActivitiesStore } from '@/lib/stores/activitiesStore';
 
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { ParsedItineraryActivity } from '../../types';
 import ActivityList from './ActivityList';
 import CategoryNavigation from './CategoryNavigation';
@@ -143,6 +143,7 @@ export function RecommendationsView({ onDeleteClick, onActivityDelete }: Recomme
 
         {/* Map Sheet */}
         <Sheet open={showMap} onOpenChange={setShowMap}>
+          <SheetTitle className="sr-only">View Map</SheetTitle>
           <SheetTrigger asChild>
             <Button
               onClick={() => setShowMap(true)}

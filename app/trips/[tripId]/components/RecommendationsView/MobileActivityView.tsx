@@ -337,7 +337,7 @@ const MyActivitiesContent = () => {
   const MINIMUM_ACTIVITIES = 1;
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full pt-[95px] flex flex-col">
       {/* Search and filters - fixed at top */}
       <div className="flex-none border-b">
         <ItineraryProgress
@@ -448,35 +448,29 @@ const MobileActivityView: React.FC<MobileActivityViewProps> = ({
             Discover
           </TabsTrigger>
           <TabsTrigger value="my-activities" className="flex-1">
-            My Activities ({trip.activities.length})
+            My Activities ({trip.activities.filter(act => act.status === 'planned').length})
           </TabsTrigger>
         </TabsList>
+      </div>
 
-        <div className="border-b">
+      <TabsContent value="discover">
+        <div className="pt-[95px] bg-white z-10 border-b">
           <MobileCategoryNavigation
             categories={categories}
             selectedCategory={currentCategory}
             onCategoryChange={onCategoryChange}
           />
         </div>
-      </div>
-
-      {/* Scrollable Content */}
-      <div className="pt-[168px]">
-        {' '}
-        {/* Account for fixed header heights */}
-        <TabsContent value="discover">
-          <ActivityList
-            currentCategory={currentCategory}
-            onPageChange={onPageChange}
-            onHover={onHover}
-            onActivityDelete={onActivityDelete}
-          />
-        </TabsContent>
-        <TabsContent value="my-activities">
-          <MyActivitiesContent />
-        </TabsContent>
-      </div>
+        <ActivityList
+          currentCategory={currentCategory}
+          onPageChange={onPageChange}
+          onHover={onHover}
+          onActivityDelete={onActivityDelete}
+        />
+      </TabsContent>
+      <TabsContent value="my-activities">
+        <MyActivitiesContent />
+      </TabsContent>
     </Tabs>
   );
 };
